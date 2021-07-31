@@ -1,0 +1,30 @@
+name: Tests
+on:
+  pull_request:
+    paths-ignore:
+      - README.md
+  push:
+    paths-ignore:
+      - README.md
+  schedule:
+    - cron: '0 13 * * *'
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        terraform:
+          - '1.0.3'
+    steps:
+    - uses: actions/checkout@v2.3.4
+    - uses: actions/setup-go@v2.1.3
+      with:
+        go-version: '1.16.5'
+    - run: go mod download
+    - run: go test -v -cover ./internal/provider/
+      env:
+        TF_ACC: "1"
+        TF_ACC_TERRAFORM_VERSION: ${{ matrix.terraform }}
+        FRONTEGG_API_KEY: ${{ secrets.FRONTEGG_API_KEY }}
+        FRONTEGG_CLIENT_ID: ${{ secrets.FRONTEGG_CLIENT_ID }}
