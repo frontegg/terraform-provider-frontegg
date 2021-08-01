@@ -71,8 +71,13 @@ func (c *Client) Request(ctx context.Context, method string, url string, in inte
 	if err != nil {
 		return fmt.Errorf("restclient: failed to read response: %w", err)
 	}
-	if res.StatusCode < 200 || res.StatusCode >= 300 {
-		return fmt.Errorf("restclient: request failed: %s: %s", res.Status, resBody)
+	if res.StatusCode == 409 && method == "POST" {
+		return c.Patch(ctx, url, in, out)
+	} else if res.StatusCode < 200 || res.StatusCode >= 300 {
+		return fmt.Errorf(
+			"restclient: request failed: %s %s: %s: %s",
+			req.Method, req.URL, res.Status, resBody,
+		)
 	}
 	log.Printf("[TRACE] Received response data %q", string(resBody))
 	if out != nil {

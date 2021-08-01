@@ -1022,7 +1022,7 @@ func resourceFronteggWorkspaceUpdate(ctx context.Context, d *schema.ResourceData
 			in.Enabled = true
 			in.MaxAttempts = d.Get("lockout_policy.0.max_attempts").(int)
 		}
-		if err := client.Patch(ctx, fronteggLockoutPolicyURL, in, nil); err != nil {
+		if err := client.Post(ctx, fronteggLockoutPolicyURL, in, nil); err != nil {
 			return diag.FromErr(err)
 		}
 	}
@@ -1045,7 +1045,7 @@ func resourceFronteggWorkspaceUpdate(ctx context.Context, d *schema.ResourceData
 			in.Enabled = true
 			in.HistorySize = history
 		}
-		if err := client.Patch(ctx, fronteggPasswordHistoryPolicyURL, in, nil); err != nil {
+		if err := client.Post(ctx, fronteggPasswordHistoryPolicyURL, in, nil); err != nil {
 			return diag.FromErr(err)
 		}
 	}
