@@ -1000,7 +1000,8 @@ func resourceFronteggWorkspaceUpdate(ctx context.Context, d *schema.ResourceData
 			EnforceMFAType:        resourceFronteggWorkspaceSerializeMFAEnforce(d.Get("mfa_policy.0.enforce").(string)),
 			MFADeviceExpiration:   d.Get("mfa_policy.0.device_expiration").(int),
 		}
-		if err := client.Patch(ctx, fronteggMFAPolicyURL, in, nil); err != nil {
+		client.ConflictRetryMethod("PATCH")
+		if err := client.Post(ctx, fronteggMFAPolicyURL, in, nil); err != nil {
 			return diag.FromErr(err)
 		}
 	}
@@ -1022,6 +1023,7 @@ func resourceFronteggWorkspaceUpdate(ctx context.Context, d *schema.ResourceData
 			in.Enabled = true
 			in.MaxAttempts = d.Get("lockout_policy.0.max_attempts").(int)
 		}
+		client.ConflictRetryMethod("PATCH")
 		if err := client.Post(ctx, fronteggLockoutPolicyURL, in, nil); err != nil {
 			return diag.FromErr(err)
 		}
@@ -1045,6 +1047,7 @@ func resourceFronteggWorkspaceUpdate(ctx context.Context, d *schema.ResourceData
 			in.Enabled = true
 			in.HistorySize = history
 		}
+		client.ConflictRetryMethod("PATCH")
 		if err := client.Post(ctx, fronteggPasswordHistoryPolicyURL, in, nil); err != nil {
 			return diag.FromErr(err)
 		}
@@ -1061,7 +1064,8 @@ func resourceFronteggWorkspaceUpdate(ctx context.Context, d *schema.ResourceData
 			in.SecretKey = d.Get("captcha_policy.0.secret_key").(string)
 			in.MinScore = d.Get("captcha_policy.0.min_score").(float64)
 		}
-		if err := client.Put(ctx, fronteggCaptchaPolicyURL, in, nil); err != nil {
+		client.ConflictRetryMethod("PUT")
+		if err := client.Post(ctx, fronteggCaptchaPolicyURL, in, nil); err != nil {
 			return diag.FromErr(err)
 		}
 	}

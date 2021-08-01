@@ -11,8 +11,9 @@ import (
 )
 
 type Client struct {
-	token  string
-	client http.Client
+	token               string
+	client              http.Client
+	conflictRetryMethod string
 }
 
 func New(baseURL string) Client {
@@ -23,6 +24,10 @@ func New(baseURL string) Client {
 
 func (c *Client) Authenticate(token string) {
 	c.token = token
+}
+
+func (c *Client) ConflictRetryMethod(method string) {
+	c.conflictRetryMethod = method
 }
 
 func (c *Client) Delete(ctx context.Context, url string, out interface{}) error {
@@ -71,8 +76,10 @@ func (c *Client) Request(ctx context.Context, method string, url string, in inte
 	if err != nil {
 		return fmt.Errorf("restclient: failed to read response: %w", err)
 	}
-	if res.StatusCode == 409 && method == "POST" {
-		return c.Patch(ctx, url, in, out)
+	if res.StatusCode == 409 && c.conflictRetryMethod != "" {
+		method := c.conflictRetryMethod
+		c.conflictRetryMethod = ""
+		return c.Request(ctx, method, url, in, out)
 	} else if res.StatusCode < 200 || res.StatusCode >= 300 {
 		return fmt.Errorf(
 			"restclient: request failed: %s %s: %s: %s",
