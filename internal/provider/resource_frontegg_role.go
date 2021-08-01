@@ -64,7 +64,7 @@ func resourceFronteggRole() *schema.Resource {
 				Required:    true,
 			},
 			"permission_ids": {
-				Description: "The IDs of the permissions that the role grants.",
+				Description: "The IDs of the permissions that the role confers to its members.",
 				Type:        schema.TypeSet,
 				Elem:        &schema.Schema{Type: schema.TypeString},
 				Required:    true,

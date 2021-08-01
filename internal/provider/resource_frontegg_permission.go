@@ -51,12 +51,12 @@ func resourceFronteggPermission() *schema.Resource {
 				Required:    true,
 			},
 			"description": {
-				Description: "A human-readable description of the permisison .",
+				Description: "A human-readable description of the permission.",
 				Type:        schema.TypeString,
 				Required:    true,
 			},
 			"created_at": {
-				Description: "The timestamp at which the webhook was created.",
+				Description: "The timestamp at which the permission was created.",
 				Type:        schema.TypeString,
 				Computed:    true,
 			},

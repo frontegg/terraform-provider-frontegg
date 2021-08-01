@@ -29,7 +29,7 @@ resource "frontegg_permission_category" "example" {
 
 ### Read-Only
 
-- **created_at** (String) The timestamp at which the webhook was created.
+- **created_at** (String) The timestamp at which the permission category was created.
 - **id** (String) The unique identifier of the permission category.
 
 

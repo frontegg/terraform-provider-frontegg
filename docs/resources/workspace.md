@@ -265,7 +265,7 @@ Required:
 Required:
 
 - **min_score** (Number) The minimum CAPTCHA score to accept. Set to 0.0 to accept all scores.
-- **secret_key** (String) The reCAPTCHA secret kye to use.
+- **secret_key** (String) The reCAPTCHA secret key to use.
 - **site_key** (String) The reCAPTCHA site key to use.
 
 

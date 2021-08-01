@@ -459,7 +459,7 @@ per Frontegg account.`,
 							Required:    true,
 						},
 						"secret_key": {
-							Description: "The reCAPTCHA secret kye to use.",
+							Description: "The reCAPTCHA secret key to use.",
 							Type:        schema.TypeString,
 							Required:    true,
 						},

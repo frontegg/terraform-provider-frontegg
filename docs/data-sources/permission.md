@@ -32,8 +32,8 @@ output "permission_id" {
 ### Read-Only
 
 - **category_id** (String) The identifier of the category to which this permission belongs.
-- **created_at** (String) The timestamp at which the webhook was created.
-- **description** (String) A human-readable description of the permisison .
+- **created_at** (String) The timestamp at which the permission was created.
+- **description** (String) A human-readable description of the permission.
 - **id** (String) The unique identifier of the permission.
 - **name** (String) A human-readable name for the permission.
 

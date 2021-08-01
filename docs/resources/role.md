@@ -34,7 +34,7 @@ resource "frontegg_role" "example" {
 - **key** (String) A human-readable identifier for the role.
 - **level** (Number) The level of the role in the role hierarchy.
 - **name** (String) A human-readable name for the role.
-- **permission_ids** (Set of String) The IDs of the permissions that the role grants.
+- **permission_ids** (Set of String) The IDs of the permissions that the role confers to its members.
 
 ### Read-Only
 

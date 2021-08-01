@@ -13,7 +13,7 @@ resource "frontegg_workspace" "example" {
   frontend_stack      = "React"
   open_saas_installed = false
 
-  frontegg_domain = "blah.frontegg.com"
+  frontegg_domain = "example.frontegg.com"
   allowed_origins = ["https://yourcompany.com"]
 
   auth_policy {

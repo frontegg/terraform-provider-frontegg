@@ -44,7 +44,7 @@ func resourceFronteggPermissionCategory() *schema.Resource {
 				Required:    true,
 			},
 			"created_at": {
-				Description: "The timestamp at which the webhook was created.",
+				Description: "The timestamp at which the permission category was created.",
 				Type:        schema.TypeString,
 				Computed:    true,
 			},
