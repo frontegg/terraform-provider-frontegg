@@ -1,6 +1,6 @@
 # Terraform Provider for Frontegg
 
-This repository contains a Terraform provider for [Frontegg] user management
+This repository contains a Terraform provider for the [Frontegg] user management
 platform.
 
 ## Requirements
