@@ -14,6 +14,7 @@ type Client struct {
 	token               string
 	client              http.Client
 	conflictRetryMethod string
+	ignore404           bool
 }
 
 func New(baseURL string) Client {
@@ -28,6 +29,10 @@ func (c *Client) Authenticate(token string) {
 
 func (c *Client) ConflictRetryMethod(method string) {
 	c.conflictRetryMethod = method
+}
+
+func (c *Client) Ignore404() {
+	c.ignore404 = true
 }
 
 func (c *Client) Delete(ctx context.Context, url string, out interface{}) error {
@@ -51,6 +56,10 @@ func (c *Client) Put(ctx context.Context, url string, in interface{}, out interf
 }
 
 func (c *Client) Request(ctx context.Context, method string, url string, in interface{}, out interface{}) error {
+	conflictRetryMethod := c.conflictRetryMethod
+	c.conflictRetryMethod = ""
+	ignore404 := c.ignore404
+	c.ignore404 = false
 	var reqBody io.Reader
 	if in != nil {
 		b, err := json.Marshal(in)
@@ -76,10 +85,10 @@ func (c *Client) Request(ctx context.Context, method string, url string, in inte
 	if err != nil {
 		return fmt.Errorf("restclient: failed to read response: %w", err)
 	}
-	if res.StatusCode == 409 && c.conflictRetryMethod != "" {
-		method := c.conflictRetryMethod
-		c.conflictRetryMethod = ""
-		return c.Request(ctx, method, url, in, out)
+	if res.StatusCode == 404 && ignore404 {
+		return nil
+	} else if res.StatusCode == 409 && conflictRetryMethod != "" {
+		return c.Request(ctx, conflictRetryMethod, url, in, out)
 	} else if res.StatusCode < 200 || res.StatusCode >= 300 {
 		return fmt.Errorf(
 			"restclient: request failed: %s %s: %s: %s",

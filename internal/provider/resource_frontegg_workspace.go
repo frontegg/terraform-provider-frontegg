@@ -14,6 +14,7 @@ import (
 )
 
 const fronteggVendorURL = "https://api.frontegg.com/vendors"
+const fronteggCustomDomainURL = "https://api.frontegg.com/vendors/custom-domains"
 const fronteggAuthURL = "https://api.frontegg.com/identity/resources/configurations/v1"
 const fronteggMFAURL = "https://api.frontegg.com/identity/resources/configurations/v1/mfa"
 const fronteggMFAPolicyURL = "https://api.frontegg.com/identity/resources/configurations/v1/mfa-policy"
@@ -21,6 +22,8 @@ const fronteggLockoutPolicyURL = "https://api.frontegg.com/identity/resources/co
 const fronteggPasswordPolicyURL = "https://api.frontegg.com/identity/resources/configurations/v1/password"
 const fronteggPasswordHistoryPolicyURL = "https://api.frontegg.com/identity/resources/configurations/v1/password-history-policy"
 const fronteggCaptchaPolicyURL = "https://api.frontegg.com/identity/resources/configurations/v1/captcha-policy"
+const fronteggOAuthURL = "https://api.frontegg.com/oauth/resources/configurations/v1"
+const fronteggOAuthRedirectURIsURL = "https://api.frontegg.com/oauth/resources/configurations/v1/redirect-uri"
 const fronteggSSOURL = "https://api.frontegg.com/identity/resources/sso/v1"
 const fronteggSSOSAMLURL = "https://api.frontegg.com/metadata?entityName=saml"
 const fronteggEmailTemplatesURL = "https://api.frontegg.com/identity/resources/mail/v1/configs/templates"
@@ -35,6 +38,10 @@ type fronteggVendor struct {
 	OpenSAASInstalled bool     `json:"openSaaSInstalled"`
 	Host              string   `json:"host"`
 	AllowedOrigins    []string `json:"allowedOrigins"`
+}
+
+type fronteggCustomDomain struct {
+	CustomDomain string `json:"customDomain"`
 }
 
 type fronteggAuth struct {
@@ -88,6 +95,19 @@ type fronteggCaptchaPolicy struct {
 	SiteKey   string  `json:"siteKey"`
 	SecretKey string  `json:"secretKey"`
 	MinScore  float64 `json:"minScore"`
+}
+
+type fronteggOAuth struct {
+	IsActive bool `json:"isActive"`
+}
+
+type fronteggOAuthRedirectURIs struct {
+	RedirectURIs []fronteggOAuthRedirectURI `json:"redirectUris"`
+}
+
+type fronteggOAuthRedirectURI struct {
+	ID          string `json:"id,omitempty"`
+	RedirectURI string `json:"redirectUri,omitempty"`
 }
 
 type fronteggSSO struct {
@@ -226,7 +246,7 @@ func resourceFronteggWorkspace() *schema.Resource {
 		Description: `Workspace configuration.
 
 This is a singleton resource. You must only create one frontegg_workspace resource
-per Frontegg account.`,
+per Frontegg provider.`,
 
 		CreateContext: resourceFronteggWorkspaceCreate,
 		ReadContext:   resourceFronteggWorkspaceRead,
@@ -276,6 +296,15 @@ per Frontegg account.`,
 					regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9\-]*\.frontegg\.com$`),
 					"host must be a valid subdomain of .frontegg.com",
 				),
+			},
+			"custom_domain": {
+				Description: `A custom domain at which Frontegg services will be reachable.
+
+    You must configure a CNAME record for this domain that points to
+    "ssl.frontegg.com" before setting this field.
+`,
+				Type:     schema.TypeString,
+				Optional: true,
 			},
 			"allowed_origins": {
 				Description: `The origins that are allowed to access the workspace.
@@ -467,6 +496,22 @@ per Frontegg account.`,
 							Description: "The minimum CAPTCHA score to accept. Set to 0.0 to accept all scores.",
 							Type:        schema.TypeFloat,
 							Required:    true,
+						},
+					},
+				},
+			},
+			"hosted_login": {
+				Description: "Configures Frontegg-hosted OAuth login.",
+				Type:        schema.TypeList,
+				Optional:    true,
+				MaxItems:    1,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"allowed_redirect_urls": {
+							Description: "Allowed redirect URLs.",
+							Type:        schema.TypeSet,
+							Optional:    true,
+							Elem:        &schema.Schema{Type: schema.TypeString},
 						},
 					},
 				},
@@ -741,6 +786,14 @@ func resourceFronteggWorkspaceRead(ctx context.Context, d *schema.ResourceData, 
 		d.SetId(out.ID)
 	}
 	{
+		var out fronteggCustomDomain
+		client.Ignore404()
+		if err := client.Get(ctx, fronteggCustomDomainURL, &out); err != nil {
+			return diag.FromErr(err)
+		}
+		d.Set("custom_domain", out.CustomDomain)
+	}
+	{
 		var out fronteggAuth
 		if err := client.Get(ctx, fronteggAuthURL, &out); err != nil {
 			return diag.FromErr(err)
@@ -886,6 +939,29 @@ func resourceFronteggWorkspaceRead(ctx context.Context, d *schema.ResourceData, 
 		}
 	}
 	{
+		var out fronteggOAuth
+		if err := client.Get(ctx, fronteggOAuthURL, &out); err != nil {
+			return diag.FromErr(err)
+		}
+		items := []interface{}{}
+		if out.IsActive {
+			var outRedirects fronteggOAuthRedirectURIs
+			if err := client.Get(ctx, fronteggOAuthRedirectURIsURL, &outRedirects); err != nil {
+				return diag.FromErr(err)
+			}
+			var allowedRedirectURLs []string
+			for _, r := range outRedirects.RedirectURIs {
+				allowedRedirectURLs = append(allowedRedirectURLs, r.RedirectURI)
+			}
+			items = append(items, map[string]interface{}{
+				"allowed_redirect_urls": allowedRedirectURLs,
+			})
+		}
+		if err := d.Set("hosted_login", items); err != nil {
+			return diag.FromErr(err)
+		}
+	}
+	{
 		var out []fronteggEmailTemplate
 		if err := client.Get(ctx, fronteggEmailTemplatesURL, &out); err != nil {
 			return diag.FromErr(err)
@@ -978,6 +1054,18 @@ func resourceFronteggWorkspaceUpdate(ctx context.Context, d *schema.ResourceData
 			return diag.FromErr(err)
 		}
 	}
+	if d.HasChange("custom_domain") {
+		if domain, ok := d.GetOk("custom_domain"); ok {
+			in := fronteggCustomDomain{CustomDomain: domain.(string)}
+			if err := client.Post(ctx, fronteggCustomDomainURL, in, nil); err != nil {
+				return diag.FromErr(err)
+			}
+		} else {
+			if err := client.Delete(ctx, fronteggCustomDomainURL, nil); err != nil {
+				return diag.FromErr(err)
+			}
+		}
+	}
 	{
 		in := fronteggAuth{
 			AllowNotVerifiedUsersLogin:    d.Get("auth_policy.0.allow_unverified_users").(bool),
@@ -1067,6 +1155,43 @@ func resourceFronteggWorkspaceUpdate(ctx context.Context, d *schema.ResourceData
 		client.ConflictRetryMethod("PUT")
 		if err := client.Post(ctx, fronteggCaptchaPolicyURL, in, nil); err != nil {
 			return diag.FromErr(err)
+		}
+	}
+	{
+		hosted_login := d.Get("hosted_login").([]interface{})
+		if len(hosted_login) > 0 {
+			err := client.Post(ctx, fmt.Sprintf("%s/activate", fronteggOAuthURL), nil, nil)
+			if err != nil {
+				return diag.FromErr(err)
+			}
+		} else {
+			err := client.Post(ctx, fmt.Sprintf("%s/deactivate", fronteggOAuthURL), nil, nil)
+			if err != nil {
+				return diag.FromErr(err)
+			}
+		}
+		if d.HasChange("hosted_login.0.allowed_redirect_urls") {
+			var outRedirects fronteggOAuthRedirectURIs
+			if err := client.Get(ctx, fronteggOAuthRedirectURIsURL, &outRedirects); err != nil {
+				return diag.FromErr(err)
+			}
+			for _, r := range outRedirects.RedirectURIs {
+				err := client.Delete(ctx, fmt.Sprintf("%s/%s", fronteggOAuthRedirectURIsURL, r.ID), nil)
+				if err != nil {
+					return diag.FromErr(err)
+				}
+			}
+			allowedRedirectURLs := d.Get("hosted_login.0.allowed_redirect_urls")
+			if allowedRedirectURLs != nil {
+				for _, url := range allowedRedirectURLs.(*schema.Set).List() {
+					in := fronteggOAuthRedirectURI{
+						RedirectURI: url.(string),
+					}
+					if err := client.Post(ctx, fronteggOAuthRedirectURIsURL, in, nil); err != nil {
+						return diag.FromErr(err)
+					}
+				}
+			}
 		}
 	}
 	for _, typ := range []string{"facebook", "github", "google", "microsoft"} {

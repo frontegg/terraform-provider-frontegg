@@ -5,7 +5,7 @@ subcategory: ""
 description: |-
   Workspace configuration.
   This is a singleton resource. You must only create one frontegg_workspace resource
-  per Frontegg account.
+  per Frontegg provider.
 ---
 
 # frontegg_workspace (Resource)
@@ -13,7 +13,7 @@ description: |-
 Workspace configuration.
 
 This is a singleton resource. You must only create one frontegg_workspace resource
-per Frontegg account.
+per Frontegg provider.
 
 ## Example Usage
 
@@ -24,6 +24,10 @@ resource "frontegg_workspace" "example" {
   backend_stack       = "Python"
   frontend_stack      = "React"
   open_saas_installed = false
+
+  # If you've configured a CNAME record to point a domain to "ssl.frontegg.com",
+  # you can use that custom domain like so:
+  # custom_domain = "frontegg.yourcompany.com"
 
   frontegg_domain = "blah.frontegg.com"
   allowed_origins = ["https://yourcompany.com"]
@@ -66,6 +70,13 @@ resource "frontegg_workspace" "example" {
     site_key   = "fake-site-key"
     secret_key = "fake-secret-key"
     min_score  = 0.5
+  }
+
+  hosted_login {
+    allowed_redirect_urls = [
+      "http://example.com/a",
+      "http://example.com/b",
+    ]
   }
 
   facebook_social_login {
@@ -158,9 +169,14 @@ resource "frontegg_workspace" "example" {
 ### Optional
 
 - **captcha_policy** (Block List, Max: 1) Configures the CAPTCHA policy in the signup form. (see [below for nested schema](#nestedblock--captcha_policy))
+- **custom_domain** (String) A custom domain at which Frontegg services will be reachable.
+
+    You must configure a CNAME record for this domain that points to
+    "ssl.frontegg.com" before setting this field.
 - **facebook_social_login** (Block List, Max: 1) Configures social login with Facebook. (see [below for nested schema](#nestedblock--facebook_social_login))
 - **github_social_login** (Block List, Max: 1) Configures social login with GitHub. (see [below for nested schema](#nestedblock--github_social_login))
 - **google_social_login** (Block List, Max: 1) Configures social login with Google. (see [below for nested schema](#nestedblock--google_social_login))
+- **hosted_login** (Block List, Max: 1) Configures Frontegg-hosted OAuth login. (see [below for nested schema](#nestedblock--hosted_login))
 - **lockout_policy** (Block List, Max: 1) Configures the user lockout policy. (see [below for nested schema](#nestedblock--lockout_policy))
 - **mfa_authentication_app** (Block List, Max: 1) Configures the multi-factor authentication (MFA) via an authentication app. (see [below for nested schema](#nestedblock--mfa_authentication_app))
 - **microsoft_social_login** (Block List, Max: 1) Configures social login with Google. (see [below for nested schema](#nestedblock--microsoft_social_login))
@@ -297,6 +313,14 @@ Required:
 - **client_id** (String) The client ID of the Google application to authenticate with.
 - **redirect_url** (String) The URL to redirect to after a successful authentication.
 - **secret** (String, Sensitive) The secret associated with the Google application.
+
+
+<a id="nestedblock--hosted_login"></a>
+### Nested Schema for `hosted_login`
+
+Optional:
+
+- **allowed_redirect_urls** (Set of String) Allowed redirect URLs.
 
 
 <a id="nestedblock--lockout_policy"></a>

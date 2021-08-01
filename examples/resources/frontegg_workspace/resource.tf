@@ -5,6 +5,10 @@ resource "frontegg_workspace" "example" {
   frontend_stack      = "React"
   open_saas_installed = false
 
+  # If you've configured a CNAME record to point a domain to "ssl.frontegg.com",
+  # you can use that custom domain like so:
+  # custom_domain = "frontegg.yourcompany.com"
+
   frontegg_domain = "blah.frontegg.com"
   allowed_origins = ["https://yourcompany.com"]
 
@@ -46,6 +50,13 @@ resource "frontegg_workspace" "example" {
     site_key   = "fake-site-key"
     secret_key = "fake-secret-key"
     min_score  = 0.5
+  }
+
+  hosted_login {
+    allowed_redirect_urls = [
+      "http://example.com/a",
+      "http://example.com/b",
+    ]
   }
 
   facebook_social_login {

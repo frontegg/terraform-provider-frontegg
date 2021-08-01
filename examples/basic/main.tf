@@ -56,6 +56,13 @@ resource "frontegg_workspace" "example" {
     min_score  = 0.5
   }
 
+  hosted_login {
+    allowed_redirect_urls = [
+      "http://example.com/a",
+      "http://example.com/b",
+    ]
+  }
+
   facebook_social_login {
     client_id    = "fake-client-id"
     redirect_url = "fake-redirect-url"
