@@ -5,7 +5,7 @@ import (
 	"flag"
 	"log"
 
-	"github.com/benesch/terraform-provider-frontegg/internal/provider"
+	"github.com/benesch/terraform-provider-frontegg/provider"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/plugin"
 )
 

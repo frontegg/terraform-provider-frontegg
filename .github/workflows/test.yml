@@ -22,7 +22,7 @@ jobs:
       with:
         go-version: '1.16.5'
     - run: go mod download
-    - run: go test -v -cover ./internal/provider/
+    - run: go test -v -cover ./provider/
       env:
         TF_ACC: "1"
         TF_ACC_TERRAFORM_VERSION: ${{ matrix.terraform }}
