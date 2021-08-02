@@ -897,6 +897,7 @@ func resourceFronteggWorkspaceRead(ctx context.Context, d *schema.ResourceData, 
 	}
 	for _, typ := range []string{"facebook", "github", "google", "microsoft"} {
 		var out fronteggSSO
+		client.Ignore404()
 		if err := client.Get(ctx, fmt.Sprintf("%s/%s", fronteggSSOURL, typ), &out); err != nil {
 			return diag.FromErr(err)
 		}
