@@ -254,11 +254,6 @@ per Frontegg provider.`,
 		DeleteContext: resourceFronteggWorkspaceDelete,
 
 		Schema: map[string]*schema.Schema{
-			"id": {
-				Description: "Frontegg's internal ID for the workspace.",
-				Type:        schema.TypeString,
-				Computed:    true,
-			},
 			"name": {
 				Description: "The name of the workspace.",
 				Type:        schema.TypeString,
@@ -759,9 +754,7 @@ func resourceFronteggWorkspaceRead(ctx context.Context, d *schema.ResourceData, 
 		if err := client.Get(ctx, fronteggVendorURL, &out); err != nil {
 			return diag.FromErr(err)
 		}
-		if err := d.Set("id", out.ID); err != nil {
-			return diag.FromErr(err)
-		}
+		d.SetId(out.ID)
 		if err := d.Set("name", out.Name); err != nil {
 			return diag.FromErr(err)
 		}
@@ -783,7 +776,6 @@ func resourceFronteggWorkspaceRead(ctx context.Context, d *schema.ResourceData, 
 		if err := d.Set("allowed_origins", out.AllowedOrigins); err != nil {
 			return diag.FromErr(err)
 		}
-		d.SetId(out.ID)
 	}
 	{
 		var out fronteggCustomDomain
@@ -1041,7 +1033,7 @@ func resourceFronteggWorkspaceUpdate(ctx context.Context, d *schema.ResourceData
 	client := meta.(*restclient.Client)
 	{
 		in := fronteggVendor{
-			ID:                d.Get("id").(string),
+			ID:                d.Id(),
 			Name:              d.Get("name").(string),
 			Country:           d.Get("country").(string),
 			BackendStack:      d.Get("backend_stack").(string),

@@ -38,11 +38,6 @@ func resourceFronteggRole() *schema.Resource {
 		DeleteContext: resourceFronteggRoleDelete,
 
 		Schema: map[string]*schema.Schema{
-			"id": {
-				Description: "The unique identifier of the role.",
-				Type:        schema.TypeString,
-				Computed:    true,
-			},
 			"name": {
 				Description: "A human-readable name for the role.",
 				Type:        schema.TypeString,
@@ -105,9 +100,6 @@ func resourceFronteggRolePermissionsSerialize(d *schema.ResourceData) fronteggRo
 
 func resourceFronteggRoleDeserialize(d *schema.ResourceData, f fronteggRole) error {
 	d.SetId(f.ID)
-	if err := d.Set("id", f.ID); err != nil {
-		return err
-	}
 	if err := d.Set("name", f.Name); err != nil {
 		return err
 	}

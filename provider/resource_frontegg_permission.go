@@ -30,11 +30,6 @@ func resourceFronteggPermission() *schema.Resource {
 		DeleteContext: resourceFronteggPermissionDelete,
 
 		Schema: map[string]*schema.Schema{
-			"id": {
-				Description: "The unique identifier of the permission.",
-				Type:        schema.TypeString,
-				Computed:    true,
-			},
 			"name": {
 				Description: "A human-readable name for the permission.",
 				Type:        schema.TypeString,
@@ -75,9 +70,6 @@ func resourceFronteggPermissionSerialize(d *schema.ResourceData) fronteggPermiss
 
 func resourceFronteggPermissionDeserialize(d *schema.ResourceData, f fronteggPermission) error {
 	d.SetId(f.ID)
-	if err := d.Set("id", f.ID); err != nil {
-		return err
-	}
 	if err := d.Set("name", f.Name); err != nil {
 		return err
 	}

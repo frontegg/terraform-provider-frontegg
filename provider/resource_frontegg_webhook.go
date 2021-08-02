@@ -36,11 +36,6 @@ func resourceFronteggWebhook() *schema.Resource {
 		DeleteContext: resourceFronteggWebhookDelete,
 
 		Schema: map[string]*schema.Schema{
-			"id": {
-				Description: "The unique identifier of the webhook.",
-				Type:        schema.TypeString,
-				Computed:    true,
-			},
 			"enabled": {
 				Description: "Whether the webhook is enabled.",
 				Type:        schema.TypeBool,
@@ -126,9 +121,6 @@ func resourceFronteggWebhookSerialize(d *schema.ResourceData) fronteggWebhook {
 
 func resourceFronteggWebhookDeserialize(d *schema.ResourceData, f fronteggWebhook) error {
 	d.SetId(f.ID)
-	if err := d.Set("id", f.ID); err != nil {
-		return err
-	}
 	if err := d.Set("enabled", f.IsActive); err != nil {
 		return err
 	}
