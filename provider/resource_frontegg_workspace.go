@@ -1122,7 +1122,7 @@ func resourceFronteggWorkspaceUpdate(ctx context.Context, d *schema.ResourceData
 	}
 	{
 		history := d.Get("password_policy.0.history").(int)
-		var in fronteggPasswordHistoryPolicy
+		in := fronteggPasswordHistoryPolicy{HistorySize: 1}
 		if history > 0 {
 			in.Enabled = true
 			in.HistorySize = history
