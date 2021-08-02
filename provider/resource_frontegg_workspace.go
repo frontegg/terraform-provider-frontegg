@@ -1189,6 +1189,7 @@ func resourceFronteggWorkspaceUpdate(ctx context.Context, d *schema.ResourceData
 	for _, typ := range []string{"facebook", "github", "google", "microsoft"} {
 		name := fmt.Sprintf("%s_social_login", typ)
 		if len(d.Get(name).([]interface{})) == 0 {
+			client.Ignore404()
 			err := client.Post(ctx, fmt.Sprintf("%s/%s/deactivate", fronteggSSOURL, typ), nil, nil)
 			if err != nil {
 				return diag.FromErr(err)
