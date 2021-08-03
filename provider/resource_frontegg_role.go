@@ -17,7 +17,7 @@ type fronteggRole struct {
 	Key         string   `json:"key,omitempty"`
 	Description string   `json:"description,omitempty"`
 	Level       int      `json:"categoryId,omitempty"`
-	IsDefault   bool     `json:"isDefault,omitempty"`
+	IsDefault   bool     `json:"isDefault"`
 	Permissions []string `json:"permissions"`
 	TenantID    string   `json:"tenantId,omitempty"`
 	VendorID    string   `json:"vendorId,omitempty"`
@@ -53,6 +53,11 @@ func resourceFronteggRole() *schema.Resource {
 				Type:        schema.TypeString,
 				Required:    true,
 			},
+			"default": {
+				Description: "Whether the role shoudl be applied to new users by default.",
+				Type:        schema.TypeBool,
+				Required:    true,
+			},
 			"level": {
 				Description: "The level of the role in the role hierarchy.",
 				Type:        schema.TypeInt,
@@ -86,6 +91,7 @@ func resourceFronteggRole() *schema.Resource {
 func resourceFronteggRoleSerialize(d *schema.ResourceData) fronteggRole {
 	return fronteggRole{
 		Name:        d.Get("name").(string),
+		IsDefault:   d.Get("default").(bool),
 		Key:         d.Get("key").(string),
 		Description: d.Get("description").(string),
 		Level:       d.Get("level").(int),
@@ -107,6 +113,9 @@ func resourceFronteggRoleDeserialize(d *schema.ResourceData, f fronteggRole) err
 		return err
 	}
 	if err := d.Set("description", f.Description); err != nil {
+		return err
+	}
+	if err := d.Set("default", f.IsDefault); err != nil {
 		return err
 	}
 	if err := d.Set("level", f.Level); err != nil {

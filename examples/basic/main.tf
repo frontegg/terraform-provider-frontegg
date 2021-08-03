@@ -158,6 +158,7 @@ data "frontegg_permission" "read_users" {
 resource "frontegg_role" "example" {
   name        = "Example"
   key         = "example"
+  default     = true
   description = "An example of a role"
   level       = 0
   permission_ids = [

@@ -19,7 +19,7 @@ type fronteggWebhook struct {
 	URL         string   `json:"url,omitempty"`
 	Secret      string   `json:"secret,omitempty"`
 	EventKeys   []string `json:"eventKeys,omitempty"`
-	IsActive    bool     `json:"isActive,omitempty"`
+	IsActive    bool     `json:"isActive"`
 	Type        string   `json:"type,omitempty"`
 	TenantID    string   `json:"tenantId,omitempty"`
 	VendorID    string   `json:"vendorId,omitempty"`
