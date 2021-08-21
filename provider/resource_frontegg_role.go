@@ -16,7 +16,7 @@ type fronteggRole struct {
 	Name        string   `json:"name,omitempty"`
 	Key         string   `json:"key,omitempty"`
 	Description string   `json:"description,omitempty"`
-	Level       int      `json:"categoryId"`
+	Level       int      `json:"level"`
 	IsDefault   bool     `json:"isDefault"`
 	Permissions []string `json:"permissions"`
 	TenantID    string   `json:"tenantId,omitempty"`
