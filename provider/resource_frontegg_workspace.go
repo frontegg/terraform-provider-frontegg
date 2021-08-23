@@ -252,6 +252,9 @@ per Frontegg provider.`,
 		ReadContext:   resourceFronteggWorkspaceRead,
 		UpdateContext: resourceFronteggWorkspaceUpdate,
 		DeleteContext: resourceFronteggWorkspaceDelete,
+		Importer: &schema.ResourceImporter{
+			StateContext: schema.ImportStatePassthroughContext,
+		},
 
 		Schema: map[string]*schema.Schema{
 			"name": {

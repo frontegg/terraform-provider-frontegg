@@ -12,39 +12,65 @@ platform.
 
 See the Terraform Registry: <https://registry.terraform.io/providers/benesch/frontegg/latest>.
 
-## Developing the provider
+## Importing existing resources
 
-If you wish to work on the provider, you'll first need
-[Go](http://www.golang.org) installed on your machine (see
-[Requirements](#requirements) above).
+### Workspaces
 
-To compile the provider, run `make install`. This will build the provider and
-put the provider binary in the correct location within `~/.terraform.d` so that
-Terraform can find the plugin.
+To import an existing workspace, first add a shim resource definition to your
+Terraform project:
 
-To generate or update documentation, run `go generate`.
-
-To run the full suite of acceptance tests, run `make testacc`.
-
-*Note:* Acceptance tests create real resources, and often cost money to run.
-
-```sh
-$ make testacc
+```tf
+# main.tf
+resource "frontegg_workspace" "example" {}
 ```
 
-### Adding dependencies
+Then run `terraform import`, specifying the address of the resource you declared
+above (`frontegg_workspace.example`) and your workspace ID (i.e., your API
+client ID):
 
-This provider uses [Go modules](https://github.com/golang/go/wiki/Modules).
-Please see the Go documentation for the most up to date information about using
-Go modules.
+```shell
+$ terraform import frontegg_workspace.example 65e2d503-c187-4d55-8ba5-816bd4a15f96
+frontegg_workspace.example: Importing from ID "65e2d503-c187-4d55-8ba5-816bd4a15f96"...
+frontegg_workspace.example: Import prepared!
+  Prepared frontegg_workspace for import
+frontegg_workspace.example: Refreshing state... [id=65e2d503-c187-4d55-8ba5-816bd4a15f96]
 
-To add a new dependency:
+Import successful!
 
+The resources that were imported are shown above. These resources are now in
+your Terraform state and will henceforth be managed by Terraform.
 ```
-go get github.com/author/dependency
-go mod tidy
+
+Next, run `terraform state show` to show the configuration values Terraform has
+imported:
+
+```shell
+ terraform state show frontegg_workspace.example
+# frontegg_workspace.example:
+resource "frontegg_workspace" "example" {
+    allowed_origins     = [
+        "https://yourcompany.com",
+    ]
+    backend_stack       = "Python"
+    country             = "US"
+    frontegg_domain     = "yourcopmany.frontegg.com"
+    # ...
+}
 ```
 
-Then commit the changes to `go.mod` and `go.sum`.
+Finally, you can copy that output back into your `main.tf` file (or equivalent).
+Beware that you may need to manually remove some output properties from the
+resource, like `jwt_public_key`.
 
-[Frontegg]: https://frontegg.com
+You should verify that `terraform plan` reports no diffs.
+
+### Roles, permissions, and permission categories
+
+The procedure is the same as above, except that it is tricky to discover the ID
+for the role, permission, or permission category. IDs for these objects are
+UUIDs.
+
+You can either query the [Frontegg API](https://docs.frontegg.com/reference)
+yourself to find these IDs, or you can use your browser's developer tools to
+sniff the IDs out of the network requests as you browse the [Frontegg
+Portal](https://portal.frontegg.com).

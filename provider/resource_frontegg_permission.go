@@ -28,6 +28,9 @@ func resourceFronteggPermission() *schema.Resource {
 		ReadContext:   resourceFronteggPermissionRead,
 		UpdateContext: resourceFronteggPermissionUpdate,
 		DeleteContext: resourceFronteggPermissionDelete,
+		Importer: &schema.ResourceImporter{
+			StateContext: schema.ImportStatePassthroughContext,
+		},
 
 		Schema: map[string]*schema.Schema{
 			"name": {

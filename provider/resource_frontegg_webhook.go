@@ -34,6 +34,9 @@ func resourceFronteggWebhook() *schema.Resource {
 		ReadContext:   resourceFronteggWebhookRead,
 		UpdateContext: resourceFronteggWebhookUpdate,
 		DeleteContext: resourceFronteggWebhookDelete,
+		Importer: &schema.ResourceImporter{
+			StateContext: schema.ImportStatePassthroughContext,
+		},
 
 		Schema: map[string]*schema.Schema{
 			"enabled": {

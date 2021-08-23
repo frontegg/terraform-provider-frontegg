@@ -36,6 +36,9 @@ func resourceFronteggRole() *schema.Resource {
 		ReadContext:   resourceFronteggRoleRead,
 		UpdateContext: resourceFronteggRoleUpdate,
 		DeleteContext: resourceFronteggRoleDelete,
+		Importer: &schema.ResourceImporter{
+			StateContext: schema.ImportStatePassthroughContext,
+		},
 
 		Schema: map[string]*schema.Schema{
 			"name": {
