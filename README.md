@@ -45,7 +45,7 @@ Next, run `terraform state show` to show the configuration values Terraform has
 imported:
 
 ```shell
- terraform state show frontegg_workspace.example
+$ terraform state show frontegg_workspace.example
 # frontegg_workspace.example:
 resource "frontegg_workspace" "example" {
     allowed_origins     = [
