@@ -57,7 +57,7 @@ func resourceFronteggRole() *schema.Resource {
 				Required:    true,
 			},
 			"default": {
-				Description: "Whether the role shoudl be applied to new users by default.",
+				Description: "Whether the role should be applied to new users by default.",
 				Type:        schema.TypeBool,
 				Required:    true,
 			},

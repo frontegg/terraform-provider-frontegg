@@ -28,9 +28,12 @@ data "frontegg_permission" "read_users" {
 - **key** (String) A human-readable identifier for the permission.
 - **name** (String) A human-readable name for the permission.
 
+### Optional
+
+- **id** (String) The ID of this resource.
+
 ### Read-Only
 
 - **created_at** (String) The timestamp at which the permission was created.
-- **id** (String) The unique identifier of the permission.
 
 

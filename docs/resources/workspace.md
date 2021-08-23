@@ -177,6 +177,7 @@ resource "frontegg_workspace" "example" {
 - **github_social_login** (Block List, Max: 1) Configures social login with GitHub. (see [below for nested schema](#nestedblock--github_social_login))
 - **google_social_login** (Block List, Max: 1) Configures social login with Google. (see [below for nested schema](#nestedblock--google_social_login))
 - **hosted_login** (Block List, Max: 1) Configures Frontegg-hosted OAuth login. (see [below for nested schema](#nestedblock--hosted_login))
+- **id** (String) The ID of this resource.
 - **lockout_policy** (Block List, Max: 1) Configures the user lockout policy. (see [below for nested schema](#nestedblock--lockout_policy))
 - **mfa_authentication_app** (Block List, Max: 1) Configures the multi-factor authentication (MFA) via an authentication app. (see [below for nested schema](#nestedblock--mfa_authentication_app))
 - **microsoft_social_login** (Block List, Max: 1) Configures social login with Google. (see [below for nested schema](#nestedblock--microsoft_social_login))
@@ -185,10 +186,6 @@ resource "frontegg_workspace" "example" {
 - **saml** (Block List, Max: 1) Configures SSO via SAML. (see [below for nested schema](#nestedblock--saml))
 - **user_activation_email** (Block List, Max: 1) Configures the user activation email. (see [below for nested schema](#nestedblock--user_activation_email))
 - **user_invitation_email** (Block List, Max: 1) Configures the user invitation email. (see [below for nested schema](#nestedblock--user_invitation_email))
-
-### Read-Only
-
-- **id** (String) Frontegg's internal ID for the workspace.
 
 <a id="nestedblock--admin_portal"></a>
 ### Nested Schema for `admin_portal`

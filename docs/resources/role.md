@@ -17,6 +17,7 @@ resource "frontegg_role" "example" {
   name        = "Example"
   key         = "example"
   description = "An example of a role"
+  default     = true
   level       = 0
   permission_ids = [
     resource.frontegg_permission.example.id,
@@ -30,16 +31,20 @@ resource "frontegg_role" "example" {
 
 ### Required
 
+- **default** (Boolean) Whether the role should be applied to new users by default.
 - **description** (String) A human-readable description of the role.
 - **key** (String) A human-readable identifier for the role.
 - **level** (Number) The level of the role in the role hierarchy.
 - **name** (String) A human-readable name for the role.
 - **permission_ids** (Set of String) The IDs of the permissions that the role confers to its members.
 
+### Optional
+
+- **id** (String) The ID of this resource.
+
 ### Read-Only
 
 - **created_at** (String) The timestamp at which the role was created.
-- **id** (String) The unique identifier of the role.
 - **tenant_id** (String) The ID of the tenant that owns the role.
 - **vendor_id** (String) The ID of the vendor that owns the role.
 

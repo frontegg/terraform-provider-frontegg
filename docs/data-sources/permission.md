@@ -29,12 +29,15 @@ output "permission_id" {
 
 - **key** (String) A human-readable identifier for the permission.
 
+### Optional
+
+- **id** (String) The ID of this resource.
+
 ### Read-Only
 
 - **category_id** (String) The identifier of the category to which this permission belongs.
 - **created_at** (String) The timestamp at which the permission was created.
 - **description** (String) A human-readable description of the permission.
-- **id** (String) The unique identifier of the permission.
 - **name** (String) A human-readable name for the permission.
 
 

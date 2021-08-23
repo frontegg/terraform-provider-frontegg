@@ -37,10 +37,13 @@ resource "frontegg_webhook" "example" {
 - **secret** (String) A secret to include with the event.
 - **url** (String) The URL to send events to.
 
+### Optional
+
+- **id** (String) The ID of this resource.
+
 ### Read-Only
 
 - **created_at** (String) The timestamp at which the webhook was created.
-- **id** (String) The unique identifier of the webhook.
 - **tenant_id** (String) The ID of the tenant that owns the webhook.
 - **type** (String) The type of the webhook.
 - **vendor_id** (String) The ID of the vendor that owns the webhook.
