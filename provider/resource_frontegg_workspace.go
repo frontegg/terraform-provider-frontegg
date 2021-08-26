@@ -1051,13 +1051,12 @@ func resourceFronteggWorkspaceUpdate(ctx context.Context, d *schema.ResourceData
 		}
 	}
 	if d.HasChange("custom_domain") {
+		if err := client.Delete(ctx, fronteggCustomDomainURL, nil); err != nil {
+			return diag.FromErr(err)
+		}
 		if domain, ok := d.GetOk("custom_domain"); ok {
 			in := fronteggCustomDomain{CustomDomain: domain.(string)}
 			if err := client.Post(ctx, fronteggCustomDomainURL, in, nil); err != nil {
-				return diag.FromErr(err)
-			}
-		} else {
-			if err := client.Delete(ctx, fronteggCustomDomainURL, nil); err != nil {
 				return diag.FromErr(err)
 			}
 		}
