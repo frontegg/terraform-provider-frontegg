@@ -6,9 +6,11 @@ import (
 	"log"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/benesch/terraform-provider-frontegg/internal/restclient"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 )
@@ -1056,7 +1058,19 @@ func resourceFronteggWorkspaceUpdate(ctx context.Context, d *schema.ResourceData
 		}
 		if domain, ok := d.GetOk("custom_domain"); ok {
 			in := fronteggCustomDomain{CustomDomain: domain.(string)}
-			if err := client.Post(ctx, fronteggCustomDomainURL, in, nil); err != nil {
+			// Retry for up to a minute if the CName is not found, in case it
+			// was just installed and DNS is still propagating.
+			err := resource.RetryContext(ctx, time.Minute, func() *resource.RetryError {
+				if err := client.Post(ctx, fronteggCustomDomainURL, in, nil); err != nil {
+					if strings.Contains(err.Error(), "CName not found") {
+						return resource.RetryableError(err)
+					} else {
+						return resource.NonRetryableError(err)
+					}
+				}
+				return nil
+			})
+			if err != nil {
 				return diag.FromErr(err)
 			}
 		}
