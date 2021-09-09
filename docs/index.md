@@ -11,13 +11,15 @@ description: |-
 The Frontegg provider provides resources to interact with the [Frontegg] user
 management platform.
 
-It is not recommended to use your own account for management of your Frontegg
-workspace. A user specific to Terraform is recommended. You can find the client
-ID by navigating to the "Workspace Settings" screen and locating the "Client ID"
-field in the "API Key" section.
-
 The provider works with only one workspace at a time. To provision multiple
 workspaces, you will need to configure multiple copies of the provider.
+
+Note that the client ID and secret key are *not* the client ID and secret key
+that appear in "Workspace Settings". You need to generate a workspace API key
+and secret specifically for the Terraform provider's use in the administration
+portal:
+
+![API key generation example](../assets/api-key.png)
 
 ## Example Usage
 
@@ -34,8 +36,7 @@ provider "frontegg" {
 
 ### Required
 
-- **client_id** (String) The ID of the Frontegg workspace to operate on.
-- **email** (String) The email of the Frontegg user to authenticate as.
-- **password** (String, Sensitive) The password of the Frontegg user to authenticate as.
+- **client_id** (String) The client ID for a Frontegg portal API key.
+- **secret_key** (String, Sensitive) The corresponding secret key for the API key.
 
 [Frontegg]: https://frontegg.com
