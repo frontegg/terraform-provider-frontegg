@@ -19,7 +19,7 @@ that appear in "Workspace Settings". You need to generate a workspace API key
 and secret specifically for the Terraform provider's use in the administration
 portal:
 
-![API key generation example](../assets/api-key.png)
+![API key generation example](https://user-images.githubusercontent.com/882976/132739276-bc72aa75-8c30-452c-b929-85a8d7ffa4d0.png)
 
 ## Example Usage
 
