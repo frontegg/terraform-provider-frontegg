@@ -1,4 +1,4 @@
-module github.com/benesch/terraform-provider-frontegg
+module github.com/frontegg/terraform-provider-frontegg
 
 go 1.16
 

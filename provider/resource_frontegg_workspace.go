@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/benesch/terraform-provider-frontegg/internal/restclient"
+	"github.com/frontegg/terraform-provider-frontegg/internal/restclient"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"

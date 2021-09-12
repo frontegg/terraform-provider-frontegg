@@ -5,7 +5,7 @@ import (
 	"flag"
 	"log"
 
-	"github.com/benesch/terraform-provider-frontegg/provider"
+	"github.com/frontegg/terraform-provider-frontegg/provider"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/plugin"
 )
 
@@ -26,7 +26,7 @@ func main() {
 	opts := &plugin.ServeOpts{ProviderFunc: provider.New(version)}
 
 	if debugMode {
-		err := plugin.Debug(context.Background(), "registry.terraform.io/benesch/frontegg", opts)
+		err := plugin.Debug(context.Background(), "registry.terraform.io/frontegg/frontegg", opts)
 		if err != nil {
 			log.Fatal(err.Error())
 		}

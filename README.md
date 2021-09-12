@@ -10,7 +10,7 @@ platform.
 
 ## Using the provider
 
-See the Terraform Registry: <https://registry.terraform.io/providers/benesch/frontegg/latest>.
+See the Terraform Registry: <https://registry.terraform.io/providers/frontegg/frontegg/latest>.
 
 ## Importing existing resources
 
