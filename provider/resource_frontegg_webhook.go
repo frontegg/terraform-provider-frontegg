@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/benesch/terraform-provider-frontegg/internal/restclient"
+	"github.com/frontegg/terraform-provider-frontegg/internal/restclient"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"

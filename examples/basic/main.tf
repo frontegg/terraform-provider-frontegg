@@ -1,7 +1,7 @@
 terraform {
   required_providers {
     frontegg = {
-      source = "benesch/frontegg"
+      source = "frontegg/frontegg"
     }
   }
 }
