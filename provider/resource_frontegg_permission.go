@@ -9,7 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
-const fronteggPermissionPath = "https://api.frontegg.com/identity/resources/permissions/v1"
+const fronteggPermissionPath = "/identity/resources/permissions/v1"
 
 type fronteggPermission struct {
 	ID          string `json:"id,omitempty"`

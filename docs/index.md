@@ -38,4 +38,7 @@ provider "frontegg" {
 - **client_id** (String) The client ID for a Frontegg portal API key.
 - **secret_key** (String, Sensitive) The corresponding secret key for the API key.
 
+### Optional
+- **api_base_url** (String) The Frontegg api url. Override to change region. Defaults to EU url.
+
 [Frontegg]: https://frontegg.com

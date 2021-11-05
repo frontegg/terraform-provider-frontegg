@@ -13,13 +13,15 @@ import (
 type Client struct {
 	token               string
 	client              http.Client
+	baseURL             string
 	conflictRetryMethod string
 	ignore404           bool
 }
 
-func New(baseURL string) Client {
+func MakeRestClient(baseURL string) Client {
 	return Client{
-		client: http.Client{},
+		client:  http.Client{},
+		baseURL: baseURL,
 	}
 }
 
@@ -40,7 +42,7 @@ func (c *Client) Delete(ctx context.Context, url string, out interface{}) error 
 }
 
 func (c *Client) Get(ctx context.Context, url string, out interface{}) error {
-	return c.Request(ctx, "GET", url, nil, out)
+	return c.Request(ctx, "GET", c.baseURL+url, nil, out)
 }
 
 func (c *Client) Patch(ctx context.Context, url string, in interface{}, out interface{}) error {
@@ -68,7 +70,7 @@ func (c *Client) Request(ctx context.Context, method string, url string, in inte
 		}
 		reqBody = bytes.NewBuffer(b)
 	}
-	req, err := http.NewRequestWithContext(ctx, method, url, reqBody)
+	req, err := http.NewRequestWithContext(ctx, method, c.baseURL+url, reqBody)
 	if err != nil {
 		return fmt.Errorf("restclient: failed to construct request: %w", err)
 	}

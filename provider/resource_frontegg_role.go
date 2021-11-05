@@ -9,7 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
-const fronteggRolePath = "https://api.frontegg.com/identity/resources/roles/v1"
+const fronteggRolePath = "/identity/resources/roles/v1"
 
 type fronteggRole struct {
 	ID          string   `json:"id,omitempty"`

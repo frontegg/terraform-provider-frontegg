@@ -16,6 +16,13 @@ func New(version string) func() *schema.Provider {
 	return func() *schema.Provider {
 		return &schema.Provider{
 			Schema: map[string]*schema.Schema{
+				"api_base_url": {
+					Description: "The Frontegg api url. Override to change region. Defaults to EU url.",
+					Type:        schema.TypeString,
+					Required:    false,
+					Default:     "https://api.frontegg.com",
+					DefaultFunc: schema.EnvDefaultFunc("FRONTEGG_API_BASE_URL", nil),
+				},
 				"client_id": {
 					Description: "The client ID for a Frontegg portal API key.",
 					Type:        schema.TypeString,
@@ -41,7 +48,7 @@ func New(version string) func() *schema.Provider {
 				"frontegg_workspace":           resourceFronteggWorkspace(),
 			},
 			ConfigureContextFunc: func(ctx context.Context, d *schema.ResourceData) (interface{}, diag.Diagnostics) {
-				client := &restclient.Client{}
+				client := restclient.MakeRestClient(d.Get("api_base_url").(string))
 				{
 					in := struct {
 						ClientId  string `json:"clientId"`
@@ -53,7 +60,7 @@ func New(version string) func() *schema.Provider {
 					var out struct {
 						AccessToken string `json:"accessToken"`
 					}
-					err := client.Post(ctx, "https://portal.frontegg.com/frontegg/identity/resources/auth/v1/api-token", in, &out)
+					err := client.Post(ctx, "/frontegg/identity/resources/auth/v1/api-token", in, &out)
 					if err != nil {
 						return nil, diag.Errorf("unable to authenticate with frontegg: %s", err)
 					}
