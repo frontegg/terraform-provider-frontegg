@@ -32,6 +32,7 @@ func New(version string) func() *schema.Provider {
 			},
 			DataSourcesMap: map[string]*schema.Resource{
 				"frontegg_permission": dataSourceFronteggPermission(),
+				"frontegg_role": dataSourceFronteggRole(),
 			},
 			ResourcesMap: map[string]*schema.Resource{
 				"frontegg_permission":          resourceFronteggPermission(),
