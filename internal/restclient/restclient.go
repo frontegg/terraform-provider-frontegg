@@ -42,7 +42,7 @@ func (c *Client) Delete(ctx context.Context, url string, out interface{}) error 
 }
 
 func (c *Client) Get(ctx context.Context, url string, out interface{}) error {
-	return c.Request(ctx, "GET", c.baseURL+url, nil, out)
+	return c.Request(ctx, "GET", url, nil, out)
 }
 
 func (c *Client) Patch(ctx context.Context, url string, in interface{}, out interface{}) error {

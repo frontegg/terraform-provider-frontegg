@@ -23,9 +23,9 @@ func dataSourceFronteggPermission() *schema.Resource {
 }
 
 func dataSourceFronteggPermissionRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	client := meta.(*restclient.Client)
+	clientHolder := meta.(*restclient.ClientHolder)
 	var out []fronteggPermission
-	if err := client.Get(ctx, fronteggPermissionPath, &out); err != nil {
+	if err := clientHolder.ApiClient.Get(ctx, fronteggPermissionPath, &out); err != nil {
 		return diag.FromErr(err)
 	}
 	key := d.Get("key").(string)
