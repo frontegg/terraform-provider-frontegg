@@ -9,7 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
-const fronteggPermissionCategoryPath = "https://api.frontegg.com/identity/resources/permissions/v1/categories"
+const fronteggPermissionCategoryPath = "/identity/resources/permissions/v1/categories"
 
 type fronteggPermissionCategory struct {
 	ID          string `json:"id,omitempty"`
@@ -72,10 +72,10 @@ func resourceFronteggPermissionCategoryDeserialize(d *schema.ResourceData, f fro
 }
 
 func resourceFronteggPermissionCategoryCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	client := meta.(*restclient.Client)
+	clientHolder := meta.(*restclient.ClientHolder)
 	in := resourceFronteggPermissionCategorySerialize(d)
 	var out fronteggPermissionCategory
-	if err := client.Post(ctx, fronteggPermissionCategoryPath, in, &out); err != nil {
+	if err := clientHolder.ApiClient.Post(ctx, fronteggPermissionCategoryPath, in, &out); err != nil {
 		return diag.FromErr(err)
 	}
 	if err := resourceFronteggPermissionCategoryDeserialize(d, out); err != nil {
@@ -85,9 +85,9 @@ func resourceFronteggPermissionCategoryCreate(ctx context.Context, d *schema.Res
 }
 
 func resourceFronteggPermissionCategoryRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	client := meta.(*restclient.Client)
+	clientHolder := meta.(*restclient.ClientHolder)
 	var out []fronteggPermissionCategory
-	if err := client.Get(ctx, fronteggPermissionCategoryPath, &out); err != nil {
+	if err := clientHolder.ApiClient.Get(ctx, fronteggPermissionCategoryPath, &out); err != nil {
 		return diag.FromErr(err)
 	}
 	for _, c := range out {
@@ -103,17 +103,17 @@ func resourceFronteggPermissionCategoryRead(ctx context.Context, d *schema.Resou
 }
 
 func resourceFronteggPermissionCategoryUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	client := meta.(*restclient.Client)
+	clientHolder := meta.(*restclient.ClientHolder)
 	in := resourceFronteggPermissionCategorySerialize(d)
-	if err := client.Patch(ctx, fmt.Sprintf("%s/%s", fronteggPermissionCategoryPath, d.Id()), in, nil); err != nil {
+	if err := clientHolder.ApiClient.Patch(ctx, fmt.Sprintf("%s/%s", fronteggPermissionCategoryPath, d.Id()), in, nil); err != nil {
 		return diag.FromErr(err)
 	}
 	return resourceFronteggPermissionCategoryRead(ctx, d, meta)
 }
 
 func resourceFronteggPermissionCategoryDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	client := meta.(*restclient.Client)
-	if err := client.Delete(ctx, fmt.Sprintf("%s/%s", fronteggPermissionCategoryPath, d.Id()), nil); err != nil {
+	clientHolder := meta.(*restclient.ClientHolder)
+	if err := clientHolder.ApiClient.Delete(ctx, fmt.Sprintf("%s/%s", fronteggPermissionCategoryPath, d.Id()), nil); err != nil {
 		return diag.FromErr(err)
 	}
 	return nil

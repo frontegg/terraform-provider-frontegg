@@ -15,21 +15,21 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 )
 
-const fronteggVendorURL = "https://api.frontegg.com/vendors"
-const fronteggCustomDomainURL = "https://api.frontegg.com/vendors/custom-domains"
-const fronteggAuthURL = "https://api.frontegg.com/identity/resources/configurations/v1"
-const fronteggMFAURL = "https://api.frontegg.com/identity/resources/configurations/v1/mfa"
-const fronteggMFAPolicyURL = "https://api.frontegg.com/identity/resources/configurations/v1/mfa-policy"
-const fronteggLockoutPolicyURL = "https://api.frontegg.com/identity/resources/configurations/v1/lockout-policy"
-const fronteggPasswordPolicyURL = "https://api.frontegg.com/identity/resources/configurations/v1/password"
-const fronteggPasswordHistoryPolicyURL = "https://api.frontegg.com/identity/resources/configurations/v1/password-history-policy"
-const fronteggCaptchaPolicyURL = "https://api.frontegg.com/identity/resources/configurations/v1/captcha-policy"
-const fronteggOAuthURL = "https://api.frontegg.com/oauth/resources/configurations/v1"
-const fronteggOAuthRedirectURIsURL = "https://api.frontegg.com/oauth/resources/configurations/v1/redirect-uri"
-const fronteggSSOURL = "https://api.frontegg.com/identity/resources/sso/v1"
-const fronteggSSOSAMLURL = "https://api.frontegg.com/metadata?entityName=saml"
-const fronteggEmailTemplatesURL = "https://api.frontegg.com/identity/resources/mail/v1/configs/templates"
-const fronteggAdminPortalURL = "https://api.frontegg.com/metadata?entityName=adminBox"
+const fronteggVendorURL = "/vendors"
+const fronteggCustomDomainURL = "/vendors/custom-domains"
+const fronteggAuthURL = "/identity/resources/configurations/v1"
+const fronteggMFAURL = "/identity/resources/configurations/v1/mfa"
+const fronteggMFAPolicyURL = "/identity/resources/configurations/v1/mfa-policy"
+const fronteggLockoutPolicyURL = "/identity/resources/configurations/v1/lockout-policy"
+const fronteggPasswordPolicyURL = "/identity/resources/configurations/v1/password"
+const fronteggPasswordHistoryPolicyURL = "/identity/resources/configurations/v1/password-history-policy"
+const fronteggCaptchaPolicyURL = "/identity/resources/configurations/v1/captcha-policy"
+const fronteggOAuthURL = "/oauth/resources/configurations/v1"
+const fronteggOAuthRedirectURIsURL = "/oauth/resources/configurations/v1/redirect-uri"
+const fronteggSSOURL = "/identity/resources/sso/v1"
+const fronteggSSOSAMLURL = "/metadata?entityName=saml"
+const fronteggEmailTemplatesURL = "/identity/resources/mail/v1/configs/templates"
+const fronteggAdminPortalURL = "/metadata?entityName=adminBox"
 
 type fronteggVendor struct {
 	ID                string   `json:"id"`
@@ -289,11 +289,11 @@ per Frontegg provider.`,
 			"frontegg_domain": {
 				Description: `The domain at which the Frontegg API is served for this workspace.
 
-    The domain must end with ".frontegg.com".`,
+    The domain must end with ".frontegg.com" or ".us.frontegg.com".`,
 				Type:     schema.TypeString,
 				Required: true,
 				ValidateFunc: validation.StringMatch(
-					regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9\-]*\.frontegg\.com$`),
+					regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9\-]*(\.us)?\.frontegg\.com$`),
 					"host must be a valid subdomain of .frontegg.com",
 				),
 			},
@@ -744,7 +744,7 @@ func resourceFronteggWorkspaceDeserializeMFAEnforce(s string) (string, error) {
 	case "ForceExceptSAML":
 		return "unless-saml", nil
 	default:
-		return "", fmt.Errorf("unexpected mfa enforcement policy: %s", s)
+		return "off", nil
 	}
 }
 
@@ -753,10 +753,10 @@ func resourceFronteggWorkspaceCreate(ctx context.Context, d *schema.ResourceData
 }
 
 func resourceFronteggWorkspaceRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	client := meta.(*restclient.Client)
+	clientHolder := meta.(*restclient.ClientHolder)
 	{
 		var out fronteggVendor
-		if err := client.Get(ctx, fronteggVendorURL, &out); err != nil {
+		if err := clientHolder.ApiClient.Get(ctx, fronteggVendorURL, &out); err != nil {
 			return diag.FromErr(err)
 		}
 		d.SetId(out.ID)
@@ -784,15 +784,15 @@ func resourceFronteggWorkspaceRead(ctx context.Context, d *schema.ResourceData, 
 	}
 	{
 		var out fronteggCustomDomain
-		client.Ignore404()
-		if err := client.Get(ctx, fronteggCustomDomainURL, &out); err != nil {
+		clientHolder.ApiClient.Ignore404()
+		if err := clientHolder.ApiClient.Get(ctx, fronteggCustomDomainURL, &out); err != nil {
 			return diag.FromErr(err)
 		}
 		d.Set("custom_domain", out.CustomDomain)
 	}
 	{
 		var out fronteggAuth
-		if err := client.Get(ctx, fronteggAuthURL, &out); err != nil {
+		if err := clientHolder.ApiClient.Get(ctx, fronteggAuthURL, &out); err != nil {
 			return diag.FromErr(err)
 		}
 		auth_policy := map[string]interface{}{
@@ -812,13 +812,15 @@ func resourceFronteggWorkspaceRead(ctx context.Context, d *schema.ResourceData, 
 	}
 	{
 		var out fronteggMFAPolicy
-		if err := client.Get(ctx, fronteggMFAPolicyURL, &out); err != nil {
+		clientHolder.ApiClient.Ignore404()
+		if err := clientHolder.ApiClient.Get(ctx, fronteggMFAPolicyURL, &out); err != nil {
 			return diag.FromErr(err)
 		}
 		enforce, err := resourceFronteggWorkspaceDeserializeMFAEnforce(out.EnforceMFAType)
 		if err != nil {
 			return diag.FromErr(err)
 		}
+
 		mfa_policy := map[string]interface{}{
 			"allow_remember_device": out.AllowRememberMyDevice,
 			"enforce":               enforce,
@@ -830,7 +832,7 @@ func resourceFronteggWorkspaceRead(ctx context.Context, d *schema.ResourceData, 
 	}
 	{
 		var out fronteggMFA
-		if err := client.Get(ctx, fronteggMFAURL, &out); err != nil {
+		if err := clientHolder.ApiClient.Get(ctx, fronteggMFAURL, &out); err != nil {
 			return diag.FromErr(err)
 		}
 		items := []interface{}{}
@@ -845,7 +847,8 @@ func resourceFronteggWorkspaceRead(ctx context.Context, d *schema.ResourceData, 
 	}
 	{
 		var out fronteggLockoutPolicy
-		if err := client.Get(ctx, fronteggLockoutPolicyURL, &out); err != nil {
+		clientHolder.ApiClient.Ignore404()
+		if err := clientHolder.ApiClient.Get(ctx, fronteggLockoutPolicyURL, &out); err != nil {
 			return diag.FromErr(err)
 		}
 		items := []interface{}{}
@@ -860,11 +863,12 @@ func resourceFronteggWorkspaceRead(ctx context.Context, d *schema.ResourceData, 
 	}
 	{
 		var out fronteggPasswordPolicy
-		if err := client.Get(ctx, fronteggPasswordPolicyURL, &out); err != nil {
+		if err := clientHolder.ApiClient.Get(ctx, fronteggPasswordPolicyURL, &out); err != nil {
 			return diag.FromErr(err)
 		}
 		var outHistory fronteggPasswordHistoryPolicy
-		if err := client.Get(ctx, fronteggPasswordHistoryPolicyURL, &outHistory); err != nil {
+		clientHolder.ApiClient.Ignore404()
+		if err := clientHolder.ApiClient.Get(ctx, fronteggPasswordHistoryPolicyURL, &outHistory); err != nil {
 			return diag.FromErr(err)
 		}
 		history := 0
@@ -885,7 +889,8 @@ func resourceFronteggWorkspaceRead(ctx context.Context, d *schema.ResourceData, 
 	}
 	{
 		var out fronteggCaptchaPolicy
-		if err := client.Get(ctx, fronteggCaptchaPolicyURL, &out); err != nil {
+		clientHolder.ApiClient.Ignore404()
+		if err := clientHolder.ApiClient.Get(ctx, fronteggCaptchaPolicyURL, &out); err != nil {
 			return diag.FromErr(err)
 		}
 		items := []interface{}{}
@@ -902,8 +907,8 @@ func resourceFronteggWorkspaceRead(ctx context.Context, d *schema.ResourceData, 
 	}
 	for _, typ := range []string{"facebook", "github", "google", "microsoft"} {
 		var out fronteggSSO
-		client.Ignore404()
-		if err := client.Get(ctx, fmt.Sprintf("%s/%s", fronteggSSOURL, typ), &out); err != nil {
+		clientHolder.ApiClient.Ignore404()
+		if err := clientHolder.ApiClient.Get(ctx, fmt.Sprintf("%s/%s", fronteggSSOURL, typ), &out); err != nil {
 			return diag.FromErr(err)
 		}
 		items := []interface{}{}
@@ -922,11 +927,11 @@ func resourceFronteggWorkspaceRead(ctx context.Context, d *schema.ResourceData, 
 		var out struct {
 			Rows []fronteggSSOSAML `json:"rows"`
 		}
-		if err := client.Get(ctx, fronteggSSOSAMLURL, &out); err != nil {
+		if err := clientHolder.ApiClient.Get(ctx, fronteggSSOSAMLURL, &out); err != nil {
 			return diag.FromErr(err)
 		}
 		items := []interface{}{}
-		if out.Rows[0].IsActive {
+		if len(out.Rows) > 0 && out.Rows[0].IsActive {
 			items = append(items, map[string]interface{}{
 				"acs_url":      out.Rows[0].Configuration.ACSUrl,
 				"sp_entity_id": out.Rows[0].Configuration.SPEntityID,
@@ -938,13 +943,15 @@ func resourceFronteggWorkspaceRead(ctx context.Context, d *schema.ResourceData, 
 	}
 	{
 		var out fronteggOAuth
-		if err := client.Get(ctx, fronteggOAuthURL, &out); err != nil {
+		clientHolder.ApiClient.Ignore404()
+		if err := clientHolder.ApiClient.Get(ctx, fronteggOAuthURL, &out); err != nil {
 			return diag.FromErr(err)
 		}
 		items := []interface{}{}
 		if out.IsActive {
 			var outRedirects fronteggOAuthRedirectURIs
-			if err := client.Get(ctx, fronteggOAuthRedirectURIsURL, &outRedirects); err != nil {
+			clientHolder.ApiClient.Ignore404()
+			if err := clientHolder.ApiClient.Get(ctx, fronteggOAuthRedirectURIsURL, &outRedirects); err != nil {
 				return diag.FromErr(err)
 			}
 			var allowedRedirectURLs []string
@@ -961,7 +968,7 @@ func resourceFronteggWorkspaceRead(ctx context.Context, d *schema.ResourceData, 
 	}
 	{
 		var out []fronteggEmailTemplate
-		if err := client.Get(ctx, fronteggEmailTemplatesURL, &out); err != nil {
+		if err := clientHolder.ApiClient.Get(ctx, fronteggEmailTemplatesURL, &out); err != nil {
 			return diag.FromErr(err)
 		}
 		deserialize := func(field string, typ string) error {
@@ -998,7 +1005,7 @@ func resourceFronteggWorkspaceRead(ctx context.Context, d *schema.ResourceData, 
 		var out struct {
 			Rows []fronteggAdminPortal `json:"rows"`
 		}
-		if err := client.Get(ctx, fronteggAdminPortalURL, &out); err != nil {
+		if err := clientHolder.ApiClient.Get(ctx, fronteggAdminPortalURL, &out); err != nil {
 			return diag.FromErr(err)
 		}
 		nav := out.Rows[0].Configuration.Navigation
@@ -1036,7 +1043,7 @@ func resourceFronteggWorkspaceRead(ctx context.Context, d *schema.ResourceData, 
 }
 
 func resourceFronteggWorkspaceUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	client := meta.(*restclient.Client)
+	clientHolder := meta.(*restclient.ClientHolder)
 	{
 		in := fronteggVendor{
 			ID:                d.Id(),
@@ -1048,12 +1055,13 @@ func resourceFronteggWorkspaceUpdate(ctx context.Context, d *schema.ResourceData
 			Host:              d.Get("frontegg_domain").(string),
 			AllowedOrigins:    stringSetToList(d.Get("allowed_origins").(*schema.Set)),
 		}
-		if err := client.Put(ctx, fronteggVendorURL, in, nil); err != nil {
+		if err := clientHolder.ApiClient.Put(ctx, fronteggVendorURL, in, nil); err != nil {
 			return diag.FromErr(err)
 		}
 	}
 	if d.HasChange("custom_domain") {
-		if err := client.Delete(ctx, fronteggCustomDomainURL, nil); err != nil {
+		clientHolder.ApiClient.Ignore404()
+		if err := clientHolder.ApiClient.Delete(ctx, fronteggCustomDomainURL, nil); err != nil {
 			return diag.FromErr(err)
 		}
 		if domain, ok := d.GetOk("custom_domain"); ok {
@@ -1061,7 +1069,7 @@ func resourceFronteggWorkspaceUpdate(ctx context.Context, d *schema.ResourceData
 			// Retry for up to a minute if the CName is not found, in case it
 			// was just installed and DNS is still propagating.
 			err := resource.RetryContext(ctx, time.Minute, func() *resource.RetryError {
-				if err := client.Post(ctx, fronteggCustomDomainURL, in, nil); err != nil {
+				if err := clientHolder.ApiClient.Post(ctx, fronteggCustomDomainURL, in, nil); err != nil {
 					if strings.Contains(err.Error(), "CName not found") {
 						return resource.RetryableError(err)
 					} else {
@@ -1087,7 +1095,7 @@ func resourceFronteggWorkspaceUpdate(ctx context.Context, d *schema.ResourceData
 			PublicKey:                     d.Get("auth_policy.0.jwt_public_key").(string),
 			CookieSameSite:                strings.ToUpper(d.Get("auth_policy.0.same_site_cookie_policy").(string)),
 		}
-		if err := client.Post(ctx, fronteggAuthURL, in, nil); err != nil {
+		if err := clientHolder.ApiClient.Post(ctx, fronteggAuthURL, in, nil); err != nil {
 			return diag.FromErr(err)
 		}
 	}
@@ -1097,8 +1105,8 @@ func resourceFronteggWorkspaceUpdate(ctx context.Context, d *schema.ResourceData
 			EnforceMFAType:        resourceFronteggWorkspaceSerializeMFAEnforce(d.Get("mfa_policy.0.enforce").(string)),
 			MFADeviceExpiration:   d.Get("mfa_policy.0.device_expiration").(int),
 		}
-		client.ConflictRetryMethod("PATCH")
-		if err := client.Post(ctx, fronteggMFAPolicyURL, in, nil); err != nil {
+		clientHolder.ApiClient.ConflictRetryMethod("PATCH")
+		if err := clientHolder.ApiClient.Post(ctx, fronteggMFAPolicyURL, in, nil); err != nil {
 			return diag.FromErr(err)
 		}
 	}
@@ -1109,7 +1117,7 @@ func resourceFronteggWorkspaceUpdate(ctx context.Context, d *schema.ResourceData
 			in.AuthenticationApp.Active = true
 			in.AuthenticationApp.ServiceName = d.Get("mfa_authentication_app.0.service_name").(string)
 		}
-		if err := client.Post(ctx, fronteggMFAURL, in, nil); err != nil {
+		if err := clientHolder.ApiClient.Post(ctx, fronteggMFAURL, in, nil); err != nil {
 			return diag.FromErr(err)
 		}
 	}
@@ -1120,8 +1128,8 @@ func resourceFronteggWorkspaceUpdate(ctx context.Context, d *schema.ResourceData
 			in.Enabled = true
 			in.MaxAttempts = d.Get("lockout_policy.0.max_attempts").(int)
 		}
-		client.ConflictRetryMethod("PATCH")
-		if err := client.Post(ctx, fronteggLockoutPolicyURL, in, nil); err != nil {
+		clientHolder.ApiClient.ConflictRetryMethod("PATCH")
+		if err := clientHolder.ApiClient.Post(ctx, fronteggLockoutPolicyURL, in, nil); err != nil {
 			return diag.FromErr(err)
 		}
 	}
@@ -1133,7 +1141,7 @@ func resourceFronteggWorkspaceUpdate(ctx context.Context, d *schema.ResourceData
 			MinOptionalTestsToPass: d.Get("password_policy.0.min_tests").(int),
 			MinPhraseLength:        d.Get("password_policy.0.min_phrase_length").(int),
 		}
-		if err := client.Post(ctx, fronteggPasswordPolicyURL, in, nil); err != nil {
+		if err := clientHolder.ApiClient.Post(ctx, fronteggPasswordPolicyURL, in, nil); err != nil {
 			return diag.FromErr(err)
 		}
 	}
@@ -1144,8 +1152,8 @@ func resourceFronteggWorkspaceUpdate(ctx context.Context, d *schema.ResourceData
 			in.Enabled = true
 			in.HistorySize = history
 		}
-		client.ConflictRetryMethod("PATCH")
-		if err := client.Post(ctx, fronteggPasswordHistoryPolicyURL, in, nil); err != nil {
+		clientHolder.ApiClient.ConflictRetryMethod("PATCH")
+		if err := clientHolder.ApiClient.Post(ctx, fronteggPasswordHistoryPolicyURL, in, nil); err != nil {
 			return diag.FromErr(err)
 		}
 	}
@@ -1161,31 +1169,31 @@ func resourceFronteggWorkspaceUpdate(ctx context.Context, d *schema.ResourceData
 			in.SecretKey = d.Get("captcha_policy.0.secret_key").(string)
 			in.MinScore = d.Get("captcha_policy.0.min_score").(float64)
 		}
-		client.ConflictRetryMethod("PUT")
-		if err := client.Post(ctx, fronteggCaptchaPolicyURL, in, nil); err != nil {
+		clientHolder.ApiClient.ConflictRetryMethod("PUT")
+		if err := clientHolder.ApiClient.Post(ctx, fronteggCaptchaPolicyURL, in, nil); err != nil {
 			return diag.FromErr(err)
 		}
 	}
 	{
 		hosted_login := d.Get("hosted_login").([]interface{})
 		if len(hosted_login) > 0 {
-			err := client.Post(ctx, fmt.Sprintf("%s/activate", fronteggOAuthURL), nil, nil)
+			err := clientHolder.ApiClient.Post(ctx, fmt.Sprintf("%s/activate", fronteggOAuthURL), nil, nil)
 			if err != nil {
 				return diag.FromErr(err)
 			}
 		} else {
-			err := client.Post(ctx, fmt.Sprintf("%s/deactivate", fronteggOAuthURL), nil, nil)
+			err := clientHolder.ApiClient.Post(ctx, fmt.Sprintf("%s/deactivate", fronteggOAuthURL), nil, nil)
 			if err != nil {
 				return diag.FromErr(err)
 			}
 		}
 		if d.HasChange("hosted_login.0.allowed_redirect_urls") {
 			var outRedirects fronteggOAuthRedirectURIs
-			if err := client.Get(ctx, fronteggOAuthRedirectURIsURL, &outRedirects); err != nil {
+			if err := clientHolder.ApiClient.Get(ctx, fronteggOAuthRedirectURIsURL, &outRedirects); err != nil {
 				return diag.FromErr(err)
 			}
 			for _, r := range outRedirects.RedirectURIs {
-				err := client.Delete(ctx, fmt.Sprintf("%s/%s", fronteggOAuthRedirectURIsURL, r.ID), nil)
+				err := clientHolder.ApiClient.Delete(ctx, fmt.Sprintf("%s/%s", fronteggOAuthRedirectURIsURL, r.ID), nil)
 				if err != nil {
 					return diag.FromErr(err)
 				}
@@ -1196,7 +1204,7 @@ func resourceFronteggWorkspaceUpdate(ctx context.Context, d *schema.ResourceData
 					in := fronteggOAuthRedirectURI{
 						RedirectURI: url.(string),
 					}
-					if err := client.Post(ctx, fronteggOAuthRedirectURIsURL, in, nil); err != nil {
+					if err := clientHolder.ApiClient.Post(ctx, fronteggOAuthRedirectURIsURL, in, nil); err != nil {
 						return diag.FromErr(err)
 					}
 				}
@@ -1206,8 +1214,8 @@ func resourceFronteggWorkspaceUpdate(ctx context.Context, d *schema.ResourceData
 	for _, typ := range []string{"facebook", "github", "google", "microsoft"} {
 		name := fmt.Sprintf("%s_social_login", typ)
 		if len(d.Get(name).([]interface{})) == 0 {
-			client.Ignore404()
-			err := client.Post(ctx, fmt.Sprintf("%s/%s/deactivate", fronteggSSOURL, typ), nil, nil)
+			clientHolder.ApiClient.Ignore404()
+			err := clientHolder.ApiClient.Post(ctx, fmt.Sprintf("%s/%s/deactivate", fronteggSSOURL, typ), nil, nil)
 			if err != nil {
 				return diag.FromErr(err)
 			}
@@ -1218,10 +1226,10 @@ func resourceFronteggWorkspaceUpdate(ctx context.Context, d *schema.ResourceData
 				Secret:      d.Get(fmt.Sprintf("%s.0.secret", name)).(string),
 				Type:        typ,
 			}
-			if err := client.Post(ctx, fronteggSSOURL, in, nil); err != nil {
+			if err := clientHolder.ApiClient.Post(ctx, fronteggSSOURL, in, nil); err != nil {
 				return diag.FromErr(err)
 			}
-			err := client.Post(ctx, fmt.Sprintf("%s/%s/activate", fronteggSSOURL, typ), nil, nil)
+			err := clientHolder.ApiClient.Post(ctx, fmt.Sprintf("%s/%s/activate", fronteggSSOURL, typ), nil, nil)
 			if err != nil {
 				return diag.FromErr(err)
 			}
@@ -1237,7 +1245,7 @@ func resourceFronteggWorkspaceUpdate(ctx context.Context, d *schema.ResourceData
 			in.Configuration.SPEntityID = d.Get("saml.0.sp_entity_id").(string)
 			in.IsActive = true
 		}
-		if err := client.Post(ctx, fronteggSSOSAMLURL, in, nil); err != nil {
+		if err := clientHolder.ApiClient.Post(ctx, fronteggSSOSAMLURL, in, nil); err != nil {
 			return diag.FromErr(err)
 		}
 	}
@@ -1261,7 +1269,7 @@ func resourceFronteggWorkspaceUpdate(ctx context.Context, d *schema.ResourceData
 			in.HTMLTemplate = d.Get(fmt.Sprintf("%s.0.html_template", field)).(string)
 			in.RedirectURL = d.Get(fmt.Sprintf("%s.0.redirect_url", field)).(string)
 		}
-		if err := client.Post(ctx, fronteggEmailTemplatesURL, in, nil); err != nil {
+		if err := clientHolder.ApiClient.Post(ctx, fronteggEmailTemplatesURL, in, nil); err != nil {
 			return diag.FromErr(err)
 		}
 	}
@@ -1307,7 +1315,7 @@ func resourceFronteggWorkspaceUpdate(ctx context.Context, d *schema.ResourceData
 			},
 			EntityName: "adminBox",
 		}
-		if err := client.Post(ctx, fronteggAdminPortalURL, in, nil); err != nil {
+		if err := clientHolder.ApiClient.Post(ctx, fronteggAdminPortalURL, in, nil); err != nil {
 			return diag.FromErr(err)
 		}
 	}

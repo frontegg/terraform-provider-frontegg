@@ -9,7 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
-const fronteggRolePath = "https://api.frontegg.com/identity/resources/roles/v1"
+const fronteggRolePath = "/identity/resources/roles/v1"
 
 type fronteggRole struct {
 	ID          string   `json:"id,omitempty"`
@@ -140,12 +140,12 @@ func resourceFronteggRoleDeserialize(d *schema.ResourceData, f fronteggRole) err
 }
 
 func resourceFronteggRoleCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	client := meta.(*restclient.Client)
+	clientHolder := meta.(*restclient.ClientHolder)
 	var id string
 	{
 		in := []fronteggRole{resourceFronteggRoleSerialize(d)}
 		var out []fronteggRole
-		if err := client.Post(ctx, fronteggRolePath, in, &out); err != nil {
+		if err := clientHolder.ApiClient.Post(ctx, fronteggRolePath, in, &out); err != nil {
 			return diag.FromErr(err)
 		}
 		if len(out) != 1 {
@@ -155,7 +155,7 @@ func resourceFronteggRoleCreate(ctx context.Context, d *schema.ResourceData, met
 	}
 	var out fronteggRole
 	in := resourceFronteggRolePermissionsSerialize(d)
-	if err := client.Put(ctx, fmt.Sprintf("%s/%s/permissions", fronteggRolePath, id), in, &out); err != nil {
+	if err := clientHolder.ApiClient.Put(ctx, fmt.Sprintf("%s/%s/permissions", fronteggRolePath, id), in, &out); err != nil {
 		return diag.FromErr(err)
 	}
 	if err := resourceFronteggRoleDeserialize(d, out); err != nil {
@@ -165,9 +165,9 @@ func resourceFronteggRoleCreate(ctx context.Context, d *schema.ResourceData, met
 }
 
 func resourceFronteggRoleRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	client := meta.(*restclient.Client)
+	clientHolder := meta.(*restclient.ClientHolder)
 	var out []fronteggRole
-	if err := client.Get(ctx, fronteggRolePath, &out); err != nil {
+	if err := clientHolder.ApiClient.Get(ctx, fronteggRolePath, &out); err != nil {
 		return diag.FromErr(err)
 	}
 	for _, c := range out {
@@ -183,16 +183,16 @@ func resourceFronteggRoleRead(ctx context.Context, d *schema.ResourceData, meta 
 }
 
 func resourceFronteggRoleUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	client := meta.(*restclient.Client)
+	clientHolder := meta.(*restclient.ClientHolder)
 	{
 		in := resourceFronteggRoleSerialize(d)
-		if err := client.Patch(ctx, fmt.Sprintf("%s/%s", fronteggRolePath, d.Id()), in, nil); err != nil {
+		if err := clientHolder.ApiClient.Patch(ctx, fmt.Sprintf("%s/%s", fronteggRolePath, d.Id()), in, nil); err != nil {
 			return diag.FromErr(err)
 		}
 	}
 	var out fronteggRole
 	in := resourceFronteggRolePermissionsSerialize(d)
-	if err := client.Put(ctx, fmt.Sprintf("%s/%s/permissions", fronteggRolePath, d.Id()), in, &out); err != nil {
+	if err := clientHolder.ApiClient.Put(ctx, fmt.Sprintf("%s/%s/permissions", fronteggRolePath, d.Id()), in, &out); err != nil {
 		return diag.FromErr(err)
 	}
 	if err := resourceFronteggRoleDeserialize(d, out); err != nil {
@@ -202,8 +202,8 @@ func resourceFronteggRoleUpdate(ctx context.Context, d *schema.ResourceData, met
 }
 
 func resourceFronteggRoleDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	client := meta.(*restclient.Client)
-	if err := client.Delete(ctx, fmt.Sprintf("%s/%s", fronteggRolePath, d.Id()), nil); err != nil {
+	clientHolder := meta.(*restclient.ClientHolder)
+	if err := clientHolder.ApiClient.Delete(ctx, fmt.Sprintf("%s/%s", fronteggRolePath, d.Id()), nil); err != nil {
 		return diag.FromErr(err)
 	}
 	return nil

@@ -9,7 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
-const fronteggPermissionPath = "https://api.frontegg.com/identity/resources/permissions/v1"
+const fronteggPermissionPath = "/identity/resources/permissions/v1"
 
 type fronteggPermission struct {
 	ID          string `json:"id,omitempty"`
@@ -92,10 +92,10 @@ func resourceFronteggPermissionDeserialize(d *schema.ResourceData, f fronteggPer
 }
 
 func resourceFronteggPermissionCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	client := meta.(*restclient.Client)
+	clientHolder := meta.(*restclient.ClientHolder)
 	in := []fronteggPermission{resourceFronteggPermissionSerialize(d)}
 	var out []fronteggPermission
-	if err := client.Post(ctx, fronteggPermissionPath, in, &out); err != nil {
+	if err := clientHolder.ApiClient.Post(ctx, fronteggPermissionPath, in, &out); err != nil {
 		return diag.FromErr(err)
 	}
 	if len(out) != 1 {
@@ -108,9 +108,9 @@ func resourceFronteggPermissionCreate(ctx context.Context, d *schema.ResourceDat
 }
 
 func resourceFronteggPermissionRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	client := meta.(*restclient.Client)
+	clientHolder := meta.(*restclient.ClientHolder)
 	var out []fronteggPermission
-	if err := client.Get(ctx, fronteggPermissionPath, &out); err != nil {
+	if err := clientHolder.ApiClient.Get(ctx, fronteggPermissionPath, &out); err != nil {
 		return diag.FromErr(err)
 	}
 	for _, c := range out {
@@ -126,17 +126,17 @@ func resourceFronteggPermissionRead(ctx context.Context, d *schema.ResourceData,
 }
 
 func resourceFronteggPermissionUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	client := meta.(*restclient.Client)
+	clientHolder := meta.(*restclient.ClientHolder)
 	in := resourceFronteggPermissionSerialize(d)
-	if err := client.Patch(ctx, fmt.Sprintf("%s/%s", fronteggPermissionPath, d.Id()), in, nil); err != nil {
+	if err := clientHolder.ApiClient.Patch(ctx, fmt.Sprintf("%s/%s", fronteggPermissionPath, d.Id()), in, nil); err != nil {
 		return diag.FromErr(err)
 	}
 	return resourceFronteggPermissionRead(ctx, d, meta)
 }
 
 func resourceFronteggPermissionDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	client := meta.(*restclient.Client)
-	if err := client.Delete(ctx, fmt.Sprintf("%s/%s", fronteggPermissionPath, d.Id()), nil); err != nil {
+	clientHolder := meta.(*restclient.ClientHolder)
+	if err := clientHolder.ApiClient.Delete(ctx, fmt.Sprintf("%s/%s", fronteggPermissionPath, d.Id()), nil); err != nil {
 		return diag.FromErr(err)
 	}
 	return nil

@@ -10,7 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 )
 
-const fronteggWebhookPath = "https://portal.frontegg.com/frontegg/webhook"
+const fronteggWebhookPath = "/frontegg/webhook"
 
 type fronteggWebhook struct {
 	ID          string   `json:"_id,omitempty"`
@@ -169,10 +169,10 @@ func resourceFronteggWebhookDeserialize(d *schema.ResourceData, f fronteggWebhoo
 }
 
 func resourceFronteggWebhookCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	client := meta.(*restclient.Client)
+	clientHolder := meta.(*restclient.ClientHolder)
 	in := resourceFronteggWebhookSerialize(d)
 	var out fronteggWebhook
-	if err := client.Post(ctx, fronteggWebhookPath+"/custom", in, &out); err != nil {
+	if err := clientHolder.PortalClient.Post(ctx, fronteggWebhookPath+"/custom", in, &out); err != nil {
 		return diag.FromErr(err)
 	}
 	if err := resourceFronteggWebhookDeserialize(d, out); err != nil {
@@ -182,9 +182,9 @@ func resourceFronteggWebhookCreate(ctx context.Context, d *schema.ResourceData, 
 }
 
 func resourceFronteggWebhookRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	client := meta.(*restclient.Client)
+	clientHolder := meta.(*restclient.ClientHolder)
 	var out fronteggWebhook
-	if err := client.Patch(ctx, fmt.Sprintf("%s/%s", fronteggWebhookPath, d.Id()), nil, &out); err != nil {
+	if err := clientHolder.PortalClient.Patch(ctx, fmt.Sprintf("%s/%s", fronteggWebhookPath, d.Id()), nil, &out); err != nil {
 		return diag.FromErr(err)
 	}
 	if err := resourceFronteggWebhookDeserialize(d, out); err != nil {
@@ -194,10 +194,10 @@ func resourceFronteggWebhookRead(ctx context.Context, d *schema.ResourceData, me
 }
 
 func resourceFronteggWebhookUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	client := meta.(*restclient.Client)
+	clientHolder := meta.(*restclient.ClientHolder)
 	in := resourceFronteggWebhookSerialize(d)
 	var out fronteggWebhook
-	if err := client.Patch(ctx, fmt.Sprintf("%s/%s", fronteggWebhookPath, d.Id()), in, &out); err != nil {
+	if err := clientHolder.PortalClient.Patch(ctx, fmt.Sprintf("%s/%s", fronteggWebhookPath, d.Id()), in, &out); err != nil {
 		return diag.FromErr(err)
 	}
 	if err := resourceFronteggWebhookDeserialize(d, out); err != nil {
@@ -207,8 +207,8 @@ func resourceFronteggWebhookUpdate(ctx context.Context, d *schema.ResourceData, 
 }
 
 func resourceFronteggWebhookDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	client := meta.(*restclient.Client)
-	if err := client.Delete(ctx, fmt.Sprintf("%s/%s", fronteggWebhookPath, d.Id()), nil); err != nil {
+	clientHolder := meta.(*restclient.ClientHolder)
+	if err := clientHolder.PortalClient.Delete(ctx, fmt.Sprintf("%s/%s", fronteggWebhookPath, d.Id()), nil); err != nil {
 		return diag.FromErr(err)
 	}
 	return nil
