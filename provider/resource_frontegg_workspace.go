@@ -93,10 +93,11 @@ type fronteggPasswordHistoryPolicy struct {
 }
 
 type fronteggCaptchaPolicy struct {
-	Enabled   bool    `json:"enabled"`
-	SiteKey   string  `json:"siteKey"`
-	SecretKey string  `json:"secretKey"`
-	MinScore  float64 `json:"minScore"`
+	Enabled      bool     `json:"enabled"`
+	SiteKey      string   `json:"siteKey"`
+	SecretKey    string   `json:"secretKey"`
+	MinScore     float64  `json:"minScore"`
+	IgnoreEmails []string `json:"ignoreEmails"`
 }
 
 type fronteggOAuth struct {
@@ -891,9 +892,10 @@ func resourceFronteggWorkspaceRead(ctx context.Context, d *schema.ResourceData, 
 		items := []interface{}{}
 		if out.Enabled {
 			items = append(items, map[string]interface{}{
-				"site_key":   out.SiteKey,
-				"secret_key": out.SecretKey,
-				"min_score":  out.MinScore,
+				"site_key":      out.SiteKey,
+				"secret_key":    out.SecretKey,
+				"min_score":     out.MinScore,
+				"ignore_emails": out.IgnoreEmails,
 			})
 		}
 		if err := d.Set("captcha_policy", items); err != nil {
@@ -1160,6 +1162,7 @@ func resourceFronteggWorkspaceUpdate(ctx context.Context, d *schema.ResourceData
 			in.SiteKey = d.Get("captcha_policy.0.site_key").(string)
 			in.SecretKey = d.Get("captcha_policy.0.secret_key").(string)
 			in.MinScore = d.Get("captcha_policy.0.min_score").(float64)
+			in.IgnoreEmails = d.Get("captcha_policy.0.ignore_emails").([]string)
 		}
 		client.ConflictRetryMethod("PUT")
 		if err := client.Post(ctx, fronteggCaptchaPolicyURL, in, nil); err != nil {
