@@ -91,8 +91,8 @@ func (c *Client) Request(ctx context.Context, method string, url string, in inte
 		return c.Request(ctx, conflictRetryMethod, url, in, out)
 	} else if res.StatusCode < 200 || res.StatusCode >= 300 {
 		return fmt.Errorf(
-			"restclient: request failed: %s %s: %s: %s",
-			req.Method, req.URL, res.Status, resBody,
+			"restclient: request failed: %s %s: %s: %v: %s",
+			req.Method, req.URL, res.Status, res.Header, resBody,
 		)
 	}
 	log.Printf("[TRACE] Received response data %q", string(resBody))
