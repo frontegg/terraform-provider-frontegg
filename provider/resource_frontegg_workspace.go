@@ -93,11 +93,11 @@ type fronteggPasswordHistoryPolicy struct {
 }
 
 type fronteggCaptchaPolicy struct {
-	Enabled      bool     `json:"enabled"`
-	SiteKey      string   `json:"siteKey"`
-	SecretKey    string   `json:"secretKey"`
-	MinScore     float64  `json:"minScore"`
-	IgnoreEmails []string `json:"ignoreEmails"`
+	Enabled       bool     `json:"enabled"`
+	SiteKey       string   `json:"siteKey"`
+	SecretKey     string   `json:"secretKey"`
+	MinScore      float64  `json:"minScore"`
+	IgnoredEmails []string `json:"ignoredEmails"`
 }
 
 type fronteggOAuth struct {
@@ -498,7 +498,7 @@ per Frontegg provider.`,
 							Type:        schema.TypeFloat,
 							Required:    true,
 						},
-						"ignore_emails": {
+						"ignored_emails": {
 							Description: "Email addresses that should be exempt from CAPTCHA checks.",
 							Type:        schema.TypeSet,
 							Optional:    true,
@@ -898,10 +898,10 @@ func resourceFronteggWorkspaceRead(ctx context.Context, d *schema.ResourceData, 
 		items := []interface{}{}
 		if out.Enabled {
 			items = append(items, map[string]interface{}{
-				"site_key":      out.SiteKey,
-				"secret_key":    out.SecretKey,
-				"min_score":     out.MinScore,
-				"ignore_emails": out.IgnoreEmails,
+				"site_key":       out.SiteKey,
+				"secret_key":     out.SecretKey,
+				"min_score":      out.MinScore,
+				"ignored_emails": out.IgnoredEmails,
 			})
 		}
 		if err := d.Set("captcha_policy", items); err != nil {
@@ -1168,7 +1168,7 @@ func resourceFronteggWorkspaceUpdate(ctx context.Context, d *schema.ResourceData
 			in.SiteKey = d.Get("captcha_policy.0.site_key").(string)
 			in.SecretKey = d.Get("captcha_policy.0.secret_key").(string)
 			in.MinScore = d.Get("captcha_policy.0.min_score").(float64)
-			in.IgnoreEmails = stringSetToList(d.Get("captcha_policy.0.ignore_emails").(*schema.Set))
+			in.IgnoredEmails = stringSetToList(d.Get("captcha_policy.0.ignored_emails").(*schema.Set))
 		}
 		client.ConflictRetryMethod("PUT")
 		if err := client.Post(ctx, fronteggCaptchaPolicyURL, in, nil); err != nil {
