@@ -500,7 +500,7 @@ per Frontegg provider.`,
 						},
 						"ignore_emails": {
 							Description: "Email addresses that should be exempt from CAPTCHA checks.",
-							Type:        schema.TypeList,
+							Type:        schema.TypeSet,
 							Optional:    true,
 							Elem:        &schema.Schema{Type: schema.TypeString},
 						},
@@ -1168,7 +1168,7 @@ func resourceFronteggWorkspaceUpdate(ctx context.Context, d *schema.ResourceData
 			in.SiteKey = d.Get("captcha_policy.0.site_key").(string)
 			in.SecretKey = d.Get("captcha_policy.0.secret_key").(string)
 			in.MinScore = d.Get("captcha_policy.0.min_score").(float64)
-			in.IgnoreEmails = d.Get("captcha_policy.0.ignore_emails").([]string)
+			in.IgnoreEmails = stringSetToList(d.Get("captcha_policy.0.ignore_emails").(*schema.Set))
 		}
 		client.ConflictRetryMethod("PUT")
 		if err := client.Post(ctx, fronteggCaptchaPolicyURL, in, nil); err != nil {
