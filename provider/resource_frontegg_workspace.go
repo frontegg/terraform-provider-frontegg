@@ -1159,10 +1159,7 @@ func resourceFronteggWorkspaceUpdate(ctx context.Context, d *schema.ResourceData
 	}
 	{
 		captcha_policy := d.Get("captcha_policy").([]interface{})
-		in := fronteggCaptchaPolicy{
-			SiteKey:   " ",
-			SecretKey: " ",
-		}
+		in := fronteggCaptchaPolicy{}
 		if len(captcha_policy) > 0 {
 			in.Enabled = true
 			in.SiteKey = d.Get("captcha_policy.0.site_key").(string)
