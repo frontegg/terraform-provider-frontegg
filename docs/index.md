@@ -15,9 +15,9 @@ The provider works with only one workspace at a time. To provision multiple
 workspaces, you will need to configure multiple copies of the provider.
 
 Note that the client ID and secret key are *not* the client ID and secret key
-that appear in "Workspace Settings". You need to generate a workspace API key
-and secret specifically for the Terraform provider's use in the administration
-portal:
+that appear in "Workspace Settings". You need to generate a personal API token
+(clientId and secret) specifically for the Terraform provider's use in the administration
+portal (Personal tokens section):
 
 ![API key generation example](https://user-images.githubusercontent.com/882976/132739276-bc72aa75-8c30-452c-b929-85a8d7ffa4d0.png)
 
