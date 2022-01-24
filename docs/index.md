@@ -17,7 +17,7 @@ workspaces, you will need to configure multiple copies of the provider.
 Note that the client ID and secret key are *not* the client ID and secret key
 that appear in "Workspace Settings". You need to generate a personal API token
 (clientId and secret) specifically for the Terraform provider's use in the administration
-portal (Personal tokens section):
+portal (**Personal tokens section**):
 
 ![API key generation example](https://user-images.githubusercontent.com/882976/132739276-bc72aa75-8c30-452c-b929-85a8d7ffa4d0.png)
 
@@ -25,8 +25,8 @@ portal (Personal tokens section):
 
 ```terraform
 provider "frontegg" {
-  client_id  = "e295e71d-40b3-4178-b0de-f7a1f3818ea4"
-  secret_key = "29c55559-6968-4d60-8f4e-40ebeec5a459"
+  client_id  = "[your-personal-token-client-id]"
+  secret_key = "[your-personal-token-api-key]"
 }
 ```
 
