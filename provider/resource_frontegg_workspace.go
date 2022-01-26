@@ -1168,7 +1168,10 @@ func resourceFronteggWorkspaceUpdate(ctx context.Context, d *schema.ResourceData
 	{
 		captcha_policy := d.Get("captcha_policy").([]interface{})
 		in := fronteggCaptchaPolicy{
-			Enabled: false,
+			Enabled:   false,
+			SiteKey:   "not-specified",
+			SecretKey: "not-specified",
+			MinScore:  0.5,
 		}
 		if len(captcha_policy) > 0 {
 			in.Enabled = true
@@ -1176,10 +1179,26 @@ func resourceFronteggWorkspaceUpdate(ctx context.Context, d *schema.ResourceData
 			in.SecretKey = d.Get("captcha_policy.0.secret_key").(string)
 			in.MinScore = d.Get("captcha_policy.0.min_score").(float64)
 			in.IgnoredEmails = stringSetToList(d.Get("captcha_policy.0.ignored_emails").(*schema.Set))
-		}
-		clientHolder.ApiClient.ConflictRetryMethod("PUT")
-		if err := clientHolder.ApiClient.Post(ctx, fronteggCaptchaPolicyURL, in, nil); err != nil {
-			return diag.FromErr(err)
+
+			clientHolder.ApiClient.ConflictRetryMethod("PUT")
+			if err := clientHolder.ApiClient.Post(ctx, fronteggCaptchaPolicyURL, in, nil); err != nil {
+				return diag.FromErr(err)
+			}
+		} else {
+			var currentCaptchaPolicy fronteggCaptchaPolicy
+			clientHolder.ApiClient.Ignore404()
+			if err := clientHolder.ApiClient.Get(ctx, fronteggCaptchaPolicyURL, &currentCaptchaPolicy); err != nil {
+				return diag.FromErr(err)
+			}
+
+			// If current configuration is applied and was removed from the provider - we are turning it off
+			if currentCaptchaPolicy.Enabled {
+				currentCaptchaPolicy.Enabled = false
+				clientHolder.ApiClient.ConflictRetryMethod("PUT")
+				if err := clientHolder.ApiClient.Put(ctx, fronteggCaptchaPolicyURL, currentCaptchaPolicy, nil); err != nil {
+					return diag.FromErr(err)
+				}
+			}
 		}
 	}
 	{
