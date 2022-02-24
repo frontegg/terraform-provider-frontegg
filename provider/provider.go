@@ -53,6 +53,9 @@ func New(version string) func() *schema.Provider {
 				"frontegg_role":                resourceFronteggRole(),
 				"frontegg_webhook":             resourceFronteggWebhook(),
 				"frontegg_workspace":           resourceFronteggWorkspace(),
+				"frontegg_tenant":              resourceFronteggTenant(),
+				"frontegg_redirect_uri":        resourceFronteggRedirectUri(),
+				"frontegg_allowed_origin":      resourceFronteggAllowedOrigin(),
 			},
 			ConfigureContextFunc: func(ctx context.Context, d *schema.ResourceData) (interface{}, diag.Diagnostics) {
 				apiClient := restclient.MakeRestClient(d.Get("api_base_url").(string))
@@ -66,9 +69,9 @@ func New(version string) func() *schema.Provider {
 						SecretKey: d.Get("secret_key").(string),
 					}
 					var out struct {
-						AccessToken string `json:"accessToken"`
+						AccessToken string `json:"token"`
 					}
-					err := portalClient.Post(ctx, "/frontegg/identity/resources/auth/v1/api-token", in, &out)
+					err := apiClient.Post(ctx, "/auth/vendor", in, &out)
 					if err != nil {
 						return nil, diag.Errorf("unable to authenticate with frontegg: %s", err)
 					}
