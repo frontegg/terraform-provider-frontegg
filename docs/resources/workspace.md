@@ -159,7 +159,7 @@ resource "frontegg_workspace" "example" {
 - **country** (String) The country associated with the workspace.
 - **frontegg_domain** (String) The domain at which the Frontegg API is served for this workspace.
 
-    The domain must end with ".frontegg.com".
+    The domain must end with ".frontegg.com" or ".us.frontegg.com".
 - **frontend_stack** (String) The frontend stack of the application associated with the worksapce.
 - **mfa_policy** (Block List, Min: 1, Max: 1) Configures the multi-factor authentication (MFA) policy. (see [below for nested schema](#nestedblock--mfa_policy))
 - **name** (String) The name of the workspace.
@@ -281,6 +281,10 @@ Required:
 - **secret_key** (String) The reCAPTCHA secret key to use.
 - **site_key** (String) The reCAPTCHA site key to use.
 
+Optional:
+
+- **ignored_emails** (Set of String) Email addresses that should be exempt from CAPTCHA checks.
+
 
 <a id="nestedblock--facebook_social_login"></a>
 ### Nested Schema for `facebook_social_login`
@@ -361,6 +365,7 @@ Optional:
 - **redirect_url** (String) The redirect URL to use, if applicable.
 
     Access this value as "\{\{redirectURL\}\}" in the template.
+- **success_redirect_url** (String) The success redirect URL to use, if applicable.
 
 
 <a id="nestedblock--reset_password_email"></a>
@@ -378,6 +383,7 @@ Optional:
 - **redirect_url** (String) The redirect URL to use, if applicable.
 
     Access this value as "\{\{redirectURL\}\}" in the template.
+- **success_redirect_url** (String) The success redirect URL to use, if applicable.
 
 
 <a id="nestedblock--saml"></a>
@@ -404,6 +410,7 @@ Optional:
 - **redirect_url** (String) The redirect URL to use, if applicable.
 
     Access this value as "\{\{redirectURL\}\}" in the template.
+- **success_redirect_url** (String) The success redirect URL to use, if applicable.
 
 
 <a id="nestedblock--user_invitation_email"></a>
@@ -421,5 +428,6 @@ Optional:
 - **redirect_url** (String) The redirect URL to use, if applicable.
 
     Access this value as "\{\{redirectURL\}\}" in the template.
+- **success_redirect_url** (String) The success redirect URL to use, if applicable.
 
 
