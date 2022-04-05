@@ -133,13 +133,14 @@ type fronteggSSOSAMLConfiguration struct {
 }
 
 type fronteggEmailTemplate struct {
-	Active       bool   `json:"active"`
-	FromName     string `json:"fromName"`
-	HTMLTemplate string `json:"htmlTemplate"`
-	RedirectURL  string `json:"redirectURL"`
-	SenderEmail  string `json:"senderEmail"`
-	Subject      string `json:"subject"`
-	Type         string `json:"type"`
+	Active             bool   `json:"active"`
+	FromName           string `json:"fromName"`
+	HTMLTemplate       string `json:"htmlTemplate"`
+	RedirectURL        string `json:"redirectURL"`
+	SuccessRedirectURL string `json:"successRedirectUrl,omitempty"`
+	SenderEmail        string `json:"senderEmail"`
+	Subject            string `json:"subject"`
+	Type               string `json:"type"`
 }
 
 type fronteggAdminPortal struct {
@@ -217,6 +218,11 @@ func resourceFronteggWorkspace() *schema.Resource {
     Access this value as "\{\{redirectURL\}\}" in the template.`,
 					Type:     schema.TypeString,
 					Optional: true,
+				},
+				"success_redirect_url": {
+					Description: `The success redirect URL to use, if applicable.`,
+					Type:        schema.TypeString,
+					Optional:    true,
 				},
 			},
 		}
@@ -985,11 +991,12 @@ func resourceFronteggWorkspaceRead(ctx context.Context, d *schema.ResourceData, 
 					var items []interface{}
 					if t.Active {
 						items = append(items, map[string]interface{}{
-							"from_address":  t.SenderEmail,
-							"from_name":     t.FromName,
-							"subject":       t.Subject,
-							"html_template": t.HTMLTemplate,
-							"redirect_url":  t.RedirectURL,
+							"from_address":         t.SenderEmail,
+							"from_name":            t.FromName,
+							"subject":              t.Subject,
+							"html_template":        t.HTMLTemplate,
+							"redirect_url":         t.RedirectURL,
+							"success_redirect_url": t.SuccessRedirectURL,
 						})
 					}
 					d.Set(field, items)
@@ -1295,6 +1302,7 @@ func resourceFronteggWorkspaceUpdate(ctx context.Context, d *schema.ResourceData
 			in.Subject = d.Get(fmt.Sprintf("%s.0.subject", field)).(string)
 			in.HTMLTemplate = d.Get(fmt.Sprintf("%s.0.html_template", field)).(string)
 			in.RedirectURL = d.Get(fmt.Sprintf("%s.0.redirect_url", field)).(string)
+			in.SuccessRedirectURL = d.Get(fmt.Sprintf("%s.0.success_redirect_url", field)).(string)
 		}
 		if err := clientHolder.ApiClient.Post(ctx, fronteggEmailTemplatesURL, in, nil); err != nil {
 			return diag.FromErr(err)
