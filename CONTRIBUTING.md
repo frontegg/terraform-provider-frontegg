@@ -20,6 +20,22 @@ To run the full suite of acceptance tests, run `make testacc`.
 $ make testacc
 ```
 
+### Iteration cycle
+
+This provider does not yet have an acceptance test suite. Instead, developers
+test changes manually by editing the basic example and running `terraform
+apply`. Following are the commands to run to efficiently manually test your
+changes.
+
+```
+export FRONTEGG_CLIENT_ID=<redacted>
+export FRONTEGG_SECRET_KEY=<redacted>
+cd examples/basic
+# Recompile the provider, reinitialize Terraform, then apply the current state.
+# Run repeatedly as you make changes to the provider or to the basic example.
+(cd ../.. && make install) && rm .terraform.lock.hcl && terraform init && terraform apply -auto-approve
+```
+
 ### Adding dependencies
 
 This provider uses [Go modules](https://github.com/golang/go/wiki/Modules).
