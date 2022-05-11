@@ -128,8 +128,9 @@ type fronteggSSOSAML struct {
 }
 
 type fronteggSSOSAMLConfiguration struct {
-	ACSUrl     string `json:"acsUrl"`
-	SPEntityID string `json:"spEntityId"`
+	ACSUrl      string `json:"acsUrl"`
+	SPEntityID  string `json:"spEntityId"`
+	RedirectUrl string `json:"redirectUri"`
 }
 
 type fronteggEmailTemplate struct {
@@ -574,6 +575,11 @@ per Frontegg provider.`,
 							Type:        schema.TypeString,
 							Required:    true,
 						},
+						"redirect_url": {
+							Description: "The redirect URL to redirect after the SAML ",
+							Type:        schema.TypeString,
+							Required:    false,
+						},
 					},
 				},
 			},
@@ -949,6 +955,7 @@ func resourceFronteggWorkspaceRead(ctx context.Context, d *schema.ResourceData, 
 			items = append(items, map[string]interface{}{
 				"acs_url":      out.Rows[0].Configuration.ACSUrl,
 				"sp_entity_id": out.Rows[0].Configuration.SPEntityID,
+				"redirect_url": out.Rows[0].Configuration.RedirectUrl,
 			})
 		}
 		if err := d.Set("saml", items); err != nil {
@@ -1277,6 +1284,7 @@ func resourceFronteggWorkspaceUpdate(ctx context.Context, d *schema.ResourceData
 		if len(saml) > 0 {
 			in.Configuration.ACSUrl = d.Get("saml.0.acs_url").(string)
 			in.Configuration.SPEntityID = d.Get("saml.0.sp_entity_id").(string)
+			in.Configuration.RedirectUrl = d.Get("saml.0.redirect_url").(string)
 			in.IsActive = true
 		}
 		if err := clientHolder.ApiClient.Post(ctx, fronteggSSOSAMLURL, in, nil); err != nil {

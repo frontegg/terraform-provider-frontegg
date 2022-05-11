@@ -90,6 +90,7 @@ resource "frontegg_workspace" "example" {
   saml {
     acs_url      = "https://mycompany.com/saml"
     sp_entity_id = "my-company"
+    redirect_url = "http://localhost:3000"
   }
 
   reset_password_email {

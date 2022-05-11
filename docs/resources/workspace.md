@@ -106,6 +106,7 @@ resource "frontegg_workspace" "example" {
   saml {
     acs_url      = "https://mycompany.com/saml"
     sp_entity_id = "my-company"
+    redirect_url = "http://localhost:3000
   }
 
   reset_password_email {
@@ -393,6 +394,10 @@ Required:
 
 - **acs_url** (String) The ACS URL for the SAML authentication flow.
 - **sp_entity_id** (String) The name of the service provider that will be displayed to users.
+
+Optional:
+
+- **redirect_url** (String) The redirect URL to use, if applicable.
 
 
 <a id="nestedblock--user_activation_email"></a>
