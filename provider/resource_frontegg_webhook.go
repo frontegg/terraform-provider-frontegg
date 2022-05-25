@@ -83,6 +83,7 @@ func resourceFronteggWebhook() *schema.Resource {
 						"frontegg.user.changedPassword",
 						"frontegg.user.forgotPassword",
 						"frontegg.user.removedFromTenant",
+						"frontegg.tenant.updated",
 						"frontegg.userApiToken.created",
 						"frontegg.userApiToken.deleted",
 						"frontegg.user.activated",
