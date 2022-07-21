@@ -54,6 +54,7 @@ func New(version string) func() *schema.Provider {
 				"frontegg_webhook":             resourceFronteggWebhook(),
 				"frontegg_workspace":           resourceFronteggWorkspace(),
 				"frontegg_tenant":              resourceFronteggTenant(),
+				"frontegg_user":                resourceFronteggUser(),
 				"frontegg_redirect_uri":        resourceFronteggRedirectUri(),
 				"frontegg_allowed_origin":      resourceFronteggAllowedOrigin(),
 			},
