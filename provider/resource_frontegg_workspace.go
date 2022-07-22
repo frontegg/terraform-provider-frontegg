@@ -578,7 +578,7 @@ per Frontegg provider.`,
 						"redirect_url": {
 							Description: "The redirect URL to redirect after the SAML ",
 							Type:        schema.TypeString,
-							Required:    false,
+							Optional:    true,
 						},
 					},
 				},
