@@ -44,7 +44,7 @@ func resourceFronteggTenant() *schema.Resource {
 			"application_uri": {
 				Description: "The application URI for this tenant.",
 				Type:        schema.TypeString,
-				Required:    true,
+				Optional:    true,
 			},
 		},
 	}
