@@ -11,12 +11,12 @@ import (
 )
 
 type fronteggUser struct {
-	Key             string   `json:"id,omitempty"`
-	Email           string   `json:"email,omitempty"`
-	Password        string   `json:"password,omitempty"`
-	Roles           []string `json:"roles,omitempty"`
-	SkipInviteEmail bool     `json:"skipInviteEmail,omitempty"`
-	Verified        bool     `json:"verified,omitempty"`
+	Key             string        `json:"id,omitempty"`
+	Email           string        `json:"email,omitempty"`
+	Password        string        `json:"password,omitempty"`
+	RoleIDs         []interface{} `json:"roleIds,omitempty"`
+	SkipInviteEmail bool          `json:"skipInviteEmail,omitempty"`
+	Verified        bool          `json:"verified,omitempty"`
 }
 
 const fronteggUserPath = "/identity/resources/users/v2"
@@ -56,12 +56,14 @@ func resourceFronteggUser() *schema.Resource {
 				Type:        schema.TypeBool,
 				Optional:    true,
 			},
-			"roles": {
-				Description: "List of the roles that the user has in the tenant",
-				Type:        schema.TypeList,
-				Elem:        schema.TypeString,
-				MinItems:    1,
-				Required:    true,
+			"role_ids": {
+				Description: "List of the role IDs that the user has in the tenant",
+				Type:        schema.TypeSet,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+				MinItems: 1,
+				Required: true,
 			},
 			"key": {
 				Description: "A human-readable identifier for the user.",
@@ -83,7 +85,7 @@ func resourceFronteggUserSerialize(d *schema.ResourceData) fronteggUser {
 		Email:           d.Get("email").(string),
 		Password:        d.Get("password").(string),
 		SkipInviteEmail: d.Get("skip_invite_email").(bool),
-		Roles:           d.Get("roles").([]string),
+		RoleIDs:         d.Get("role_ids").(*schema.Set).List(),
 	}
 }
 
@@ -93,9 +95,6 @@ func resourceFronteggUserDeserialize(d *schema.ResourceData, f fronteggUser) err
 		return err
 	}
 	if err := d.Set("key", f.Key); err != nil {
-		return err
-	}
-	if err := d.Set("roles", f.Roles); err != nil {
 		return err
 	}
 	return nil
