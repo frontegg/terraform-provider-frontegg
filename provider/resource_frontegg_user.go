@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	"log"
 	"net/http"
 
 	"github.com/frontegg/terraform-provider-frontegg/internal/restclient"
@@ -81,6 +82,7 @@ func resourceFronteggUser() *schema.Resource {
 }
 
 func resourceFronteggUserSerialize(d *schema.ResourceData) fronteggUser {
+	log.Printf("role IDs: %#v", d.Get("role_ids").(*schema.Set).List())
 	return fronteggUser{
 		Email:           d.Get("email").(string),
 		Password:        d.Get("password").(string),
@@ -116,7 +118,7 @@ func resourceFronteggUserCreate(ctx context.Context, d *schema.ResourceData, met
 	if !d.Get("automatically_verify").(bool) {
 		return nil
 	}
-	if err := clientHolder.ApiClient.RequestWithHeaders(ctx, "POST", fmt.Sprintf("%s/%s/verify", fronteggUserPathV1, out.Key), headers, in, &out); err != nil {
+	if err := clientHolder.ApiClient.Post(ctx, fmt.Sprintf("%s/%s/verify", fronteggUserPathV1, out.Key), nil, nil); err != nil {
 		return diag.FromErr(err)
 	}
 
