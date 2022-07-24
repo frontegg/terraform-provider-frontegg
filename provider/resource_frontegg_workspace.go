@@ -1149,11 +1149,15 @@ func resourceFronteggWorkspaceUpdate(ctx context.Context, d *schema.ResourceData
 		if len(lockout_policy) > 0 {
 			in.Enabled = true
 			in.MaxAttempts = d.Get("lockout_policy.0.max_attempts").(int)
+		} else {
+			in.Enabled = false
+			in.MaxAttempts = 5
 		}
 		clientHolder.ApiClient.ConflictRetryMethod("PATCH")
 		if err := clientHolder.ApiClient.Post(ctx, fronteggLockoutPolicyURL, in, nil); err != nil {
 			return diag.FromErr(err)
 		}
+
 	}
 	{
 		in := fronteggPasswordPolicy{
