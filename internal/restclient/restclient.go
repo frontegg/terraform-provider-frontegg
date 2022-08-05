@@ -105,7 +105,7 @@ func (c *Client) RequestWithHeaders(ctx context.Context, method string, url stri
 	log.Printf("[TRACE] Received response data %q", string(resBody))
 	if out != nil {
 		if err := json.Unmarshal(resBody, out); err != nil {
-			return fmt.Errorf("restclient: failed to decode JSON response: %w", err)
+			return fmt.Errorf("restclient: failed to decode JSON response %#v: %w", string(resBody), err)
 		}
 	}
 	return nil
