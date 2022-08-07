@@ -38,26 +38,26 @@ func (c *Client) Ignore404() {
 }
 
 func (c *Client) Delete(ctx context.Context, url string, out interface{}) error {
-	return c.Request(ctx, "DELETE", url, nil, out)
+	return c.RequestWithHeaders(ctx, "DELETE", url, nil, nil, out)
 }
 
 func (c *Client) Get(ctx context.Context, url string, out interface{}) error {
-	return c.Request(ctx, "GET", url, nil, out)
+	return c.RequestWithHeaders(ctx, "GET", url, nil, nil, out)
 }
 
 func (c *Client) Patch(ctx context.Context, url string, in interface{}, out interface{}) error {
-	return c.Request(ctx, "PATCH", url, in, out)
+	return c.RequestWithHeaders(ctx, "PATCH", url, nil, in, out)
 }
 
 func (c *Client) Post(ctx context.Context, url string, in interface{}, out interface{}) error {
-	return c.Request(ctx, "POST", url, in, out)
+	return c.RequestWithHeaders(ctx, "POST", url, nil, in, out)
 }
 
 func (c *Client) Put(ctx context.Context, url string, in interface{}, out interface{}) error {
-	return c.Request(ctx, "PUT", url, in, out)
+	return c.RequestWithHeaders(ctx, "PUT", url, nil, in, out)
 }
 
-func (c *Client) Request(ctx context.Context, method string, url string, in interface{}, out interface{}) error {
+func (c *Client) RequestWithHeaders(ctx context.Context, method string, url string, headers http.Header, in interface{}, out interface{}) error {
 	conflictRetryMethod := c.conflictRetryMethod
 	c.conflictRetryMethod = ""
 	ignore404 := c.ignore404
@@ -73,6 +73,11 @@ func (c *Client) Request(ctx context.Context, method string, url string, in inte
 	req, err := http.NewRequestWithContext(ctx, method, c.baseURL+url, reqBody)
 	if err != nil {
 		return fmt.Errorf("restclient: failed to construct request: %w", err)
+	}
+	for k, vals := range headers {
+		for _, v := range vals {
+			req.Header.Add(k, v)
+		}
 	}
 	req.Header.Set("Content-Type", "application/json")
 	if c.token != "" {
@@ -90,7 +95,7 @@ func (c *Client) Request(ctx context.Context, method string, url string, in inte
 	if res.StatusCode == 404 && ignore404 {
 		return nil
 	} else if res.StatusCode == 409 && conflictRetryMethod != "" {
-		return c.Request(ctx, conflictRetryMethod, url, in, out)
+		return c.RequestWithHeaders(ctx, conflictRetryMethod, url, headers, in, out)
 	} else if res.StatusCode < 200 || res.StatusCode >= 300 {
 		return fmt.Errorf(
 			"restclient: request failed: %s %s: %s: %v: %s",
@@ -100,7 +105,7 @@ func (c *Client) Request(ctx context.Context, method string, url string, in inte
 	log.Printf("[TRACE] Received response data %q", string(resBody))
 	if out != nil {
 		if err := json.Unmarshal(resBody, out); err != nil {
-			return fmt.Errorf("restclient: failed to decode JSON response: %w", err)
+			return fmt.Errorf("restclient: failed to decode JSON response %#v: %w", string(resBody), err)
 		}
 	}
 	return nil
