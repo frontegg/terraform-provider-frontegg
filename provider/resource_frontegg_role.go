@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	"net/http"
 
 	"github.com/frontegg/terraform-provider-frontegg/internal/restclient"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -75,7 +76,7 @@ func resourceFronteggRole() *schema.Resource {
 			"tenant_id": {
 				Description: "The ID of the tenant that owns the role.",
 				Type:        schema.TypeString,
-				Computed:    true,
+				Optional: 	 true,
 			},
 			"vendor_id": {
 				Description: "The ID of the vendor that owns the role.",
@@ -139,13 +140,26 @@ func resourceFronteggRoleDeserialize(d *schema.ResourceData, f fronteggRole) err
 	return nil
 }
 
+
+func getTenantIdHeaders(d *schema.ResourceData) http.Header{
+	headers := http.Header{}
+	tenant_id := d.Get("tenant_id").(string)
+	if tenant_id != "" {
+		headers.Add("frontegg-tenant-id", tenant_id)
+	} else {
+		headers = nil
+	}
+	return headers
+}
+
 func resourceFronteggRoleCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	headers := getTenantIdHeaders(d)
 	clientHolder := meta.(*restclient.ClientHolder)
 	var id string
 	{
 		in := []fronteggRole{resourceFronteggRoleSerialize(d)}
 		var out []fronteggRole
-		if err := clientHolder.ApiClient.Post(ctx, fronteggRolePath, in, &out); err != nil {
+		if err := clientHolder.ApiClient.PostWithHeaders(ctx, fronteggRolePath, headers, in, &out); err != nil {
 			return diag.FromErr(err)
 		}
 		if len(out) != 1 {
@@ -155,7 +169,7 @@ func resourceFronteggRoleCreate(ctx context.Context, d *schema.ResourceData, met
 	}
 	var out fronteggRole
 	in := resourceFronteggRolePermissionsSerialize(d)
-	if err := clientHolder.ApiClient.Put(ctx, fmt.Sprintf("%s/%s/permissions", fronteggRolePath, id), in, &out); err != nil {
+	if err := clientHolder.ApiClient.PutWithHeaders(ctx, fmt.Sprintf("%s/%s/permissions", fronteggRolePath, id), headers, in, &out); err != nil {
 		return diag.FromErr(err)
 	}
 	if err := resourceFronteggRoleDeserialize(d, out); err != nil {
@@ -165,9 +179,10 @@ func resourceFronteggRoleCreate(ctx context.Context, d *schema.ResourceData, met
 }
 
 func resourceFronteggRoleRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	headers := getTenantIdHeaders(d)
 	clientHolder := meta.(*restclient.ClientHolder)
 	var out []fronteggRole
-	if err := clientHolder.ApiClient.Get(ctx, fronteggRolePath, &out); err != nil {
+	if err := clientHolder.ApiClient.GetWithHeaders(ctx, fronteggRolePath, headers, &out); err != nil {
 		return diag.FromErr(err)
 	}
 	for _, c := range out {
@@ -183,16 +198,17 @@ func resourceFronteggRoleRead(ctx context.Context, d *schema.ResourceData, meta 
 }
 
 func resourceFronteggRoleUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	headers := getTenantIdHeaders(d)
 	clientHolder := meta.(*restclient.ClientHolder)
 	{
 		in := resourceFronteggRoleSerialize(d)
-		if err := clientHolder.ApiClient.Patch(ctx, fmt.Sprintf("%s/%s", fronteggRolePath, d.Id()), in, nil); err != nil {
+		if err := clientHolder.ApiClient.PatchWithHeaders(ctx, fmt.Sprintf("%s/%s", fronteggRolePath, d.Id()), headers, in, nil); err != nil {
 			return diag.FromErr(err)
 		}
 	}
 	var out fronteggRole
 	in := resourceFronteggRolePermissionsSerialize(d)
-	if err := clientHolder.ApiClient.Put(ctx, fmt.Sprintf("%s/%s/permissions", fronteggRolePath, d.Id()), in, &out); err != nil {
+	if err := clientHolder.ApiClient.PutWithHeaders(ctx, fmt.Sprintf("%s/%s/permissions", fronteggRolePath, d.Id()), headers, in, &out); err != nil {
 		return diag.FromErr(err)
 	}
 	if err := resourceFronteggRoleDeserialize(d, out); err != nil {
@@ -202,8 +218,9 @@ func resourceFronteggRoleUpdate(ctx context.Context, d *schema.ResourceData, met
 }
 
 func resourceFronteggRoleDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	headers := getTenantIdHeaders(d)
 	clientHolder := meta.(*restclient.ClientHolder)
-	if err := clientHolder.ApiClient.Delete(ctx, fmt.Sprintf("%s/%s", fronteggRolePath, d.Id()), nil); err != nil {
+	if err := clientHolder.ApiClient.DeleteWithHeaders(ctx, fmt.Sprintf("%s/%s", fronteggRolePath, d.Id()), headers, nil); err != nil {
 		return diag.FromErr(err)
 	}
 	return nil
