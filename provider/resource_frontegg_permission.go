@@ -11,6 +11,14 @@ import (
 
 const fronteggPermissionPath = "/identity/resources/permissions/v1"
 
+var cache = make(map[string]fronteggPermission)
+
+func clearCache() {
+	for k := range cache {
+		delete(cache, k)
+	}
+}
+
 type fronteggPermission struct {
 	ID          string `json:"id,omitempty"`
 	CategoryID  string `json:"categoryId,omitempty"`
@@ -104,16 +112,28 @@ func resourceFronteggPermissionCreate(ctx context.Context, d *schema.ResourceDat
 	if err := resourceFronteggPermissionDeserialize(d, out[0]); err != nil {
 		return diag.FromErr(err)
 	}
+	clearCache()
 	return nil
 }
 
 func resourceFronteggPermissionRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	perm, exists := cache[d.Id()]
+	if exists {
+		if err := resourceFronteggPermissionDeserialize(d, perm); err != nil {
+			return diag.FromErr(err)
+		}
+		return diag.Diagnostics{}
+	}
+
+	clearCache()
+
 	clientHolder := meta.(*restclient.ClientHolder)
 	var out []fronteggPermission
 	if err := clientHolder.ApiClient.Get(ctx, fronteggPermissionPath, &out); err != nil {
 		return diag.FromErr(err)
 	}
 	for _, c := range out {
+		cache[c.ID] = c
 		if c.ID == d.Id() {
 			if err := resourceFronteggPermissionDeserialize(d, c); err != nil {
 				return diag.FromErr(err)
@@ -131,6 +151,7 @@ func resourceFronteggPermissionUpdate(ctx context.Context, d *schema.ResourceDat
 	if err := clientHolder.ApiClient.Patch(ctx, fmt.Sprintf("%s/%s", fronteggPermissionPath, d.Id()), in, nil); err != nil {
 		return diag.FromErr(err)
 	}
+	clearCache()
 	return resourceFronteggPermissionRead(ctx, d, meta)
 }
 
@@ -139,5 +160,6 @@ func resourceFronteggPermissionDelete(ctx context.Context, d *schema.ResourceDat
 	if err := clientHolder.ApiClient.Delete(ctx, fmt.Sprintf("%s/%s", fronteggPermissionPath, d.Id()), nil); err != nil {
 		return diag.FromErr(err)
 	}
+	clearCache()
 	return nil
 }
