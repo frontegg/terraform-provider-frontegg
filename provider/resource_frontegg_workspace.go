@@ -152,6 +152,7 @@ type fronteggAdminPortal struct {
 type fronteggAdminPortalConfiguration struct {
 	Navigation fronteggAdminPortalNavigation `json:"navigation"`
 	Theme      fronteggAdminPortalTheme      `json:"theme"`
+	ThemeV2    interface{}                   `json:"themeV2"`
 }
 
 type fronteggAdminPortalNavigation struct {
@@ -1330,39 +1331,43 @@ func resourceFronteggWorkspaceUpdate(ctx context.Context, d *schema.ResourceData
 				Visibility: visibility,
 			}
 		}
-		in := fronteggAdminPortal{
-			Configuration: fronteggAdminPortalConfiguration{
-				Navigation: fronteggAdminPortalNavigation{
-					Account:           serializeVisibility("admin_portal.0.enable_account_settings"),
-					APITokens:         serializeVisibility("admin_portal.0.enable_api_tokens"),
-					Audits:            serializeVisibility("admin_portal.0.enable_audit_logs"),
-					PersonalAPITokens: serializeVisibility("admin_portal.0.enable_personal_api_tokens"),
-					Privacy:           serializeVisibility("admin_portal.0.enable_privacy"),
-					Profile:           serializeVisibility("admin_portal.0.enable_profile"),
-					Roles:             serializeVisibility("admin_portal.0.enable_roles"),
-					Security:          serializeVisibility("admin_portal.0.enable_security"),
-					SSO:               serializeVisibility("admin_portal.0.enable_sso"),
-					Subscriptions:     serializeVisibility("admin_portal.0.enable_subscriptions"),
-					Usage:             serializeVisibility("admin_portal.0.enable_usage"),
-					Users:             serializeVisibility("admin_portal.0.enable_users"),
-					Webhooks:          serializeVisibility("admin_portal.0.enable_webhooks"),
-				},
-				Theme: fronteggAdminPortalTheme{
-					Palette: fronteggAdminPortalPalette{
-						Success:       d.Get("admin_portal.0.palette.0.success").(string),
-						Info:          d.Get("admin_portal.0.palette.0.info").(string),
-						Warning:       d.Get("admin_portal.0.palette.0.warning").(string),
-						Error:         d.Get("admin_portal.0.palette.0.error").(string),
-						Primary:       d.Get("admin_portal.0.palette.0.primary").(string),
-						PrimaryText:   d.Get("admin_portal.0.palette.0.primary_text").(string),
-						Secondary:     d.Get("admin_portal.0.palette.0.secondary").(string),
-						SecondaryText: d.Get("admin_portal.0.palette.0.secondary_text").(string),
-					},
-				},
-			},
-			EntityName: "adminBox",
+
+		var out struct {
+			Rows []fronteggAdminPortal `json:"rows"`
 		}
-		if err := clientHolder.ApiClient.Post(ctx, fronteggAdminPortalURL, in, nil); err != nil {
+		if err := clientHolder.ApiClient.Get(ctx, fronteggAdminPortalURL, &out); err != nil {
+			return diag.FromErr(err)
+		}
+
+		adminPortal := out.Rows[0]
+
+		log.Printf("----------------------current admin portal configuration %+v", adminPortal)
+
+		configuration := adminPortal.Configuration
+		configuration.Navigation.Account = serializeVisibility("admin_portal.0.enable_account_settings")
+		configuration.Navigation.APITokens = serializeVisibility("admin_portal.0.enable_api_tokens")
+		configuration.Navigation.Audits = serializeVisibility("admin_portal.0.enable_audit_logs")
+		configuration.Navigation.PersonalAPITokens = serializeVisibility("admin_portal.0.enable_personal_api_tokens")
+		configuration.Navigation.Privacy = serializeVisibility("admin_portal.0.enable_privacy")
+		configuration.Navigation.Profile = serializeVisibility("admin_portal.0.enable_profile")
+		configuration.Navigation.Roles = serializeVisibility("admin_portal.0.enable_roles")
+		configuration.Navigation.Security = serializeVisibility("admin_portal.0.enable_security")
+		configuration.Navigation.SSO = serializeVisibility("admin_portal.0.enable_sso")
+		configuration.Navigation.Subscriptions = serializeVisibility("admin_portal.0.enable_subscriptions")
+		configuration.Navigation.Usage = serializeVisibility("admin_portal.0.enable_usage")
+		configuration.Navigation.Users = serializeVisibility("admin_portal.0.enable_users")
+		configuration.Navigation.Webhooks = serializeVisibility("admin_portal.0.enable_webhooks")
+
+		configuration.Theme.Palette.Success = d.Get("admin_portal.0.palette.0.success").(string)
+		configuration.Theme.Palette.Info = d.Get("admin_portal.0.palette.0.info").(string)
+		configuration.Theme.Palette.Warning = d.Get("admin_portal.0.palette.0.warning").(string)
+		configuration.Theme.Palette.Error = d.Get("admin_portal.0.palette.0.error").(string)
+		configuration.Theme.Palette.Primary = d.Get("admin_portal.0.palette.0.primary").(string)
+		configuration.Theme.Palette.PrimaryText = d.Get("admin_portal.0.palette.0.primary_text").(string)
+		configuration.Theme.Palette.Secondary = d.Get("admin_portal.0.palette.0.secondary").(string)
+		configuration.Theme.Palette.SecondaryText = d.Get("admin_portal.0.palette.0.secondary_text").(string)
+
+		if err := clientHolder.ApiClient.Post(ctx, fronteggAdminPortalURL, adminPortal, nil); err != nil {
 			return diag.FromErr(err)
 		}
 	}
