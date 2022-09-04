@@ -37,6 +37,26 @@ func (c *Client) Ignore404() {
 	c.ignore404 = true
 }
 
+func (c *Client) DeleteWithHeaders(ctx context.Context, url string, headers http.Header, out interface{}) error {
+	return c.RequestWithHeaders(ctx, "DELETE", url, nil, headers, out)
+}
+
+func (c *Client) GetWithHeaders(ctx context.Context, url string, headers http.Header, out interface{}) error {
+	return c.RequestWithHeaders(ctx, "GET", url, nil, headers, out)
+}
+
+func (c *Client) PatchWithHeaders(ctx context.Context, url string, headers http.Header, in interface{}, out interface{}) error {
+	return c.RequestWithHeaders(ctx, "PATCH", url, headers, in, out)
+}
+
+func (c *Client) PostWithHeaders(ctx context.Context, url string, headers http.Header, in interface{}, out interface{}) error {
+	return c.RequestWithHeaders(ctx, "POST", url, headers, in, out)
+}
+
+func (c *Client) PutWithHeaders(ctx context.Context, url string, headers http.Header, in interface{}, out interface{}) error {
+	return c.RequestWithHeaders(ctx, "PUT", url, headers, in, out)
+}
+
 func (c *Client) Delete(ctx context.Context, url string, out interface{}) error {
 	return c.RequestWithHeaders(ctx, "DELETE", url, nil, nil, out)
 }
