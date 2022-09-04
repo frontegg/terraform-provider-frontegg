@@ -612,6 +612,48 @@ per Frontegg provider.`,
 				MaxItems:    1,
 				Elem:        resourceFronteggEmail("PwnedPassword"),
 			},
+			"magic_link_email": {
+				Description: "Configures the magic link email.",
+				Type:        schema.TypeList,
+				Optional:    true,
+				MaxItems:    1,
+				Elem:        resourceFronteggEmail("MagicLink"),
+			},
+			"magic_code_email": {
+				Description: "Configures the one time code email.",
+				Type:        schema.TypeList,
+				Optional:    true,
+				MaxItems:    1,
+				Elem:        resourceFronteggEmail("OTC"),
+			},
+			"new_device_connected_email": {
+				Description: "Configures the new device connected email.",
+				Type:        schema.TypeList,
+				Optional:    true,
+				MaxItems:    1,
+				Elem:        resourceFronteggEmail("ConnectNewDevice"),
+			},
+			"user_used_invitation_email": {
+				Description: "Configures the user used invitation email.",
+				Type:        schema.TypeList,
+				Optional:    true,
+				MaxItems:    1,
+				Elem:        resourceFronteggEmail("UserUsedInvitation"),
+			},
+			"reset_phone_number_email": {
+				Description: "Configures the reset phone number email.",
+				Type:        schema.TypeList,
+				Optional:    true,
+				MaxItems:    1,
+				Elem:        resourceFronteggEmail("ResetPhoneNumber"),
+			},
+			"bulk_tenants_invites_email": {
+				Description: "Configures the bulk tenants invite email.",
+				Type:        schema.TypeList,
+				Optional:    true,
+				MaxItems:    1,
+				Elem:        resourceFronteggEmail("BulkInvitesToTenant"),
+			},
 			"admin_portal": {
 				Description: "Configures the admin portal.",
 				Type:        schema.TypeList,
@@ -1014,10 +1056,16 @@ func resourceFronteggWorkspaceRead(ctx context.Context, d *schema.ResourceData, 
 			return fmt.Errorf("frontegg missing required email template %s", typ)
 		}
 		for field, typ := range map[string]string{
-			"reset_password_email":  "ResetPassword",
-			"user_activation_email": "ActivateUser",
-			"user_invitation_email": "InviteToTenant",
-			"pwned_password_email":  "PwnedPassword",
+			"reset_password_email":       "ResetPassword",
+			"user_activation_email":      "ActivateUser",
+			"user_invitation_email":      "InviteToTenant",
+			"pwned_password_email":       "PwnedPassword",
+			"magic_link_email":           "MagicLink",
+			"magic_code_email":           "OTC",
+			"new_device_connected_email": "ConnectNewDevice",
+			"user_used_invitation_email": "UserUsedInvitation",
+			"reset_phone_number_email":   "ResetPhoneNumber",
+			"bulk_tenants_invites_email": "BulkInvitesToTenant",
 		} {
 			if err := deserialize(field, typ); err != nil {
 				return diag.FromErr(err)
@@ -1297,10 +1345,16 @@ func resourceFronteggWorkspaceUpdate(ctx context.Context, d *schema.ResourceData
 		}
 	}
 	for field, typ := range map[string]string{
-		"reset_password_email":  "ResetPassword",
-		"user_activation_email": "ActivateUser",
-		"user_invitation_email": "InviteToTenant",
-		"pwned_password_email":  "PwnedPassword",
+		"reset_password_email":       "ResetPassword",
+		"user_activation_email":      "ActivateUser",
+		"user_invitation_email":      "InviteToTenant",
+		"pwned_password_email":       "PwnedPassword",
+		"magic_link_email":           "MagicLink",
+		"magic_code_email":           "OTC",
+		"new_device_connected_email": "ConnectNewDevice",
+		"user_used_invitation_email": "UserUsedInvitation",
+		"reset_phone_number_email":   "ResetPhoneNumber",
+		"bulk_tenants_invites_email": "BulkInvitesToTenant",
 	} {
 		email := d.Get(field).([]interface{})
 		in := fronteggEmailTemplate{
@@ -1316,10 +1370,11 @@ func resourceFronteggWorkspaceUpdate(ctx context.Context, d *schema.ResourceData
 			in.HTMLTemplate = d.Get(fmt.Sprintf("%s.0.html_template", field)).(string)
 			in.RedirectURL = d.Get(fmt.Sprintf("%s.0.redirect_url", field)).(string)
 			in.SuccessRedirectURL = d.Get(fmt.Sprintf("%s.0.success_redirect_url", field)).(string)
+			if err := clientHolder.ApiClient.Post(ctx, fronteggEmailTemplatesURL, in, nil); err != nil {
+				return diag.FromErr(err)
+			}
 		}
-		if err := clientHolder.ApiClient.Post(ctx, fronteggEmailTemplatesURL, in, nil); err != nil {
-			return diag.FromErr(err)
-		}
+
 	}
 	{
 		serializeVisibility := func(key string) fronteggAdminPortalVisibility {
@@ -1340,8 +1395,6 @@ func resourceFronteggWorkspaceUpdate(ctx context.Context, d *schema.ResourceData
 		}
 
 		adminPortal := out.Rows[0]
-
-		log.Printf("----------------------current admin portal configuration %+v", adminPortal)
 
 		configuration := adminPortal.Configuration
 		configuration.Navigation.Account = serializeVisibility("admin_portal.0.enable_account_settings")
