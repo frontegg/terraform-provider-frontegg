@@ -187,6 +187,12 @@ resource "frontegg_workspace" "example" {
 - **saml** (Block List, Max: 1) Configures SSO via SAML. (see [below for nested schema](#nestedblock--saml))
 - **user_activation_email** (Block List, Max: 1) Configures the user activation email. (see [below for nested schema](#nestedblock--user_activation_email))
 - **user_invitation_email** (Block List, Max: 1) Configures the user invitation email. (see [below for nested schema](#nestedblock--user_invitation_email))
+- **magic_link_email** (Block List, Max: 1) Configures the magic link email. (see [below for nested schema](#nestedblock--magic_link_email))
+- **magic_code_email** (Block List, Max: 1) Configures the magic code email. (see [below for nested schema](#nestedblock--magic_code_email))
+- **new_device_connected_email** (Block List, Max: 1) Configures the new device connected email. (see [below for nested schema](#nestedblock--new_device_connected_email))
+- **user_used_invitation_email** (Block List, Max: 1) Configures the user used invitation email. (see [below for nested schema](#nestedblock--user_used_invitation_email))
+- **reset_phone_number_email** (Block List, Max: 1) Configures the reset phone number email. (see [below for nested schema](#nestedblock--reset_phone_number_email))
+- **bulk_tenants_invites_email** (Block List, Max: 1) Configures the bulk tenant invites email. (see [below for nested schema](#nestedblock--bulk_tenants_invites_email))
 
 <a id="nestedblock--admin_portal"></a>
 ### Nested Schema for `admin_portal`
@@ -434,5 +440,111 @@ Optional:
 
     Access this value as "\{\{redirectURL\}\}" in the template.
 - **success_redirect_url** (String) The success redirect URL to use, if applicable.
+
+
+<a id="nestedblock--magic_link_email"></a>
+### Nested Schema for `magic_link_email`
+
+Required:
+
+- **from_address** (String) The address to use in the "From" header of the email.
+- **from_name** (String) The name to use in the "From" header of the email.
+- **html_template** (String) The HTML template to use in the email.
+- **subject** (String) The subject of the email.
+
+Optional:
+
+- **redirect_url** (String) The redirect URL to use, if applicable.
+
+    Access this value as "\{\{redirectURL\}\}" in the template.
+- **success_redirect_url** (String) The success redirect URL to use, if applicable.
+
+<a id="nestedblock--magic_code_email"></a>
+### Nested Schema for `magic_code_email`
+
+Required:
+
+- **from_address** (String) The address to use in the "From" header of the email.
+- **from_name** (String) The name to use in the "From" header of the email.
+- **html_template** (String) The HTML template to use in the email.
+- **subject** (String) The subject of the email.
+
+Optional:
+
+- **redirect_url** (String) The redirect URL to use, if applicable.
+
+    Access this value as "\{\{redirectURL\}\}" in the template.
+- **success_redirect_url** (String) The success redirect URL to use, if applicable.
+
+<a id="nestedblock--new_device_connected_email"></a>
+### Nested Schema for `new_device_connected_email`
+
+Required:
+
+- **from_address** (String) The address to use in the "From" header of the email.
+- **from_name** (String) The name to use in the "From" header of the email.
+- **html_template** (String) The HTML template to use in the email.
+- **subject** (String) The subject of the email.
+
+Optional:
+
+- **redirect_url** (String) The redirect URL to use, if applicable.
+
+    Access this value as "\{\{redirectURL\}\}" in the template.
+- **success_redirect_url** (String) The success redirect URL to use, if applicable.
+
+<a id="nestedblock--user_used_invitation_email"></a>
+### Nested Schema for `user_used_invitation_email`
+
+Required:
+
+- **from_address** (String) The address to use in the "From" header of the email.
+- **from_name** (String) The name to use in the "From" header of the email.
+- **html_template** (String) The HTML template to use in the email.
+- **subject** (String) The subject of the email.
+
+Optional:
+
+- **redirect_url** (String) The redirect URL to use, if applicable.
+
+    Access this value as "\{\{redirectURL\}\}" in the template.
+- **success_redirect_url** (String) The success redirect URL to use, if applicable.
+
+
+<a id="nestedblock--reset_phone_number_email"></a>
+### Nested Schema for `reset_phone_number_email`
+
+Required:
+
+- **from_address** (String) The address to use in the "From" header of the email.
+- **from_name** (String) The name to use in the "From" header of the email.
+- **html_template** (String) The HTML template to use in the email.
+- **subject** (String) The subject of the email.
+
+Optional:
+
+- **redirect_url** (String) The redirect URL to use, if applicable.
+
+    Access this value as "\{\{redirectURL\}\}" in the template.
+- **success_redirect_url** (String) The success redirect URL to use, if applicable.
+
+<a id="nestedblock--bulk_tenants_invites_email"></a>
+### Nested Schema for `bulk_tenants_invites_email`
+
+Required:
+
+- **from_address** (String) The address to use in the "From" header of the email.
+- **from_name** (String) The name to use in the "From" header of the email.
+- **html_template** (String) The HTML template to use in the email.
+- **subject** (String) The subject of the email.
+
+Optional:
+
+- **redirect_url** (String) The redirect URL to use, if applicable.
+
+    Access this value as "\{\{redirectURL\}\}" in the template.
+- **success_redirect_url** (String) The success redirect URL to use, if applicable.
+
+
 
 
