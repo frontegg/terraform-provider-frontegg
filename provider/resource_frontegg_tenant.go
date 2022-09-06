@@ -15,6 +15,16 @@ type fronteggTenant struct {
 	Key            string `json:"tenantId,omitempty"`
 	Name           string `json:"name,omitempty"`
 	ApplicationUri string `json:"applicationUrl,omitempty"`
+	Status		   string `json:"status,omitempty"`
+	Website		   string `json:"website,omitempty"`
+	Logo		   string `json:"logo,omitempty"`
+	LogoUrl		   string `json:"logoUrl,omitempty"`
+	Address		   string `json:"address,omitempty"`
+	Timezone	   string `json:"timezone,omitempty"`
+	Currency	   string `json:"currency,omitempty"`
+	CreatorName	   string `json:"creatorName,omitempty"`
+	CreatorEmail   string `json:"creatorEmail,omitempty"`
+	IsReseller     bool `json:"isReseller,omitempty"`
 }
 
 func resourceFronteggTenant() *schema.Resource {
@@ -46,6 +56,56 @@ func resourceFronteggTenant() *schema.Resource {
 				Type:        schema.TypeString,
 				Optional:    true,
 			},
+			"status": {
+				Description: "The status for this tenant.",
+				Type:        schema.TypeString,
+				Optional:    true,
+			},
+			"website": {
+				Description: "The website for this tenant.",
+				Type:        schema.TypeString,
+				Optional:    true,
+			},
+			"logo": {
+				Description: "The logo for this tenant.",
+				Type:        schema.TypeString,
+				Optional:    true,
+			},
+			"logo_url": {
+				Description: "The logo Url for this tenant.",
+				Type:        schema.TypeString,
+				Optional:    true,
+			},
+			"address": {
+				Description: "The address for this tenant.",
+				Type:        schema.TypeString,
+				Optional:    true,
+			},
+			"timezone": {
+				Description: "The timezone for this tenant.",
+				Type:        schema.TypeString,
+				Optional:    true,
+			},
+			"currency": {
+				Description: "The currency for this tenant.",
+				Type:        schema.TypeString,
+				Optional:    true,
+			},
+			"creator_name": {
+				Description: "The creator name for this tenant.",
+				Type:        schema.TypeString,
+				Optional:    true,
+			},
+			"creator_email": {
+				Description: "The creator email for this tenant.",
+				Type:        schema.TypeString,
+				Optional:    true,
+			},
+			"is_reseller": {
+				Description: "Mark tenant as reseller",
+				Type:        schema.TypeBool,
+				Optional:    true,
+			},
 		},
 	}
 }
@@ -55,6 +115,16 @@ func resourceFronteggTenantSerialize(d *schema.ResourceData) fronteggTenant {
 		Name:           d.Get("name").(string),
 		Key:            d.Get("key").(string),
 		ApplicationUri: d.Get("application_uri").(string),
+		Status: 		d.Get("status").(string),
+		Website: 		d.Get("website").(string),
+		Logo: 			d.Get("logo").(string),
+		LogoUrl: 		d.Get("logo_url").(string),
+		Address: 		d.Get("address").(string),
+		Timezone: 		d.Get("timezone").(string),
+		Currency: 		d.Get("currency").(string),
+		CreatorName: 	d.Get("creator_name").(string),
+		CreatorEmail: 	d.Get("creator_email").(string),
+		IsReseller: 	d.Get("is_reseller").(bool),
 	}
 }
 
@@ -67,6 +137,36 @@ func resourceFronteggTenantDeserialize(d *schema.ResourceData, f fronteggTenant)
 		return err
 	}
 	if err := d.Set("application_uri", f.ApplicationUri); err != nil {
+		return err
+	}
+	if err := d.Set("status", f.Status); err != nil {
+		return err
+	}
+	if err := d.Set("website", f.Website); err != nil {
+		return err
+	}
+	if err := d.Set("logo", f.Logo); err != nil {
+		return err
+	}
+	if err := d.Set("logo_url", f.LogoUrl); err != nil {
+		return err
+	}
+	if err := d.Set("address", f.Address); err != nil {
+		return err
+	}
+	if err := d.Set("timezone", f.Timezone); err != nil {
+		return err
+	}
+	if err := d.Set("currency", f.Currency); err != nil {
+		return err
+	}
+	if err := d.Set("creator_name", f.CreatorName); err != nil {
+		return err
+	}
+	if err := d.Set("creator_email", f.CreatorEmail); err != nil {
+		return err
+	}
+	if err := d.Set("is_reseller", f.IsReseller); err != nil {
 		return err
 	}
 	return nil
