@@ -27,6 +27,7 @@ type fronteggTenant struct {
 	IsReseller     bool `json:"isReseller,omitempty"`
 }
 
+
 func resourceFronteggTenant() *schema.Resource {
 	return &schema.Resource{
 		Description: `Configures a Frontegg tenant.`,
