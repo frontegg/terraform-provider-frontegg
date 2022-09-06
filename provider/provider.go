@@ -27,7 +27,7 @@ func New(version string) func() *schema.Provider {
 					Description: "The Frontegg portal url. Override to change region. Defaults to EU url.",
 					Type:        schema.TypeString,
 					Optional:    true,
-					Default:     "https://portal.frontegg.com",
+					Default:     "https://frontegg-prod.frontegg.com",
 					DefaultFunc: schema.EnvDefaultFunc("FRONTEGG_PORTAL_BASE_URL", nil),
 				},
 				"client_id": {

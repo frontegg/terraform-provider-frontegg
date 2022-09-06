@@ -106,7 +106,7 @@ resource "frontegg_workspace" "example" {
   saml {
     acs_url      = "https://mycompany.com/saml"
     sp_entity_id = "my-company"
-    redirect_url = "http://localhost:3000"
+    redirect_url = "http://localhost:3000
   }
 
   reset_password_email {
@@ -151,79 +151,82 @@ resource "frontegg_workspace" "example" {
 
 ### Required
 
-- `admin_portal` (Block List, Min: 1, Max: 1) Configures the admin portal. (see [below for nested schema](#nestedblock--admin_portal))
-- `allowed_origins` (Set of String) The origins that are allowed to access the workspace.
+- **admin_portal** (Block List, Min: 1, Max: 1) Configures the admin portal. (see [below for nested schema](#nestedblock--admin_portal))
+- **allowed_origins** (Set of String) The origins that are allowed to access the workspace.
 
     This parameter controls the value of the "Origin" header for API responses.
-- `auth_policy` (Block List, Min: 1, Max: 1) Configures the general authentication policy. (see [below for nested schema](#nestedblock--auth_policy))
-- `backend_stack` (String) The backend stack of the application associated with the workspace.
-- `country` (String) The country associated with the workspace.
-- `frontegg_domain` (String) The domain at which the Frontegg API is served for this workspace.
+- **auth_policy** (Block List, Min: 1, Max: 1) Configures the general authentication policy. (see [below for nested schema](#nestedblock--auth_policy))
+- **backend_stack** (String) The backend stack of the application associated with the workspace.
+- **country** (String) The country associated with the workspace.
+- **frontegg_domain** (String) The domain at which the Frontegg API is served for this workspace.
 
     The domain must end with ".frontegg.com" or ".us.frontegg.com".
-- `frontend_stack` (String) The frontend stack of the application associated with the worksapce.
-- `mfa_policy` (Block List, Min: 1, Max: 1) Configures the multi-factor authentication (MFA) policy. (see [below for nested schema](#nestedblock--mfa_policy))
-- `name` (String) The name of the workspace.
-- `open_saas_installed` (Boolean) Whether the application associated with the workspace has OpenSaaS installed.
-- `password_policy` (Block List, Min: 1, Max: 1) Configures the password policy. (see [below for nested schema](#nestedblock--password_policy))
+- **frontend_stack** (String) The frontend stack of the application associated with the worksapce.
+- **mfa_policy** (Block List, Min: 1, Max: 1) Configures the multi-factor authentication (MFA) policy. (see [below for nested schema](#nestedblock--mfa_policy))
+- **name** (String) The name of the workspace.
+- **open_saas_installed** (Boolean) Whether the application associated with the workspace has OpenSaaS installed.
+- **password_policy** (Block List, Min: 1, Max: 1) Configures the password policy. (see [below for nested schema](#nestedblock--password_policy))
 
 ### Optional
 
-- `captcha_policy` (Block List, Max: 1) Configures the CAPTCHA policy in the signup form. (see [below for nested schema](#nestedblock--captcha_policy))
-- `custom_domain` (String) A custom domain at which Frontegg services will be reachable.
+- **captcha_policy** (Block List, Max: 1) Configures the CAPTCHA policy in the signup form. (see [below for nested schema](#nestedblock--captcha_policy))
+- **custom_domain** (String) A custom domain at which Frontegg services will be reachable.
 
     You must configure a CNAME record for this domain that points to
     "ssl.frontegg.com" before setting this field.
-- `facebook_social_login` (Block List, Max: 1) Configures social login with Facebook. (see [below for nested schema](#nestedblock--facebook_social_login))
-- `github_social_login` (Block List, Max: 1) Configures social login with GitHub. (see [below for nested schema](#nestedblock--github_social_login))
-- `google_social_login` (Block List, Max: 1) Configures social login with Google. (see [below for nested schema](#nestedblock--google_social_login))
-- `hosted_login` (Block List, Max: 1) Configures Frontegg-hosted OAuth login. (see [below for nested schema](#nestedblock--hosted_login))
-- `lockout_policy` (Block List, Max: 1) Configures the user lockout policy. (see [below for nested schema](#nestedblock--lockout_policy))
-- `mfa_authentication_app` (Block List, Max: 1) Configures the multi-factor authentication (MFA) via an authentication app. (see [below for nested schema](#nestedblock--mfa_authentication_app))
-- `microsoft_social_login` (Block List, Max: 1) Configures social login with Google. (see [below for nested schema](#nestedblock--microsoft_social_login))
-- `pwned_password_email` (Block List, Max: 1) Configures the pwned password email. (see [below for nested schema](#nestedblock--pwned_password_email))
-- `reset_password_email` (Block List, Max: 1) Configures the password reset email. (see [below for nested schema](#nestedblock--reset_password_email))
-- `saml` (Block List, Max: 1) Configures SSO via SAML. (see [below for nested schema](#nestedblock--saml))
-- `user_activation_email` (Block List, Max: 1) Configures the user activation email. (see [below for nested schema](#nestedblock--user_activation_email))
-- `user_invitation_email` (Block List, Max: 1) Configures the user invitation email. (see [below for nested schema](#nestedblock--user_invitation_email))
-
-### Read-Only
-
-- `id` (String) The ID of this resource.
+- **facebook_social_login** (Block List, Max: 1) Configures social login with Facebook. (see [below for nested schema](#nestedblock--facebook_social_login))
+- **github_social_login** (Block List, Max: 1) Configures social login with GitHub. (see [below for nested schema](#nestedblock--github_social_login))
+- **google_social_login** (Block List, Max: 1) Configures social login with Google. (see [below for nested schema](#nestedblock--google_social_login))
+- **hosted_login** (Block List, Max: 1) Configures Frontegg-hosted OAuth login. (see [below for nested schema](#nestedblock--hosted_login))
+- **id** (String) The ID of this resource.
+- **lockout_policy** (Block List, Max: 1) Configures the user lockout policy. (see [below for nested schema](#nestedblock--lockout_policy))
+- **mfa_authentication_app** (Block List, Max: 1) Configures the multi-factor authentication (MFA) via an authentication app. (see [below for nested schema](#nestedblock--mfa_authentication_app))
+- **microsoft_social_login** (Block List, Max: 1) Configures social login with Google. (see [below for nested schema](#nestedblock--microsoft_social_login))
+- **pwned_password_email** (Block List, Max: 1) Configures the pwned password email. (see [below for nested schema](#nestedblock--pwned_password_email))
+- **reset_password_email** (Block List, Max: 1) Configures the password reset email. (see [below for nested schema](#nestedblock--reset_password_email))
+- **saml** (Block List, Max: 1) Configures SSO via SAML. (see [below for nested schema](#nestedblock--saml))
+- **user_activation_email** (Block List, Max: 1) Configures the user activation email. (see [below for nested schema](#nestedblock--user_activation_email))
+- **user_invitation_email** (Block List, Max: 1) Configures the user invitation email. (see [below for nested schema](#nestedblock--user_invitation_email))
+- **magic_link_email** (Block List, Max: 1) Configures the magic link email. (see [below for nested schema](#nestedblock--magic_link_email))
+- **magic_code_email** (Block List, Max: 1) Configures the magic code email. (see [below for nested schema](#nestedblock--magic_code_email))
+- **new_device_connected_email** (Block List, Max: 1) Configures the new device connected email. (see [below for nested schema](#nestedblock--new_device_connected_email))
+- **user_used_invitation_email** (Block List, Max: 1) Configures the user used invitation email. (see [below for nested schema](#nestedblock--user_used_invitation_email))
+- **reset_phone_number_email** (Block List, Max: 1) Configures the reset phone number email. (see [below for nested schema](#nestedblock--reset_phone_number_email))
+- **bulk_tenants_invites_email** (Block List, Max: 1) Configures the bulk tenant invites email. (see [below for nested schema](#nestedblock--bulk_tenants_invites_email))
 
 <a id="nestedblock--admin_portal"></a>
 ### Nested Schema for `admin_portal`
 
 Required:
 
-- `enable_account_settings` (Boolean) Enable access to account settings in the admin portal.
-- `enable_api_tokens` (Boolean) Enable access to API tokens in the admin portal.
-- `enable_audit_logs` (Boolean) Enable access to audit logs in the admin portal.
-- `enable_personal_api_tokens` (Boolean) Enable access to personal API tokens in the admin portal.
-- `enable_privacy` (Boolean) Enable access to privacy settings in the admin portal.
-- `enable_profile` (Boolean) Enable access to profile settings in the admin portal.
-- `enable_roles` (Boolean) Enable access to roles and permissions in the admin portal.
-- `enable_security` (Boolean) Enable access to security settings in the admin portal.
-- `enable_sso` (Boolean) Enable access to SSO settings in the admin portal.
-- `enable_subscriptions` (Boolean) Enable access to subscription settings in the admin portal.
-- `enable_usage` (Boolean) Enable access to usage information in the admin portal.
-- `enable_users` (Boolean) Enable access to user management in the admin portal.
-- `enable_webhooks` (Boolean) Enable access to webhooks in the admin portal.
-- `palette` (Block List, Min: 1, Max: 1) Configures the color palette for the admin portal. (see [below for nested schema](#nestedblock--admin_portal--palette))
+- **enable_account_settings** (Boolean) Enable access to account settings in the admin portal.
+- **enable_api_tokens** (Boolean) Enable access to API tokens in the admin portal.
+- **enable_audit_logs** (Boolean) Enable access to audit logs in the admin portal.
+- **enable_personal_api_tokens** (Boolean) Enable access to personal API tokens in the admin portal.
+- **enable_privacy** (Boolean) Enable access to privacy settings in the admin portal.
+- **enable_profile** (Boolean) Enable access to profile settings in the admin portal.
+- **enable_roles** (Boolean) Enable access to roles and permissions in the admin portal.
+- **enable_security** (Boolean) Enable access to security settings in the admin portal.
+- **enable_sso** (Boolean) Enable access to SSO settings in the admin portal.
+- **enable_subscriptions** (Boolean) Enable access to subscription settings in the admin portal.
+- **enable_usage** (Boolean) Enable access to usage information in the admin portal.
+- **enable_users** (Boolean) Enable access to user management in the admin portal.
+- **enable_webhooks** (Boolean) Enable access to webhooks in the admin portal.
+- **palette** (Block List, Min: 1, Max: 1) Configures the color palette for the admin portal. (see [below for nested schema](#nestedblock--admin_portal--palette))
 
 <a id="nestedblock--admin_portal--palette"></a>
 ### Nested Schema for `admin_portal.palette`
 
 Required:
 
-- `error` (String) Error color.
-- `info` (String) Info color.
-- `primary` (String) Primary color.
-- `primary_text` (String) Primary text color.
-- `secondary` (String) Secondary color.
-- `secondary_text` (String) Secondary text color.
-- `success` (String) Success color.
-- `warning` (String) Warning color.
+- **error** (String) Error color.
+- **info** (String) Info color.
+- **primary** (String) Primary color.
+- **primary_text** (String) Primary text color.
+- **secondary** (String) Secondary color.
+- **secondary_text** (String) Secondary text color.
+- **success** (String) Success color.
+- **warning** (String) Warning color.
 
 
 
@@ -232,23 +235,23 @@ Required:
 
 Required:
 
-- `allow_signups` (Boolean) Whether users are allowed to sign up.
-- `allow_unverified_users` (Boolean) Whether unverified users are allowed to log in.
-- `enable_api_tokens` (Boolean) Whether users can create API tokens.
-- `enable_roles` (Boolean) Whether granular roles and permissions are enabled.
-- `jwt_access_token_expiration` (Number) The expiration time for the JWT access tokens issued by Frontegg.
-- `jwt_refresh_token_expiration` (Number) The expiration time for the JWT refresh tokens issued by Frontegg.
-- `same_site_cookie_policy` (String) The SameSite policy to use for Frontegg cookies.
+- **allow_signups** (Boolean) Whether users are allowed to sign up.
+- **allow_unverified_users** (Boolean) Whether unverified users are allowed to log in.
+- **enable_api_tokens** (Boolean) Whether users can create API tokens.
+- **enable_roles** (Boolean) Whether granular roles and permissions are enabled.
+- **jwt_access_token_expiration** (Number) The expiration time for the JWT access tokens issued by Frontegg.
+- **jwt_refresh_token_expiration** (Number) The expiration time for the JWT refresh tokens issued by Frontegg.
+- **same_site_cookie_policy** (String) The SameSite policy to use for Frontegg cookies.
 
 	Must be one of "none", "lax", or "strict".
 
 Optional:
 
-- `jwt_algorithm` (String) The algorithm Frontegg uses to sign JWT tokens.
+- **jwt_algorithm** (String) The algorithm Frontegg uses to sign JWT tokens.
 
 Read-Only:
 
-- `jwt_public_key` (String) The public key that Frontegg uses to sign JWT tokens.
+- **jwt_public_key** (String) The public key that Frontegg uses to sign JWT tokens.
 
 
 <a id="nestedblock--mfa_policy"></a>
@@ -256,9 +259,9 @@ Read-Only:
 
 Required:
 
-- `allow_remember_device` (Boolean) Allow users to remember their MFA devices.
-- `device_expiration` (Number) The number of seconds that MFA devices can be remembered for, if allow_remember_my_device is true.
-- `enforce` (String) Whether to force use of MFA.
+- **allow_remember_device** (Boolean) Allow users to remember their MFA devices.
+- **device_expiration** (Number) The number of seconds that MFA devices can be remembered for, if allow_remember_my_device is true.
+- **enforce** (String) Whether to force use of MFA.
 
 	Must be one of "off", "on", or "unless-saml".
 
@@ -268,12 +271,12 @@ Required:
 
 Required:
 
-- `allow_passphrases` (Boolean)
-- `history` (Number) The number of historical passwords to prevent users from reusing. Set to zero to disable.
-- `max_length` (Number) The maximum length of a password.
-- `min_length` (Number) The minimum length of a password.
-- `min_phrase_length` (Number)
-- `min_tests` (Number) The minimum number of strength tests the password must meet.
+- **allow_passphrases** (Boolean)
+- **history** (Number) The number of historical passwords to prevent users from reusing. Set to zero to disable.
+- **max_length** (Number) The maximum length of a password.
+- **min_length** (Number) The minimum length of a password.
+- **min_phrase_length** (Number)
+- **min_tests** (Number) The minimum number of strength tests the password must meet.
 
 
 <a id="nestedblock--captcha_policy"></a>
@@ -281,13 +284,13 @@ Required:
 
 Required:
 
-- `min_score` (Number) The minimum CAPTCHA score to accept. Set to 0.0 to accept all scores.
-- `secret_key` (String) The reCAPTCHA secret key to use.
-- `site_key` (String) The reCAPTCHA site key to use.
+- **min_score** (Number) The minimum CAPTCHA score to accept. Set to 0.0 to accept all scores.
+- **secret_key** (String) The reCAPTCHA secret key to use.
+- **site_key** (String) The reCAPTCHA site key to use.
 
 Optional:
 
-- `ignored_emails` (Set of String) Email addresses that should be exempt from CAPTCHA checks.
+- **ignored_emails** (Set of String) Email addresses that should be exempt from CAPTCHA checks.
 
 
 <a id="nestedblock--facebook_social_login"></a>
@@ -295,9 +298,9 @@ Optional:
 
 Required:
 
-- `client_id` (String) The client ID of the Facebook application to authenticate with.
-- `redirect_url` (String) The URL to redirect to after a successful authentication.
-- `secret` (String, Sensitive) The secret associated with the Facebook application.
+- **client_id** (String) The client ID of the Facebook application to authenticate with.
+- **redirect_url** (String) The URL to redirect to after a successful authentication.
+- **secret** (String, Sensitive) The secret associated with the Facebook application.
 
 
 <a id="nestedblock--github_social_login"></a>
@@ -305,9 +308,9 @@ Required:
 
 Required:
 
-- `client_id` (String) The client ID of the GitHub application to authenticate with.
-- `redirect_url` (String) The URL to redirect to after a successful authentication.
-- `secret` (String, Sensitive) The secret associated with the GitHub application.
+- **client_id** (String) The client ID of the GitHub application to authenticate with.
+- **redirect_url** (String) The URL to redirect to after a successful authentication.
+- **secret** (String, Sensitive) The secret associated with the GitHub application.
 
 
 <a id="nestedblock--google_social_login"></a>
@@ -315,9 +318,9 @@ Required:
 
 Required:
 
-- `client_id` (String) The client ID of the Google application to authenticate with.
-- `redirect_url` (String) The URL to redirect to after a successful authentication.
-- `secret` (String, Sensitive) The secret associated with the Google application.
+- **client_id** (String) The client ID of the Google application to authenticate with.
+- **redirect_url** (String) The URL to redirect to after a successful authentication.
+- **secret** (String, Sensitive) The secret associated with the Google application.
 
 
 <a id="nestedblock--hosted_login"></a>
@@ -325,7 +328,7 @@ Required:
 
 Optional:
 
-- `allowed_redirect_urls` (Set of String) Allowed redirect URLs.
+- **allowed_redirect_urls** (Set of String) Allowed redirect URLs.
 
 
 <a id="nestedblock--lockout_policy"></a>
@@ -333,7 +336,7 @@ Optional:
 
 Required:
 
-- `max_attempts` (Number) The number of failed attempts after which a user will be locked out.
+- **max_attempts** (Number) The number of failed attempts after which a user will be locked out.
 
 
 <a id="nestedblock--mfa_authentication_app"></a>
@@ -341,7 +344,7 @@ Required:
 
 Required:
 
-- `service_name` (String) The service name to display in the authentication app.
+- **service_name** (String) The service name to display in the authentication app.
 
 
 <a id="nestedblock--microsoft_social_login"></a>
@@ -349,9 +352,9 @@ Required:
 
 Required:
 
-- `client_id` (String) The client ID of the Microsoft application to authenticate with.
-- `redirect_url` (String) The URL to redirect to after a successful authentication.
-- `secret` (String, Sensitive) The secret associated with the Microsoft application.
+- **client_id** (String) The client ID of the Microsoft application to authenticate with.
+- **redirect_url** (String) The URL to redirect to after a successful authentication.
+- **secret** (String, Sensitive) The secret associated with the Microsoft application.
 
 
 <a id="nestedblock--pwned_password_email"></a>
@@ -359,17 +362,17 @@ Required:
 
 Required:
 
-- `from_address` (String) The address to use in the "From" header of the email.
-- `from_name` (String) The name to use in the "From" header of the email.
-- `html_template` (String) The HTML template to use in the email.
-- `subject` (String) The subject of the email.
+- **from_address** (String) The address to use in the "From" header of the email.
+- **from_name** (String) The name to use in the "From" header of the email.
+- **html_template** (String) The HTML template to use in the email.
+- **subject** (String) The subject of the email.
 
 Optional:
 
-- `redirect_url` (String) The redirect URL to use, if applicable.
+- **redirect_url** (String) The redirect URL to use, if applicable.
 
     Access this value as "\{\{redirectURL\}\}" in the template.
-- `success_redirect_url` (String) The success redirect URL to use, if applicable.
+- **success_redirect_url** (String) The success redirect URL to use, if applicable.
 
 
 <a id="nestedblock--reset_password_email"></a>
@@ -377,17 +380,17 @@ Optional:
 
 Required:
 
-- `from_address` (String) The address to use in the "From" header of the email.
-- `from_name` (String) The name to use in the "From" header of the email.
-- `html_template` (String) The HTML template to use in the email.
-- `subject` (String) The subject of the email.
+- **from_address** (String) The address to use in the "From" header of the email.
+- **from_name** (String) The name to use in the "From" header of the email.
+- **html_template** (String) The HTML template to use in the email.
+- **subject** (String) The subject of the email.
 
 Optional:
 
-- `redirect_url` (String) The redirect URL to use, if applicable.
+- **redirect_url** (String) The redirect URL to use, if applicable.
 
     Access this value as "\{\{redirectURL\}\}" in the template.
-- `success_redirect_url` (String) The success redirect URL to use, if applicable.
+- **success_redirect_url** (String) The success redirect URL to use, if applicable.
 
 
 <a id="nestedblock--saml"></a>
@@ -395,12 +398,12 @@ Optional:
 
 Required:
 
-- `acs_url` (String) The ACS URL for the SAML authentication flow.
-- `sp_entity_id` (String) The name of the service provider that will be displayed to users.
+- **acs_url** (String) The ACS URL for the SAML authentication flow.
+- **sp_entity_id** (String) The name of the service provider that will be displayed to users.
 
 Optional:
 
-- `redirect_url` (String) The redirect URL to redirect after the SAML
+- **redirect_url** (String) The redirect URL to use, if applicable.
 
 
 <a id="nestedblock--user_activation_email"></a>
@@ -408,17 +411,17 @@ Optional:
 
 Required:
 
-- `from_address` (String) The address to use in the "From" header of the email.
-- `from_name` (String) The name to use in the "From" header of the email.
-- `html_template` (String) The HTML template to use in the email.
-- `subject` (String) The subject of the email.
+- **from_address** (String) The address to use in the "From" header of the email.
+- **from_name** (String) The name to use in the "From" header of the email.
+- **html_template** (String) The HTML template to use in the email.
+- **subject** (String) The subject of the email.
 
 Optional:
 
-- `redirect_url` (String) The redirect URL to use, if applicable.
+- **redirect_url** (String) The redirect URL to use, if applicable.
 
     Access this value as "\{\{redirectURL\}\}" in the template.
-- `success_redirect_url` (String) The success redirect URL to use, if applicable.
+- **success_redirect_url** (String) The success redirect URL to use, if applicable.
 
 
 <a id="nestedblock--user_invitation_email"></a>
@@ -426,16 +429,122 @@ Optional:
 
 Required:
 
-- `from_address` (String) The address to use in the "From" header of the email.
-- `from_name` (String) The name to use in the "From" header of the email.
-- `html_template` (String) The HTML template to use in the email.
-- `subject` (String) The subject of the email.
+- **from_address** (String) The address to use in the "From" header of the email.
+- **from_name** (String) The name to use in the "From" header of the email.
+- **html_template** (String) The HTML template to use in the email.
+- **subject** (String) The subject of the email.
 
 Optional:
 
-- `redirect_url` (String) The redirect URL to use, if applicable.
+- **redirect_url** (String) The redirect URL to use, if applicable.
 
     Access this value as "\{\{redirectURL\}\}" in the template.
-- `success_redirect_url` (String) The success redirect URL to use, if applicable.
+- **success_redirect_url** (String) The success redirect URL to use, if applicable.
+
+
+<a id="nestedblock--magic_link_email"></a>
+### Nested Schema for `magic_link_email`
+
+Required:
+
+- **from_address** (String) The address to use in the "From" header of the email.
+- **from_name** (String) The name to use in the "From" header of the email.
+- **html_template** (String) The HTML template to use in the email.
+- **subject** (String) The subject of the email.
+
+Optional:
+
+- **redirect_url** (String) The redirect URL to use, if applicable.
+
+    Access this value as "\{\{redirectURL\}\}" in the template.
+- **success_redirect_url** (String) The success redirect URL to use, if applicable.
+
+<a id="nestedblock--magic_code_email"></a>
+### Nested Schema for `magic_code_email`
+
+Required:
+
+- **from_address** (String) The address to use in the "From" header of the email.
+- **from_name** (String) The name to use in the "From" header of the email.
+- **html_template** (String) The HTML template to use in the email.
+- **subject** (String) The subject of the email.
+
+Optional:
+
+- **redirect_url** (String) The redirect URL to use, if applicable.
+
+    Access this value as "\{\{redirectURL\}\}" in the template.
+- **success_redirect_url** (String) The success redirect URL to use, if applicable.
+
+<a id="nestedblock--new_device_connected_email"></a>
+### Nested Schema for `new_device_connected_email`
+
+Required:
+
+- **from_address** (String) The address to use in the "From" header of the email.
+- **from_name** (String) The name to use in the "From" header of the email.
+- **html_template** (String) The HTML template to use in the email.
+- **subject** (String) The subject of the email.
+
+Optional:
+
+- **redirect_url** (String) The redirect URL to use, if applicable.
+
+    Access this value as "\{\{redirectURL\}\}" in the template.
+- **success_redirect_url** (String) The success redirect URL to use, if applicable.
+
+<a id="nestedblock--user_used_invitation_email"></a>
+### Nested Schema for `user_used_invitation_email`
+
+Required:
+
+- **from_address** (String) The address to use in the "From" header of the email.
+- **from_name** (String) The name to use in the "From" header of the email.
+- **html_template** (String) The HTML template to use in the email.
+- **subject** (String) The subject of the email.
+
+Optional:
+
+- **redirect_url** (String) The redirect URL to use, if applicable.
+
+    Access this value as "\{\{redirectURL\}\}" in the template.
+- **success_redirect_url** (String) The success redirect URL to use, if applicable.
+
+
+<a id="nestedblock--reset_phone_number_email"></a>
+### Nested Schema for `reset_phone_number_email`
+
+Required:
+
+- **from_address** (String) The address to use in the "From" header of the email.
+- **from_name** (String) The name to use in the "From" header of the email.
+- **html_template** (String) The HTML template to use in the email.
+- **subject** (String) The subject of the email.
+
+Optional:
+
+- **redirect_url** (String) The redirect URL to use, if applicable.
+
+    Access this value as "\{\{redirectURL\}\}" in the template.
+- **success_redirect_url** (String) The success redirect URL to use, if applicable.
+
+<a id="nestedblock--bulk_tenants_invites_email"></a>
+### Nested Schema for `bulk_tenants_invites_email`
+
+Required:
+
+- **from_address** (String) The address to use in the "From" header of the email.
+- **from_name** (String) The name to use in the "From" header of the email.
+- **html_template** (String) The HTML template to use in the email.
+- **subject** (String) The subject of the email.
+
+Optional:
+
+- **redirect_url** (String) The redirect URL to use, if applicable.
+
+    Access this value as "\{\{redirectURL\}\}" in the template.
+- **success_redirect_url** (String) The success redirect URL to use, if applicable.
+
+
 
 
