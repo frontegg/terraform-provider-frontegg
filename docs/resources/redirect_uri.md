@@ -17,14 +17,11 @@ Configures a Frontegg Redirect URI.
 
 ### Required
 
-- **redirect_uri** (String) The redirect URI.
-
-### Optional
-
-- **id** (String) The ID of this resource.
+- `redirect_uri` (String) The redirect URI.
 
 ### Read-Only
 
-- **key** (String) The redirect URI key.
+- `id` (String) The ID of this resource.
+- `key` (String) The redirect URI key.
 
 

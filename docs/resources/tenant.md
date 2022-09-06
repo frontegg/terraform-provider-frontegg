@@ -17,12 +17,25 @@ Configures a Frontegg tenant.
 
 ### Required
 
-- **application_uri** (String) The application URI for this tenant.
-- **key** (String) A human-readable identifier for the tenant.
-- **name** (String) A human-readable name for the tenant.
+- `key` (String) A human-readable identifier for the tenant.
+- `name` (String) A human-readable name for the tenant.
 
 ### Optional
 
-- **id** (String) The ID of this resource.
+- `address` (String) The address for this tenant.
+- `application_uri` (String) The application URI for this tenant.
+- `creator_email` (String) The creator email for this tenant.
+- `creator_name` (String) The creator name for this tenant.
+- `currency` (String) The currency for this tenant.
+- `is_reseller` (Boolean) Mark tenant as reseller
+- `logo` (String) The logo for this tenant.
+- `logo_url` (String) The logo Url for this tenant.
+- `status` (String) The status for this tenant.
+- `timezone` (String) The timezone for this tenant.
+- `website` (String) The website for this tenant.
+
+### Read-Only
+
+- `id` (String) The ID of this resource.
 
 

@@ -23,17 +23,14 @@ data "frontegg_permission" "read_users" {
 
 ### Required
 
-- **category_id** (String) The identifier of the category to which this permission belongs.
-- **description** (String) A human-readable description of the permission.
-- **key** (String) A human-readable identifier for the permission.
-- **name** (String) A human-readable name for the permission.
-
-### Optional
-
-- **id** (String) The ID of this resource.
+- `category_id` (String) The identifier of the category to which this permission belongs.
+- `description` (String) A human-readable description of the permission.
+- `key` (String) A human-readable identifier for the permission.
+- `name` (String) A human-readable name for the permission.
 
 ### Read-Only
 
-- **created_at** (String) The timestamp at which the permission was created.
+- `created_at` (String) The timestamp at which the permission was created.
+- `id` (String) The ID of this resource.
 
 

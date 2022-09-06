@@ -27,17 +27,14 @@ output "permission_id" {
 
 ### Required
 
-- **key** (String) A human-readable identifier for the permission.
-
-### Optional
-
-- **id** (String) The ID of this resource.
+- `key` (String) A human-readable identifier for the permission.
 
 ### Read-Only
 
-- **category_id** (String) The identifier of the category to which this permission belongs.
-- **created_at** (String) The timestamp at which the permission was created.
-- **description** (String) A human-readable description of the permission.
-- **name** (String) A human-readable name for the permission.
+- `category_id` (String) The identifier of the category to which this permission belongs.
+- `created_at` (String) The timestamp at which the permission was created.
+- `description` (String) A human-readable description of the permission.
+- `id` (String) The ID of this resource.
+- `name` (String) A human-readable name for the permission.
 
 
