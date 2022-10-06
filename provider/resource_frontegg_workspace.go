@@ -387,7 +387,7 @@ per Frontegg provider.`,
 						"auth_strategy": {
 							Description: `The authentication strategy to use for people logging in.
 
-	Must be one of "EmailAndPassword" and "Code"`,
+	Must be one of "EmailAndPassword" or "Code"`,
 							Type:         schema.TypeString,
 							Required:     true,
 							ValidateFunc: validation.StringInSlice([]string{"EmailAndPassword", "Code"}, false),
