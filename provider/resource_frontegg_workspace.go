@@ -57,6 +57,7 @@ type fronteggAuth struct {
 	ForcePermissions              bool   `json:"forcePermissions"`
 	JWTAlgorithm                  string `json:"jwtAlgorithm"`
 	PublicKey                     string `json:"publicKey"`
+	AuthStrategy                  string `json:"authStrategy"`
 }
 
 type fronteggMFA struct {
@@ -382,6 +383,14 @@ per Frontegg provider.`,
 							Type:         schema.TypeString,
 							Required:     true,
 							ValidateFunc: validation.StringInSlice([]string{"none", "lax", "strict"}, false),
+						},
+						"auth_strategy": {
+							Description: `The authentication strategy to use for people logging in.
+
+	Must be one of "EmailAndPassword" or "Code"`,
+							Type:         schema.TypeString,
+							Required:     true,
+							ValidateFunc: validation.StringInSlice([]string{"EmailAndPassword", "Code"}, false),
 						},
 					},
 				},
@@ -867,6 +876,7 @@ func resourceFronteggWorkspaceRead(ctx context.Context, d *schema.ResourceData, 
 			"jwt_refresh_token_expiration": out.DefaultRefreshTokenExpiration,
 			"jwt_public_key":               out.PublicKey,
 			"same_site_cookie_policy":      strings.ToLower(out.CookieSameSite),
+			"auth_strategy":                out.AuthStrategy,
 		}
 		if err := d.Set("auth_policy", []interface{}{auth_policy}); err != nil {
 			return diag.FromErr(err)
@@ -1165,6 +1175,7 @@ func resourceFronteggWorkspaceUpdate(ctx context.Context, d *schema.ResourceData
 			DefaultRefreshTokenExpiration: d.Get("auth_policy.0.jwt_refresh_token_expiration").(int),
 			PublicKey:                     d.Get("auth_policy.0.jwt_public_key").(string),
 			CookieSameSite:                strings.ToUpper(d.Get("auth_policy.0.same_site_cookie_policy").(string)),
+			AuthStrategy:                  d.Get("auth_policy.0.auth_strategy").(string),
 		}
 		if err := clientHolder.ApiClient.Post(ctx, fronteggAuthURL, in, nil); err != nil {
 			return diag.FromErr(err)
