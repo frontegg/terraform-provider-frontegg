@@ -13,13 +13,6 @@ platform.
 
 See the Terraform Registry: <https://registry.terraform.io/providers/frontegg/frontegg/latest>.
 
-## Building
-`git clone` this repository and `cd` into its directory
-`make install` will create a fresh development build of the provider
-
-## Debugging
-Terraform has detailed logs that you can enable by setting the `TF_LOG` environment variable to any value. Enabling this setting causes detailed logs to appear on `stderr`
-
 ## Importing existing resources
 
 ### Workspaces

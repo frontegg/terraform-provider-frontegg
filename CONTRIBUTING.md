@@ -6,6 +6,7 @@ If you wish to work on the provider, you'll first need
 [Go](http://www.golang.org) installed on your machine (see
 [Requirements](#requirements) above).
 
+`git clone` this repository and `cd` into its directory.
 To compile the provider, run `make install`. This will build the provider and
 put the provider binary in the correct location within `~/.terraform.d` so that
 Terraform can find the plugin.
@@ -19,6 +20,9 @@ To run the full suite of acceptance tests, run `make testacc`.
 ```sh
 $ make testacc
 ```
+
+## Debugging
+Terraform has detailed logs that you can enable by setting the `TF_LOG` environment variable to any value. Enabling this setting causes detailed logs to appear on `stderr`.
 
 ### Iteration cycle
 
