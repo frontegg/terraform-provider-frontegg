@@ -1616,6 +1616,38 @@ func resourceFronteggWorkspaceUpdate(ctx context.Context, d *schema.ResourceData
 			}
 		}
 
+		serializeSeverityPaletteColor := func(key string) fronteggPaletteSeverityColor {
+			light := d.Get(fmt.Sprintf("%s.0.light", key)).(string)
+			main := d.Get(fmt.Sprintf("%s.0.main", key)).(string)
+			dark := d.Get(fmt.Sprintf("%s.0.dark", key)).(string)
+			contrastText := d.Get(fmt.Sprintf("%s.0.contrast_text", key)).(string)
+
+			return fronteggPaletteSeverityColor{
+				Light:        light,
+				Main:         main,
+				Dark:         dark,
+				ContrastText: contrastText,
+			}
+		}
+
+		serializePaletteColor := func(key string) fronteggPaletteColor {
+			light := d.Get(fmt.Sprintf("%s.0.light", key)).(string)
+			main := d.Get(fmt.Sprintf("%s.0.main", key)).(string)
+			dark := d.Get(fmt.Sprintf("%s.0.dark", key)).(string)
+			hover := d.Get(fmt.Sprintf("%s.0.hover", key)).(string)
+			active := d.Get(fmt.Sprintf("%s.0.active", key)).(string)
+			contrastText := d.Get(fmt.Sprintf("%s.0.contrast_text", key)).(string)
+
+			return fronteggPaletteColor{
+				Light:        light,
+				Main:         main,
+				Dark:         dark,
+				ContrastText: contrastText,
+				Hover:        hover,
+				Active:       active,
+			}
+		}
+
 		var out struct {
 			Rows []fronteggAdminPortal `json:"rows"`
 		}
@@ -1649,39 +1681,13 @@ func resourceFronteggWorkspaceUpdate(ctx context.Context, d *schema.ResourceData
 		// configuration.Theme.Palette.Secondary = d.Get("admin_portal.0.palette.0.secondary").(string)
 		// configuration.Theme.Palette.SecondaryText = d.Get("admin_portal.0.palette.0.secondary_text").(string)
 
-		configuration.Theme.Palette.Success.Light = d.Get("admin_portal.0.palette.0.success.0.light").(string)
-		configuration.Theme.Palette.Success.Main = d.Get("admin_portal.0.palette.0.success.0.main").(string)
-		configuration.Theme.Palette.Success.Dark = d.Get("admin_portal.0.palette.0.success.0.dark").(string)
-		configuration.Theme.Palette.Success.ContrastText = d.Get("admin_portal.0.palette.0.success.0.contrast_text").(string)
+		configuration.Theme.Palette.Success = serializeSeverityPaletteColor("admin_portal.0.palette.0.success")
+		configuration.Theme.Palette.Info = serializeSeverityPaletteColor("admin_portal.0.palette.0.info")
+		configuration.Theme.Palette.Warning = serializeSeverityPaletteColor("admin_portal.0.palette.0.warning")
+		configuration.Theme.Palette.Error = serializeSeverityPaletteColor("admin_portal.0.palette.0.error")
 
-		configuration.Theme.Palette.Info.Light = d.Get("admin_portal.0.palette.0.info.0.light").(string)
-		configuration.Theme.Palette.Info.Main = d.Get("admin_portal.0.palette.0.info.0.main").(string)
-		configuration.Theme.Palette.Info.Dark = d.Get("admin_portal.0.palette.0.info.0.dark").(string)
-		configuration.Theme.Palette.Info.ContrastText = d.Get("admin_portal.0.palette.0.info.0.contrast_text").(string)
-
-		configuration.Theme.Palette.Warning.Light = d.Get("admin_portal.0.palette.0.warning.0.light").(string)
-		configuration.Theme.Palette.Warning.Main = d.Get("admin_portal.0.palette.0.warning.0.main").(string)
-		configuration.Theme.Palette.Warning.Dark = d.Get("admin_portal.0.palette.0.warning.0.dark").(string)
-		configuration.Theme.Palette.Warning.ContrastText = d.Get("admin_portal.0.palette.0.warning.0.contrast_text").(string)
-
-		configuration.Theme.Palette.Error.Light = d.Get("admin_portal.0.palette.0.error.0.light").(string)
-		configuration.Theme.Palette.Error.Main = d.Get("admin_portal.0.palette.0.error.0.main").(string)
-		configuration.Theme.Palette.Error.Dark = d.Get("admin_portal.0.palette.0.error.0.dark").(string)
-		configuration.Theme.Palette.Error.ContrastText = d.Get("admin_portal.0.palette.0.error.0.contrast_text").(string)
-
-		configuration.Theme.Palette.Primary.Light = d.Get("admin_portal.0.palette.0.primary.0.light").(string)
-		configuration.Theme.Palette.Primary.Main = d.Get("admin_portal.0.palette.0.primary.0.main").(string)
-		configuration.Theme.Palette.Primary.Dark = d.Get("admin_portal.0.palette.0.primary.0.dark").(string)
-		configuration.Theme.Palette.Primary.ContrastText = d.Get("admin_portal.0.palette.0.primary.0.contrast_text").(string)
-		configuration.Theme.Palette.Primary.Active = d.Get("admin_portal.0.palette.0.primary.0.active").(string)
-		configuration.Theme.Palette.Primary.Hover = d.Get("admin_portal.0.palette.0.primary.0.hover").(string)
-
-		configuration.Theme.Palette.Secondary.Light = d.Get("admin_portal.0.palette.0.secondary.0.light").(string)
-		configuration.Theme.Palette.Secondary.Main = d.Get("admin_portal.0.palette.0.secondary.0.main").(string)
-		configuration.Theme.Palette.Secondary.Dark = d.Get("admin_portal.0.palette.0.secondary.0.dark").(string)
-		configuration.Theme.Palette.Secondary.ContrastText = d.Get("admin_portal.0.palette.0.secondary.0.contrast_text").(string)
-		configuration.Theme.Palette.Secondary.Active = d.Get("admin_portal.0.palette.0.secondary.0.active").(string)
-		configuration.Theme.Palette.Secondary.Hover = d.Get("admin_portal.0.palette.0.secondary.0.hover").(string)
+		configuration.Theme.Palette.Primary = serializePaletteColor("admin_portal.0.palette.0.primary")
+		configuration.Theme.Palette.Secondary = serializePaletteColor("admin_portal.0.palette.0.secondary")
 
 		if err := clientHolder.ApiClient.Post(ctx, fronteggAdminPortalURL, adminPortal, nil); err != nil {
 			return diag.FromErr(err)
