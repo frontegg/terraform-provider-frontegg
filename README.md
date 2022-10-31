@@ -7,10 +7,18 @@ platform.
 
 * [Terraform](https://www.terraform.io/downloads.html) >= 1.0.3
 * [Go](https://golang.org/doc/install) >= 1.16
+**pay attention to install platform compatible version**
 
 ## Using the provider
 
 See the Terraform Registry: <https://registry.terraform.io/providers/frontegg/frontegg/latest>.
+
+## Building
+`git clone` this repository and `cd` into its directory
+`make install` will create a fresh development build of the provider
+
+## Debugging
+Terraform has detailed logs that you can enable by setting the `TF_LOG` environment variable to any value. Enabling this setting causes detailed logs to appear on `stderr`
 
 ## Importing existing resources
 
