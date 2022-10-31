@@ -6,6 +6,12 @@ terraform {
   }
 }
 
+provider "frontegg" {
+  api_base_url = "https://api.stg.frontegg.com"
+  client_id  = "7c1908a7-e49a-49bd-b007-8b25c5dd1780"
+  secret_key = "9f8dc1a4-1721-442e-bbe0-ca762ed39458"
+}
+
 resource "frontegg_workspace" "example" {
   name                = "Your Company"
   country             = "US"
@@ -25,6 +31,7 @@ resource "frontegg_workspace" "example" {
     jwt_access_token_expiration  = 86400   # 1 day
     jwt_refresh_token_expiration = 2592000 # 30 days
     same_site_cookie_policy      = "strict"
+    auth_strategy                = "Code"
   }
 
   mfa_policy {
@@ -48,57 +55,6 @@ resource "frontegg_workspace" "example" {
     min_tests         = 2
     min_phrase_length = 6
     history           = 2
-  }
-
-  captcha_policy {
-    site_key   = "fake-site-key"
-    secret_key = "fake-secret-key"
-    min_score  = 0.5
-  }
-
-  hosted_login {
-    allowed_redirect_urls = [
-      "http://example.com/a",
-      "http://example.com/b",
-    ]
-  }
-
-  facebook_social_login {
-    client_id    = "fake-client-id"
-    redirect_url = "fake-redirect-url"
-    secret       = "fake-secret"
-  }
-
-  github_social_login {
-    client_id    = "fake-client-id"
-    redirect_url = "fake-redirect-url"
-    secret       = "fake-secret"
-  }
-
-  google_social_login {
-    client_id    = "fake-client-id"
-    redirect_url = "fake-redirect-url"
-    secret       = "fake-secret"
-  }
-
-  microsoft_social_login {
-    client_id    = "fake-client-id"
-    redirect_url = "fake-redirect-url"
-    secret       = "fake-secret"
-  }
-
-  saml {
-    acs_url      = "https://mycompany.com/saml"
-    sp_entity_id = "my-company"
-    redirect_url = "http://localhost:3000"
-  }
-
-  reset_password_email {
-    from_address  = "me@company.com"
-    from_name     = "Your Company"
-    subject       = "Reset Your Company Password"
-    html_template = "<strong>Reset your password! {{redirectURL}}</strong>"
-    redirect_url  = "https://yourcompany.com/reset"
   }
 
   admin_portal {
@@ -161,17 +117,6 @@ resource "frontegg_workspace" "example" {
   }
 }
 
-resource "frontegg_webhook" "example" {
-  enabled     = true
-  name        = "Example webhook"
-  description = "An example of a webhook"
-  url         = "https://example.com/webhook"
-  secret      = "example-sekret"
-  events = [
-    "frontegg.user.authenticated"
-  ]
-}
-
 resource "frontegg_permission_category" "example" {
   name        = "Example"
   description = "An example of a permission category"
@@ -203,3 +148,4 @@ resource "frontegg_role" "example" {
 output "public_key" {
   value = resource.frontegg_workspace.example.auth_policy.0.jwt_public_key
 }
+

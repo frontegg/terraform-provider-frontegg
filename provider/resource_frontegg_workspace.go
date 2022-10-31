@@ -180,15 +180,41 @@ type fronteggAdminPortalTheme struct {
 	Palette fronteggAdminPortalPalette `json:"palette"`
 }
 
+// type fronteggAdminPortalPalette struct {
+// 	Success       string `json:"success"`
+// 	Info          string `json:"info"`
+// 	Warning       string `json:"warning"`
+// 	Error         string `json:"error"`
+// 	Primary       string `json:"primary"`
+// 	PrimaryText   string `json:"primaryText"`
+// 	Secondary     string `json:"secondary"`
+// 	SecondaryText string `json:"secondaryText"`
+// }
+
 type fronteggAdminPortalPalette struct {
-	Success       string `json:"success"`
-	Info          string `json:"info"`
-	Warning       string `json:"warning"`
-	Error         string `json:"error"`
-	Primary       string `json:"primary"`
-	PrimaryText   string `json:"primaryText"`
-	Secondary     string `json:"secondary"`
-	SecondaryText string `json:"secondaryText"`
+	Success   fronteggPaletteSeverityColor `json:"success"`
+	Info      fronteggPaletteSeverityColor `json:"info"`
+	Warning   fronteggPaletteSeverityColor `json:"warning"`
+	Error     fronteggPaletteSeverityColor `json:"error"`
+	Primary   fronteggPaletteColor         `json:"primary"`
+	Secondary fronteggPaletteColor         `json:"secondary"`
+}
+
+type fronteggPaletteColor struct {
+	Light        string `json:"light"`
+	Main         string `json:"main"`
+	Dark         string `json:"dark"`
+	Hover        string `json:"hover"`
+	Active       string `json:"active"`
+	ContrastText string `json:"contrast_text"`
+}
+
+// TODO: check how to make it OOP way
+type fronteggPaletteSeverityColor struct {
+	Light        string `json:"light"`
+	Main         string `json:"main"`
+	Dark         string `json:"dark"`
+	ContrastText string `json:"contrast_text"`
 }
 
 func resourceFronteggWorkspace() *schema.Resource {
@@ -746,43 +772,203 @@ per Frontegg provider.`,
 								Schema: map[string]*schema.Schema{
 									"success": {
 										Description: "Success color.",
-										Type:        schema.TypeString,
+										Type:        schema.TypeList,
 										Required:    true,
+										MinItems:    1,
+										Elem: &schema.Resource{
+											Schema: map[string]*schema.Schema{
+												"light": {
+													Description: "light color.",
+													Type:        schema.TypeString,
+													Required:    true,
+												},
+												"main": {
+													Description: "main color.",
+													Type:        schema.TypeString,
+													Required:    true,
+												},
+												"dark": {
+													Description: "dark color.",
+													Type:        schema.TypeString,
+													Required:    true,
+												},
+												"contrast_text": {
+													Description: "contrast_text color.",
+													Type:        schema.TypeString,
+													Required:    true,
+												},
+											},
+										},
 									},
 									"info": {
 										Description: "Info color.",
-										Type:        schema.TypeString,
+										Type:        schema.TypeList,
 										Required:    true,
+										MinItems:    1,
+										Elem: &schema.Resource{
+											Schema: map[string]*schema.Schema{
+												"light": {
+													Description: "light color.",
+													Type:        schema.TypeString,
+													Required:    true,
+												},
+												"main": {
+													Description: "main color.",
+													Type:        schema.TypeString,
+													Required:    true,
+												},
+												"dark": {
+													Description: "dark color.",
+													Type:        schema.TypeString,
+													Required:    true,
+												},
+												"contrast_text": {
+													Description: "contrast_text color.",
+													Type:        schema.TypeString,
+													Required:    true,
+												},
+											},
+										},
 									},
 									"warning": {
 										Description: "Warning color.",
-										Type:        schema.TypeString,
+										Type:        schema.TypeList,
 										Required:    true,
+										MinItems:    1,
+										Elem: &schema.Resource{
+											Schema: map[string]*schema.Schema{
+												"light": {
+													Description: "light color.",
+													Type:        schema.TypeString,
+													Required:    true,
+												},
+												"main": {
+													Description: "main color.",
+													Type:        schema.TypeString,
+													Required:    true,
+												},
+												"dark": {
+													Description: "dark color.",
+													Type:        schema.TypeString,
+													Required:    true,
+												},
+												"contrast_text": {
+													Description: "contrast_text color.",
+													Type:        schema.TypeString,
+													Required:    true,
+												},
+											},
+										},
 									},
 									"error": {
 										Description: "Error color.",
-										Type:        schema.TypeString,
+										Type:        schema.TypeList,
 										Required:    true,
+										MinItems:    1,
+										Elem: &schema.Resource{
+											Schema: map[string]*schema.Schema{
+												"light": {
+													Description: "light color.",
+													Type:        schema.TypeString,
+													Required:    true,
+												},
+												"main": {
+													Description: "main color.",
+													Type:        schema.TypeString,
+													Required:    true,
+												},
+												"dark": {
+													Description: "dark color.",
+													Type:        schema.TypeString,
+													Required:    true,
+												},
+												"contrast_text": {
+													Description: "contrast_text color.",
+													Type:        schema.TypeString,
+													Required:    true,
+												},
+											},
+										},
 									},
 									"primary": {
 										Description: "Primary color.",
-										Type:        schema.TypeString,
+										Type:        schema.TypeList,
 										Required:    true,
-									},
-									"primary_text": {
-										Description: "Primary text color.",
-										Type:        schema.TypeString,
-										Required:    true,
+										MinItems:    1,
+										Elem: &schema.Resource{
+											Schema: map[string]*schema.Schema{
+												"light": {
+													Description: "light color.",
+													Type:        schema.TypeString,
+													Required:    true,
+												},
+												"main": {
+													Description: "main color.",
+													Type:        schema.TypeString,
+													Required:    true,
+												},
+												"dark": {
+													Description: "dark color.",
+													Type:        schema.TypeString,
+													Required:    true,
+												},
+												"contrast_text": {
+													Description: "contrast_text color.",
+													Type:        schema.TypeString,
+													Required:    true,
+												},
+												"active": {
+													Description: "active color.",
+													Type:        schema.TypeString,
+													Required:    true,
+												},
+												"hover": {
+													Description: "hover color.",
+													Type:        schema.TypeString,
+													Required:    true,
+												},
+											},
+										},
 									},
 									"secondary": {
 										Description: "Secondary color.",
-										Type:        schema.TypeString,
+										Type:        schema.TypeList,
 										Required:    true,
-									},
-									"secondary_text": {
-										Description: "Secondary text color.",
-										Type:        schema.TypeString,
-										Required:    true,
+										MinItems:    1,
+										Elem: &schema.Resource{
+											Schema: map[string]*schema.Schema{
+												"light": {
+													Description: "light color.",
+													Type:        schema.TypeString,
+													Required:    true,
+												},
+												"main": {
+													Description: "main color.",
+													Type:        schema.TypeString,
+													Required:    true,
+												},
+												"dark": {
+													Description: "dark color.",
+													Type:        schema.TypeString,
+													Required:    true,
+												},
+												"contrast_text": {
+													Description: "contrast_text color.",
+													Type:        schema.TypeString,
+													Required:    true,
+												},
+												"active": {
+													Description: "active color.",
+													Type:        schema.TypeString,
+													Required:    true,
+												},
+												"hover": {
+													Description: "hover color.",
+													Type:        schema.TypeString,
+													Required:    true,
+												},
+											},
+										},
 									},
 								},
 							},
@@ -1106,14 +1292,46 @@ func resourceFronteggWorkspaceRead(ctx context.Context, d *schema.ResourceData, 
 			"enable_users":               nav.Users.Visibility == "byPermissions",
 			"enable_webhooks":            nav.Webhooks.Visibility == "byPermissions",
 			"palette": []interface{}{map[string]interface{}{
-				"success":        palette.Success,
-				"info":           palette.Info,
-				"warning":        palette.Warning,
-				"error":          palette.Error,
-				"primary":        palette.Primary,
-				"primary_text":   palette.PrimaryText,
-				"secondary":      palette.Secondary,
-				"secondary_text": palette.SecondaryText,
+				"success": []interface{}{map[string]interface{}{
+					"light":         palette.Success.Light,
+					"main":          palette.Success.Main,
+					"dark":          palette.Success.Dark,
+					"contrast_text": palette.Success.ContrastText,
+				}},
+				"info": []interface{}{map[string]interface{}{
+					"light":         palette.Info.Light,
+					"main":          palette.Info.Main,
+					"dark":          palette.Info.Dark,
+					"contrast_text": palette.Info.ContrastText,
+				}},
+				"warning": []interface{}{map[string]interface{}{
+					"light":         palette.Warning.Light,
+					"main":          palette.Warning.Main,
+					"dark":          palette.Warning.Dark,
+					"contrast_text": palette.Warning.ContrastText,
+				}},
+				"error": []interface{}{map[string]interface{}{
+					"light":         palette.Error.Light,
+					"main":          palette.Error.Main,
+					"dark":          palette.Error.Dark,
+					"contrast_text": palette.Error.ContrastText,
+				}},
+				"primary": []interface{}{map[string]interface{}{
+					"light":         palette.Primary.Light,
+					"main":          palette.Primary.Main,
+					"dark":          palette.Primary.Dark,
+					"contrast_text": palette.Primary.ContrastText,
+					"active":        palette.Primary.Active,
+					"hover":         palette.Primary.Hover,
+				}},
+				"secondary": []interface{}{map[string]interface{}{
+					"light":         palette.Secondary.Light,
+					"main":          palette.Secondary.Main,
+					"dark":          palette.Secondary.Dark,
+					"contrast_text": palette.Secondary.ContrastText,
+					"active":        palette.Secondary.Active,
+					"hover":         palette.Secondary.Hover,
+				}},
 			}},
 		}
 		if err := d.Set("admin_portal", []interface{}{adminPortal}); err != nil {
@@ -1422,14 +1640,48 @@ func resourceFronteggWorkspaceUpdate(ctx context.Context, d *schema.ResourceData
 		configuration.Navigation.Users = serializeVisibility("admin_portal.0.enable_users")
 		configuration.Navigation.Webhooks = serializeVisibility("admin_portal.0.enable_webhooks")
 
-		configuration.Theme.Palette.Success = d.Get("admin_portal.0.palette.0.success").(string)
-		configuration.Theme.Palette.Info = d.Get("admin_portal.0.palette.0.info").(string)
-		configuration.Theme.Palette.Warning = d.Get("admin_portal.0.palette.0.warning").(string)
-		configuration.Theme.Palette.Error = d.Get("admin_portal.0.palette.0.error").(string)
-		configuration.Theme.Palette.Primary = d.Get("admin_portal.0.palette.0.primary").(string)
-		configuration.Theme.Palette.PrimaryText = d.Get("admin_portal.0.palette.0.primary_text").(string)
-		configuration.Theme.Palette.Secondary = d.Get("admin_portal.0.palette.0.secondary").(string)
-		configuration.Theme.Palette.SecondaryText = d.Get("admin_portal.0.palette.0.secondary_text").(string)
+		// configuration.Theme.Palette.Success = d.Get("admin_portal.0.palette.0.success").(string)
+		// configuration.Theme.Palette.Info = d.Get("admin_portal.0.palette.0.info").(string)
+		// configuration.Theme.Palette.Warning = d.Get("admin_portal.0.palette.0.warning").(string)
+		// configuration.Theme.Palette.Error = d.Get("admin_portal.0.palette.0.error").(string)
+		// configuration.Theme.Palette.Primary = d.Get("admin_portal.0.palette.0.primary").(string)
+		// configuration.Theme.Palette.PrimaryText = d.Get("admin_portal.0.palette.0.primary_text").(string)
+		// configuration.Theme.Palette.Secondary = d.Get("admin_portal.0.palette.0.secondary").(string)
+		// configuration.Theme.Palette.SecondaryText = d.Get("admin_portal.0.palette.0.secondary_text").(string)
+
+		configuration.Theme.Palette.Success.Light = d.Get("admin_portal.0.palette.0.success.0.light").(string)
+		configuration.Theme.Palette.Success.Main = d.Get("admin_portal.0.palette.0.success.0.main").(string)
+		configuration.Theme.Palette.Success.Dark = d.Get("admin_portal.0.palette.0.success.0.dark").(string)
+		configuration.Theme.Palette.Success.ContrastText = d.Get("admin_portal.0.palette.0.success.0.contrast_text").(string)
+
+		configuration.Theme.Palette.Info.Light = d.Get("admin_portal.0.palette.0.info.0.light").(string)
+		configuration.Theme.Palette.Info.Main = d.Get("admin_portal.0.palette.0.info.0.main").(string)
+		configuration.Theme.Palette.Info.Dark = d.Get("admin_portal.0.palette.0.info.0.dark").(string)
+		configuration.Theme.Palette.Info.ContrastText = d.Get("admin_portal.0.palette.0.info.0.contrast_text").(string)
+
+		configuration.Theme.Palette.Warning.Light = d.Get("admin_portal.0.palette.0.warning.0.light").(string)
+		configuration.Theme.Palette.Warning.Main = d.Get("admin_portal.0.palette.0.warning.0.main").(string)
+		configuration.Theme.Palette.Warning.Dark = d.Get("admin_portal.0.palette.0.warning.0.dark").(string)
+		configuration.Theme.Palette.Warning.ContrastText = d.Get("admin_portal.0.palette.0.warning.0.contrast_text").(string)
+
+		configuration.Theme.Palette.Error.Light = d.Get("admin_portal.0.palette.0.error.0.light").(string)
+		configuration.Theme.Palette.Error.Main = d.Get("admin_portal.0.palette.0.error.0.main").(string)
+		configuration.Theme.Palette.Error.Dark = d.Get("admin_portal.0.palette.0.error.0.dark").(string)
+		configuration.Theme.Palette.Error.ContrastText = d.Get("admin_portal.0.palette.0.error.0.contrast_text").(string)
+
+		configuration.Theme.Palette.Primary.Light = d.Get("admin_portal.0.palette.0.primary.0.light").(string)
+		configuration.Theme.Palette.Primary.Main = d.Get("admin_portal.0.palette.0.primary.0.main").(string)
+		configuration.Theme.Palette.Primary.Dark = d.Get("admin_portal.0.palette.0.primary.0.dark").(string)
+		configuration.Theme.Palette.Primary.ContrastText = d.Get("admin_portal.0.palette.0.primary.0.contrast_text").(string)
+		configuration.Theme.Palette.Primary.Active = d.Get("admin_portal.0.palette.0.primary.0.active").(string)
+		configuration.Theme.Palette.Primary.Hover = d.Get("admin_portal.0.palette.0.primary.0.hover").(string)
+
+		configuration.Theme.Palette.Secondary.Light = d.Get("admin_portal.0.palette.0.secondary.0.light").(string)
+		configuration.Theme.Palette.Secondary.Main = d.Get("admin_portal.0.palette.0.secondary.0.main").(string)
+		configuration.Theme.Palette.Secondary.Dark = d.Get("admin_portal.0.palette.0.secondary.0.dark").(string)
+		configuration.Theme.Palette.Secondary.ContrastText = d.Get("admin_portal.0.palette.0.secondary.0.contrast_text").(string)
+		configuration.Theme.Palette.Secondary.Active = d.Get("admin_portal.0.palette.0.secondary.0.active").(string)
+		configuration.Theme.Palette.Secondary.Hover = d.Get("admin_portal.0.palette.0.secondary.0.hover").(string)
 
 		if err := clientHolder.ApiClient.Post(ctx, fronteggAdminPortalURL, adminPortal, nil); err != nil {
 			return diag.FromErr(err)
