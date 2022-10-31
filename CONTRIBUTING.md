@@ -6,6 +6,8 @@ If you wish to work on the provider, you'll first need
 [Go](http://www.golang.org) installed on your machine (see
 [Requirements](#requirements) above).
 
+**pay attention to install platform compatible version**
+
 `git clone` this repository and `cd` into its directory.
 To compile the provider, run `make install`. This will build the provider and
 put the provider binary in the correct location within `~/.terraform.d` so that
