@@ -178,11 +178,11 @@ type fronteggAdminPortalVisibility struct {
 }
 
 type fronteggAdminPortalTheme struct {
-	PaletteNew fronteggAdminPortalPaletteNew `json:"palette"`
-	PaletteOld fronteggAdminPortalPaletteOld `json:"Palette"`
+	PaletteV2 fronteggAdminPortalPaletteV2 `json:"palette"`
+	PaletteV1 fronteggAdminPortalPaletteV1 `json:"Palette"`
 }
 
-type fronteggAdminPortalPaletteOld struct {
+type fronteggAdminPortalPaletteV1 struct {
 	Success       string `json:"success"`
 	Info          string `json:"info"`
 	Warning       string `json:"warning"`
@@ -193,7 +193,7 @@ type fronteggAdminPortalPaletteOld struct {
 	SecondaryText string `json:"secondaryText"`
 }
 
-type fronteggAdminPortalPaletteNew struct {
+type fronteggAdminPortalPaletteV2 struct {
 	Success   fronteggPaletteSeverityColor `json:"success"`
 	Info      fronteggPaletteSeverityColor `json:"info"`
 	Warning   fronteggPaletteSeverityColor `json:"warning"`
@@ -1187,63 +1187,63 @@ func resourceFronteggWorkspaceRead(ctx context.Context, d *schema.ResourceData, 
 			return diag.FromErr(err)
 		}
 		nav := out.Rows[0].Configuration.Navigation
-		paletteNew := out.Rows[0].Configuration.Theme.PaletteNew
-		paletteOld := out.Rows[0].Configuration.Theme.PaletteOld
+		paletteV2 := out.Rows[0].Configuration.Theme.PaletteV2
+		paletteV1 := out.Rows[0].Configuration.Theme.PaletteV1
 
 		var paletteItems []interface{}
-		if paletteOld.Error == "" && paletteOld.Success == "" {
+		if paletteV1.Error == "" && paletteV1.Success == "" {
 			paletteItems = append(paletteItems, map[string]interface{}{
 				"success": []interface{}{map[string]interface{}{
-					"light":         paletteNew.Success.Light,
-					"main":          paletteNew.Success.Main,
-					"dark":          paletteNew.Success.Dark,
-					"contrast_text": paletteNew.Success.ContrastText,
+					"light":         paletteV2.Success.Light,
+					"main":          paletteV2.Success.Main,
+					"dark":          paletteV2.Success.Dark,
+					"contrast_text": paletteV2.Success.ContrastText,
 				}},
 				"info": []interface{}{map[string]interface{}{
-					"light":         paletteNew.Info.Light,
-					"main":          paletteNew.Info.Main,
-					"dark":          paletteNew.Info.Dark,
-					"contrast_text": paletteNew.Info.ContrastText,
+					"light":         paletteV2.Info.Light,
+					"main":          paletteV2.Info.Main,
+					"dark":          paletteV2.Info.Dark,
+					"contrast_text": paletteV2.Info.ContrastText,
 				}},
 				"warning": []interface{}{map[string]interface{}{
-					"light":         paletteNew.Warning.Light,
-					"main":          paletteNew.Warning.Main,
-					"dark":          paletteNew.Warning.Dark,
-					"contrast_text": paletteNew.Warning.ContrastText,
+					"light":         paletteV2.Warning.Light,
+					"main":          paletteV2.Warning.Main,
+					"dark":          paletteV2.Warning.Dark,
+					"contrast_text": paletteV2.Warning.ContrastText,
 				}},
 				"error": []interface{}{map[string]interface{}{
-					"light":         paletteNew.Error.Light,
-					"main":          paletteNew.Error.Main,
-					"dark":          paletteNew.Error.Dark,
-					"contrast_text": paletteNew.Error.ContrastText,
+					"light":         paletteV2.Error.Light,
+					"main":          paletteV2.Error.Main,
+					"dark":          paletteV2.Error.Dark,
+					"contrast_text": paletteV2.Error.ContrastText,
 				}},
 				"primary": []interface{}{map[string]interface{}{
-					"light":         paletteNew.Primary.Light,
-					"main":          paletteNew.Primary.Main,
-					"dark":          paletteNew.Primary.Dark,
-					"contrast_text": paletteNew.Primary.ContrastText,
-					"active":        paletteNew.Primary.Active,
-					"hover":         paletteNew.Primary.Hover,
+					"light":         paletteV2.Primary.Light,
+					"main":          paletteV2.Primary.Main,
+					"dark":          paletteV2.Primary.Dark,
+					"contrast_text": paletteV2.Primary.ContrastText,
+					"active":        paletteV2.Primary.Active,
+					"hover":         paletteV2.Primary.Hover,
 				}},
 				"secondary": []interface{}{map[string]interface{}{
-					"light":         paletteNew.Secondary.Light,
-					"main":          paletteNew.Secondary.Main,
-					"dark":          paletteNew.Secondary.Dark,
-					"contrast_text": paletteNew.Secondary.ContrastText,
-					"active":        paletteNew.Secondary.Active,
-					"hover":         paletteNew.Secondary.Hover,
+					"light":         paletteV2.Secondary.Light,
+					"main":          paletteV2.Secondary.Main,
+					"dark":          paletteV2.Secondary.Dark,
+					"contrast_text": paletteV2.Secondary.ContrastText,
+					"active":        paletteV2.Secondary.Active,
+					"hover":         paletteV2.Secondary.Hover,
 				}},
 			})
 		} else {
 			paletteItems = append(paletteItems, map[string]interface{}{
-				"success":       paletteOld.Success,
-				"info":          paletteOld.Info,
-				"warning":       paletteOld.Warning,
-				"error":         paletteOld.Error,
-				"primary":       paletteOld.Primary,
-				"primaryText":   paletteOld.PrimaryText,
-				"secondary":     paletteOld.Secondary,
-				"secondaryText": paletteOld.SecondaryText,
+				"success":       paletteV1.Success,
+				"info":          paletteV1.Info,
+				"warning":       paletteV1.Warning,
+				"error":         paletteV1.Error,
+				"primary":       paletteV1.Primary,
+				"primaryText":   paletteV1.PrimaryText,
+				"secondary":     paletteV1.Secondary,
+				"secondaryText": paletteV1.SecondaryText,
 			})
 		}
 
@@ -1577,7 +1577,7 @@ func resourceFronteggWorkspaceUpdate(ctx context.Context, d *schema.ResourceData
 			}
 		}
 
-		serializeNewPalette := func(key string) fronteggAdminPortalPaletteNew {
+		serializeNewPalette := func(key string) fronteggAdminPortalPaletteV2 {
 			paletteSuccess := serializeSeverityPaletteColor(fmt.Sprintf("%s.0.success", key))
 			paletteInfo := serializeSeverityPaletteColor(fmt.Sprintf("%s.0.info", key))
 			paletteWarning := serializeSeverityPaletteColor(fmt.Sprintf("%s.0.warning", key))
@@ -1585,7 +1585,7 @@ func resourceFronteggWorkspaceUpdate(ctx context.Context, d *schema.ResourceData
 			palettePrimary := serializePaletteColor(fmt.Sprintf("%s.0.primary", key))
 			paletteSecondary := serializePaletteColor(fmt.Sprintf("%s.0.secondary", key))
 
-			return fronteggAdminPortalPaletteNew{
+			return fronteggAdminPortalPaletteV2{
 				Success:   paletteSuccess,
 				Info:      paletteInfo,
 				Warning:   paletteWarning,
@@ -1595,7 +1595,7 @@ func resourceFronteggWorkspaceUpdate(ctx context.Context, d *schema.ResourceData
 			}
 		}
 
-		serializeOldPalette := func(key string) fronteggAdminPortalPaletteOld {
+		serializeOldPalette := func(key string) fronteggAdminPortalPaletteV1 {
 			paletteSuccess := d.Get(fmt.Sprintf("%s.0.success", key)).(string)
 			paletteInfo := d.Get(fmt.Sprintf("%s.0.info", key)).(string)
 			paletteWarning := d.Get(fmt.Sprintf("%s.0.warning", key)).(string)
@@ -1605,7 +1605,7 @@ func resourceFronteggWorkspaceUpdate(ctx context.Context, d *schema.ResourceData
 			paletteSecondary := d.Get(fmt.Sprintf("%s.0.secondary", key)).(string)
 			paletteSecondaryText := d.Get(fmt.Sprintf("%s.0.secondary_text", key)).(string)
 
-			return fronteggAdminPortalPaletteOld{
+			return fronteggAdminPortalPaletteV1{
 				Success:       paletteSuccess,
 				Info:          paletteInfo,
 				Warning:       paletteWarning,
@@ -1643,9 +1643,9 @@ func resourceFronteggWorkspaceUpdate(ctx context.Context, d *schema.ResourceData
 
 		paletteSuccess := d.Get("admin_portal.0.palette.0.success")
 		if reflect.TypeOf(paletteSuccess).Kind() == reflect.String {
-			configuration.Theme.PaletteOld = serializeOldPalette("admin_portal.0.palette")
+			configuration.Theme.PaletteV1 = serializeOldPalette("admin_portal.0.palette")
 		} else {
-			configuration.Theme.PaletteNew = serializeNewPalette("admin_portal.0.palette")
+			configuration.Theme.PaletteV2 = serializeNewPalette("admin_portal.0.palette")
 		}
 
 		if err := clientHolder.ApiClient.Post(ctx, fronteggAdminPortalURL, adminPortal, nil); err != nil {
