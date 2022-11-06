@@ -74,7 +74,7 @@ func resourceFronteggRedirectUriCreate(ctx context.Context, d *schema.ResourceDa
 		return diag.FromErr(err)
 	}
 	for _, c := range out.RedirectURIs {
-		if c.RedirectUri == in.RedirectUri {
+		if c.RedirectUri == in.RedirectUri || c.RedirectUri == fmt.Sprintf("%s/", in.RedirectUri) {
 			if err := resourceFronteggRedirectUriDeserialize(d, c); err != nil {
 				return diag.FromErr(err)
 			}
