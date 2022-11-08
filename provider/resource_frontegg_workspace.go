@@ -1625,10 +1625,11 @@ func resourceFronteggWorkspaceUpdate(ctx context.Context, d *schema.ResourceData
 		}
 
 		var configuration fronteggAdminPortalConfiguration
+		var adminPortal []fronteggAdminPortal
 		// adminBox is only defined when the default style of the web page has been modified, if not it's 0 rows and
 		// this is not an error.
 		if len(out.Rows) > 0 {
-			adminPortal := out.Rows[0]
+			adminPortal = out.Rows[0]
 			configuration = adminPortal.Configuration
 		}
 
