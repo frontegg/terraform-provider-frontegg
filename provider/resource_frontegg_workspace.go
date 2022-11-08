@@ -1624,9 +1624,14 @@ func resourceFronteggWorkspaceUpdate(ctx context.Context, d *schema.ResourceData
 			return diag.FromErr(err)
 		}
 
-		adminPortal := out.Rows[0]
+		var configuration fronteggAdminPortalConfiguration
+		// adminBox is only defined when the default style of the web page has been modified, if not it's 0 rows and
+		// this is not an error.
+		if len(out.Rows) > 0 {
+			adminPortal := out.Rows[0]
+			configuration = adminPortal.Configuration
+		}
 
-		configuration := adminPortal.Configuration
 		configuration.Navigation.Account = serializeVisibility("admin_portal.0.enable_account_settings")
 		configuration.Navigation.APITokens = serializeVisibility("admin_portal.0.enable_api_tokens")
 		configuration.Navigation.Audits = serializeVisibility("admin_portal.0.enable_audit_logs")
