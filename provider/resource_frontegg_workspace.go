@@ -527,10 +527,10 @@ per Frontegg provider.`,
 						"auth_strategy": {
 							Description: `The authentication strategy to use for people logging in.
 
-	Must be one of "EmailAndPassword" or "Code"`,
+	Must be one of "EmailAndPassword", "Code", "MagicLink", "NoLocalAuthentication", "SmsCode"`,
 							Type:         schema.TypeString,
 							Required:     true,
-							ValidateFunc: validation.StringInSlice([]string{"EmailAndPassword", "Code"}, false),
+							ValidateFunc: validation.StringInSlice([]string{"EmailAndPassword", "Code", "MagicLink", "NoLocalAuthentication", "SmsCode"}, false),
 						},
 					},
 				},

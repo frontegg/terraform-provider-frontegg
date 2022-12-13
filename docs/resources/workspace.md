@@ -272,6 +272,10 @@ Required:
 
 Required:
 
+- **auth_strategy** (String) The authentication strategy to use for people logging in.
+
+  Must be one of "EmailAndPassword", "Code", "MagicLink", "NoLocalAuthentication" or "SmsCode"
+
 - **allow_signups** (Boolean) Whether users are allowed to sign up.
 - **allow_unverified_users** (Boolean) Whether unverified users are allowed to log in.
 - **enable_api_tokens** (Boolean) Whether users can create API tokens.
