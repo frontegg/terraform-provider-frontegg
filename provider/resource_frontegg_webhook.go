@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	"net/http"
 
 	"github.com/frontegg/terraform-provider-frontegg/internal/restclient"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -10,7 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 )
 
-const fronteggWebhookPath = "/frontegg/webhook"
+const fronteggWebhookPath = "/webhook"
 
 type fronteggWebhook struct {
 	ID          string   `json:"_id,omitempty"`
@@ -47,7 +48,7 @@ func resourceFronteggWebhook() *schema.Resource {
 			"name": {
 				Description: "A human-readable name for the webhook.",
 				Type:        schema.TypeString,
-				Required:    true,
+				Optional:    true,
 			},
 			"description": {
 				Description: "A human-readable description of the webhook.",
@@ -105,7 +106,7 @@ func resourceFronteggWebhook() *schema.Resource {
 			"tenant_id": {
 				Description: "The ID of the tenant that owns the webhook.",
 				Type:        schema.TypeString,
-				Computed:    true,
+				Required:    true,
 			},
 			"vendor_id": {
 				Description: "The ID of the vendor that owns the webhook.",
@@ -129,6 +130,7 @@ func resourceFronteggWebhookSerialize(d *schema.ResourceData) fronteggWebhook {
 		URL:         d.Get("url").(string),
 		Secret:      d.Get("secret").(string),
 		EventKeys:   stringSetToList(d.Get("events").(*schema.Set)),
+		TenantID:    d.Get("tenant_id").(string),
 	}
 }
 
@@ -174,7 +176,9 @@ func resourceFronteggWebhookCreate(ctx context.Context, d *schema.ResourceData, 
 	clientHolder := meta.(*restclient.ClientHolder)
 	in := resourceFronteggWebhookSerialize(d)
 	var out fronteggWebhook
-	if err := clientHolder.PortalClient.Post(ctx, fronteggWebhookPath+"/custom", in, &out); err != nil {
+	headers := http.Header{}
+	headers.Add("frontegg-tenant-id", d.Get("tenant_id").(string))
+	if err := clientHolder.ApiClient.PostWithHeaders(ctx, fronteggWebhookPath+"/custom", headers, in, &out); err != nil {
 		return diag.FromErr(err)
 	}
 	if err := resourceFronteggWebhookDeserialize(d, out); err != nil {
@@ -185,21 +189,30 @@ func resourceFronteggWebhookCreate(ctx context.Context, d *schema.ResourceData, 
 
 func resourceFronteggWebhookRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	clientHolder := meta.(*restclient.ClientHolder)
-	var out fronteggWebhook
-	if err := clientHolder.PortalClient.Patch(ctx, fmt.Sprintf("%s/%s", fronteggWebhookPath, d.Id()), nil, &out); err != nil {
+	var out []fronteggWebhook
+	headers := http.Header{}
+	headers.Add("frontegg-tenant-id", d.Get("tenant_id").(string))
+	if err := clientHolder.ApiClient.GetWithHeaders(ctx, fmt.Sprintf("%s", fronteggWebhookPath), headers, &out); err != nil {
 		return diag.FromErr(err)
 	}
-	if err := resourceFronteggWebhookDeserialize(d, out); err != nil {
-		return diag.FromErr(err)
+	for _, c := range out {
+		if c.ID == d.Id() {
+			if err := resourceFronteggWebhookDeserialize(d, c); err != nil {
+				return diag.FromErr(err)
+			}
+			return diag.Diagnostics{}
+		}
 	}
-	return diag.Diagnostics{}
+	return nil
 }
 
 func resourceFronteggWebhookUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	clientHolder := meta.(*restclient.ClientHolder)
 	in := resourceFronteggWebhookSerialize(d)
 	var out fronteggWebhook
-	if err := clientHolder.PortalClient.Patch(ctx, fmt.Sprintf("%s/%s", fronteggWebhookPath, d.Id()), in, &out); err != nil {
+	headers := http.Header{}
+	headers.Add("frontegg-tenant-id", d.Get("tenant_id").(string))
+	if err := clientHolder.ApiClient.PatchWithHeaders(ctx, fmt.Sprintf("%s/%s", fronteggWebhookPath, d.Id()), headers, in, &out); err != nil {
 		return diag.FromErr(err)
 	}
 	if err := resourceFronteggWebhookDeserialize(d, out); err != nil {
@@ -210,7 +223,9 @@ func resourceFronteggWebhookUpdate(ctx context.Context, d *schema.ResourceData, 
 
 func resourceFronteggWebhookDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	clientHolder := meta.(*restclient.ClientHolder)
-	if err := clientHolder.PortalClient.Delete(ctx, fmt.Sprintf("%s/%s", fronteggWebhookPath, d.Id()), nil); err != nil {
+	headers := http.Header{}
+	headers.Add("frontegg-tenant-id", d.Get("tenant_id").(string))
+	if err := clientHolder.ApiClient.DeleteWithHeaders(ctx, fmt.Sprintf("%s/%s", fronteggWebhookPath, d.Id()), headers, nil); err != nil {
 		return diag.FromErr(err)
 	}
 	return nil
