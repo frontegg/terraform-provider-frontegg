@@ -32,20 +32,19 @@ resource "frontegg_webhook" "example" {
 
 ### Required
 
-- **description** (String) A human-readable description of the webhook.
-- **enabled** (Boolean) Whether the webhook is enabled.
-- **events** (Set of String) The names of the events to subscribe to.
-- **name** (String) A human-readable name for the webhook.
-- **secret** (String) A secret to include with the event.
-- **url** (String) The URL to send events to.
-- **tenant_id** (String) The ID of the tenant that owns the webhook.
 
-### Optional
-
-- **id** (String) The ID of this resource.
+- `description` (String) A human-readable description of the webhook.
+- `enabled` (Boolean) Whether the webhook is enabled.
+- `events` (Set of String) The names of the events to subscribe to.
+- `name` (String) A human-readable name for the webhook.
+- `secret` (String) A secret to include with the event.
+- `url` (String) The URL to send events to.
+- `tenant_id` (String) The ID of the tenant that owns the webhook.
 
 ### Read-Only
 
-- **created_at** (String) The timestamp at which the webhook was created.
-- **type** (String) The type of the webhook.
-- **vendor_id** (String) The ID of the vendor that owns the webhook.
+- `created_at` (String) The timestamp at which the webhook was created.
+- `id` (String) The ID of this resource.
+- `type` (String) The type of the webhook.
+- `vendor_id` (String) The ID of the vendor that owns the webhook.
+

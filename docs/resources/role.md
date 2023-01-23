@@ -31,21 +31,21 @@ resource "frontegg_role" "example" {
 
 ### Required
 
-- **default** (Boolean) Whether the role should be applied to new users by default.
-- **description** (String) A human-readable description of the role.
-- **key** (String) A human-readable identifier for the role.
-- **level** (Number) The level of the role in the role hierarchy.
-- **name** (String) A human-readable name for the role.
-- **permission_ids** (Set of String) The IDs of the permissions that the role confers to its members.
+- `default` (Boolean) Whether the role should be applied to new users by default.
+- `description` (String) A human-readable description of the role.
+- `key` (String) A human-readable identifier for the role.
+- `level` (Number) The level of the role in the role hierarchy.
+- `name` (String) A human-readable name for the role.
+- `permission_ids` (Set of String) The IDs of the permissions that the role confers to its members.
 
 ### Optional
 
-- **id** (String) The ID of this resource.
+- `tenant_id` (String) The ID of the tenant that owns the role.
 
 ### Read-Only
 
-- **created_at** (String) The timestamp at which the role was created.
-- **tenant_id** (String) The ID of the tenant that owns the role.
-- **vendor_id** (String) The ID of the vendor that owns the role.
+- `created_at` (String) The timestamp at which the role was created.
+- `id` (String) The ID of this resource.
+- `vendor_id` (String) The ID of the vendor that owns the role.
 
 
