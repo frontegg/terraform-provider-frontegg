@@ -24,15 +24,12 @@ resource "frontegg_permission_category" "example" {
 
 ### Required
 
-- **description** (String) A human-readable description of the permission category.
-- **name** (String) A human-readable name for the permission category.
-
-### Optional
-
-- **id** (String) The ID of this resource.
+- `description` (String) A human-readable description of the permission category.
+- `name` (String) A human-readable name for the permission category.
 
 ### Read-Only
 
-- **created_at** (String) The timestamp at which the permission category was created.
+- `created_at` (String) The timestamp at which the permission category was created.
+- `id` (String) The ID of this resource.
 
 

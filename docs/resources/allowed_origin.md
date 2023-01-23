@@ -17,10 +17,10 @@ Configures a Frontegg allowed origin.
 
 ### Required
 
-- **allowed_origin** (String) The allowed origin URI.
+- `allowed_origin` (String) The allowed origin URI.
 
-### Optional
+### Read-Only
 
-- **id** (String) The ID of this resource.
+- `id` (String) The ID of this resource.
 
 
