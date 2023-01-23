@@ -170,6 +170,7 @@ resource "frontegg_webhook" "example" {
   events = [
     "frontegg.user.authenticated"
   ]
+  tenant_id = "TenantId"
 }
 
 resource "frontegg_permission_category" "example" {

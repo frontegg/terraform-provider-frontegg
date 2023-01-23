@@ -42,7 +42,7 @@ func (c *Client) DeleteWithHeaders(ctx context.Context, url string, headers http
 }
 
 func (c *Client) GetWithHeaders(ctx context.Context, url string, headers http.Header, out interface{}) error {
-	return c.RequestWithHeaders(ctx, "GET", url, nil, headers, out)
+	return c.RequestWithHeaders(ctx, "GET", url, headers, nil, out)
 }
 
 func (c *Client) PatchWithHeaders(ctx context.Context, url string, headers http.Header, in interface{}, out interface{}) error {

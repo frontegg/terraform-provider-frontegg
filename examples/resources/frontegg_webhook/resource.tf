@@ -7,4 +7,5 @@ resource "frontegg_webhook" "example" {
   events = [
     "frontegg.user.authenticated"
   ]
+  tenant_id = "TenantId"
 }
