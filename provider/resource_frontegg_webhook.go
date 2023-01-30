@@ -14,17 +14,17 @@ import (
 const fronteggWebhookPath = "/webhook"
 
 type fronteggWebhook struct {
-	ID          string   `json:"_id,omitempty"`
-	DisplayName string   `json:"displayName,omitempty"`
-	Description string   `json:"description,omitempty"`
-	URL         string   `json:"url,omitempty"`
-	Secret      string   `json:"secret,omitempty"`
-	EventKeys   []string `json:"eventKeys,omitempty"`
-	IsActive    bool     `json:"isActive"`
-	Type        string   `json:"type,omitempty"`
-	TenantID    string   `json:"tenantId,omitempty"`
-	VendorID    string   `json:"vendorId,omitempty"`
-	CreatedAt   string   `json:"createdAt,omitempty"`
+	ID            string   `json:"_id,omitempty"`
+	DisplayName   string   `json:"displayName,omitempty"`
+	Description   string   `json:"description,omitempty"`
+	URL           string   `json:"url,omitempty"`
+	Secret        string   `json:"secret,omitempty"`
+	EventKeys     []string `json:"eventKeys,omitempty"`
+	IsActive      bool     `json:"isActive"`
+	Type          string   `json:"type,omitempty"`
+	VendorID      string   `json:"vendorId,omitempty"`
+	CreatedAt     string   `json:"createdAt,omitempty"`
+	EnvironmentID string   `json:"environmentId,omitempty"`
 }
 
 func resourceFronteggWebhook() *schema.Resource {
@@ -103,10 +103,10 @@ func resourceFronteggWebhook() *schema.Resource {
 				Type:        schema.TypeString,
 				Computed:    true,
 			},
-			"tenant_id": {
-				Description: "The ID of the tenant that owns the webhook.",
+			"environment_id": {
+				Description: "The ID of the environment of webhook.",
 				Type:        schema.TypeString,
-				Required:    true,
+				Optional:    true,
 			},
 			"vendor_id": {
 				Description: "The ID of the vendor that owns the webhook.",
@@ -124,13 +124,13 @@ func resourceFronteggWebhook() *schema.Resource {
 
 func resourceFronteggWebhookSerialize(d *schema.ResourceData) fronteggWebhook {
 	return fronteggWebhook{
-		IsActive:    d.Get("enabled").(bool),
-		DisplayName: d.Get("name").(string),
-		Description: d.Get("description").(string),
-		URL:         d.Get("url").(string),
-		Secret:      d.Get("secret").(string),
-		EventKeys:   stringSetToList(d.Get("events").(*schema.Set)),
-		TenantID:    d.Get("tenant_id").(string),
+		IsActive:      d.Get("enabled").(bool),
+		DisplayName:   d.Get("name").(string),
+		Description:   d.Get("description").(string),
+		URL:           d.Get("url").(string),
+		Secret:        d.Get("secret").(string),
+		EventKeys:     stringSetToList(d.Get("events").(*schema.Set)),
+		EnvironmentID: d.Get("environment_id").(string),
 	}
 }
 
@@ -160,7 +160,7 @@ func resourceFronteggWebhookDeserialize(d *schema.ResourceData, f fronteggWebhoo
 	if err := d.Set("type", f.Type); err != nil {
 		return err
 	}
-	if err := d.Set("tenant_id", f.TenantID); err != nil {
+	if err := d.Set("environment_id", f.EnvironmentID); err != nil {
 		return err
 	}
 	if err := d.Set("vendor_id", f.VendorID); err != nil {
@@ -176,9 +176,8 @@ func resourceFronteggWebhookCreate(ctx context.Context, d *schema.ResourceData, 
 	clientHolder := meta.(*restclient.ClientHolder)
 	in := resourceFronteggWebhookSerialize(d)
 	var out fronteggWebhook
-	headers := http.Header{}
-	headers.Add("frontegg-tenant-id", d.Get("tenant_id").(string))
-	if err := clientHolder.ApiClient.PostWithHeaders(ctx, fronteggWebhookPath+"/custom", headers, in, &out); err != nil {
+	headers := resourceFronteggWebhookTenantHeader(d)
+	if err := clientHolder.PortalClient.PostWithHeaders(ctx, fronteggWebhookPath+"/custom", headers, in, &out); err != nil {
 		return diag.FromErr(err)
 	}
 	if err := resourceFronteggWebhookDeserialize(d, out); err != nil {
@@ -190,9 +189,8 @@ func resourceFronteggWebhookCreate(ctx context.Context, d *schema.ResourceData, 
 func resourceFronteggWebhookRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	clientHolder := meta.(*restclient.ClientHolder)
 	var out []fronteggWebhook
-	headers := http.Header{}
-	headers.Add("frontegg-tenant-id", d.Get("tenant_id").(string))
-	if err := clientHolder.ApiClient.GetWithHeaders(ctx, fmt.Sprintf("%s", fronteggWebhookPath), headers, &out); err != nil {
+	headers := resourceFronteggWebhookTenantHeader(d)
+	if err := clientHolder.PortalClient.GetWithHeaders(ctx, fronteggWebhookPath, headers, &out); err != nil {
 		return diag.FromErr(err)
 	}
 	for _, c := range out {
@@ -210,9 +208,8 @@ func resourceFronteggWebhookUpdate(ctx context.Context, d *schema.ResourceData, 
 	clientHolder := meta.(*restclient.ClientHolder)
 	in := resourceFronteggWebhookSerialize(d)
 	var out fronteggWebhook
-	headers := http.Header{}
-	headers.Add("frontegg-tenant-id", d.Get("tenant_id").(string))
-	if err := clientHolder.ApiClient.PatchWithHeaders(ctx, fmt.Sprintf("%s/%s", fronteggWebhookPath, d.Id()), headers, in, &out); err != nil {
+	headers := resourceFronteggWebhookTenantHeader(d)
+	if err := clientHolder.PortalClient.PatchWithHeaders(ctx, fmt.Sprintf("%s/%s", fronteggWebhookPath, d.Id()), headers, in, &out); err != nil {
 		return diag.FromErr(err)
 	}
 	if err := resourceFronteggWebhookDeserialize(d, out); err != nil {
@@ -223,10 +220,20 @@ func resourceFronteggWebhookUpdate(ctx context.Context, d *schema.ResourceData, 
 
 func resourceFronteggWebhookDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	clientHolder := meta.(*restclient.ClientHolder)
-	headers := http.Header{}
-	headers.Add("frontegg-tenant-id", d.Get("tenant_id").(string))
-	if err := clientHolder.ApiClient.DeleteWithHeaders(ctx, fmt.Sprintf("%s/%s", fronteggWebhookPath, d.Id()), headers, nil); err != nil {
+	headers := resourceFronteggWebhookTenantHeader(d)
+	if err := clientHolder.PortalClient.DeleteWithHeaders(ctx, fmt.Sprintf("%s/%s", fronteggWebhookPath, d.Id()), headers, nil); err != nil {
 		return diag.FromErr(err)
 	}
 	return nil
+}
+
+func resourceFronteggWebhookTenantHeader(d *schema.ResourceData) http.Header {
+	header := http.Header{}
+	environment_id := d.Get("environment_id").(string)
+	if environment_id != "" {
+		header.Add("frontegg-environment-id", environment_id)
+	} else {
+		header = nil
+	}
+	return header
 }

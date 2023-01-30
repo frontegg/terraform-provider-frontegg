@@ -22,7 +22,7 @@ resource "frontegg_webhook" "example" {
   events = [
     "frontegg.user.authenticated"
   ]
-  tenant_id   = "TenantId"
+  environment_id   = "environment_id"
 }
 ```
 
@@ -32,14 +32,16 @@ resource "frontegg_webhook" "example" {
 
 ### Required
 
-
 - `description` (String) A human-readable description of the webhook.
 - `enabled` (Boolean) Whether the webhook is enabled.
 - `events` (Set of String) The names of the events to subscribe to.
 - `name` (String) A human-readable name for the webhook.
 - `secret` (String) A secret to include with the event.
 - `url` (String) The URL to send events to.
-- `tenant_id` (String) The ID of the tenant that owns the webhook.
+
+### Optional
+
+- `environment_id` (String) The ID of the environment that owns the webhook.
 
 ### Read-Only
 
@@ -47,4 +49,3 @@ resource "frontegg_webhook" "example" {
 - `id` (String) The ID of this resource.
 - `type` (String) The type of the webhook.
 - `vendor_id` (String) The ID of the vendor that owns the webhook.
-
