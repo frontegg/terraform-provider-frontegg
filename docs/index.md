@@ -15,7 +15,7 @@ The provider works with only one workspace at a time. To provision multiple
 workspaces, you will need to configure multiple copies of the provider.
 
 Note that the client ID and secret key are *not* the client ID and secret key
-that appear in "Workspace Settings". You need to generate a workspace API key
+that appear in environment "Settings". You need to generate a workspace API key
 and secret specifically for the Terraform provider's use in the administration
 portal:
 
@@ -35,7 +35,7 @@ provider "frontegg" {
 
 ### Required
 
-- `client_id` (String) The client ID for a Frontegg portal API key.
+- `client_id` (String) The client ID from administration portal for a Frontegg portal API key.
 - `secret_key` (String, Sensitive) The corresponding secret key for the API key.
 
 ### Optional

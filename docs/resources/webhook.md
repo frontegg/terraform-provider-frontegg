@@ -41,7 +41,6 @@ resource "frontegg_webhook" "example" {
 
 ### Optional
 
-- `tenant_id` (String) The ID of the tenant that owns the webhook.
 - `environment_id` (String) The ID of the environment that owns the webhook.
 
 ### Read-Only

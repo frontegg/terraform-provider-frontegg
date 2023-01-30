@@ -22,7 +22,6 @@ type fronteggWebhook struct {
 	EventKeys     []string `json:"eventKeys,omitempty"`
 	IsActive      bool     `json:"isActive"`
 	Type          string   `json:"type,omitempty"`
-	TenantID      string   `json:"tenantId,omitempty"`
 	VendorID      string   `json:"vendorId,omitempty"`
 	CreatedAt     string   `json:"createdAt,omitempty"`
 	EnvironmentID string   `json:"environmentId,omitempty"`
@@ -104,11 +103,6 @@ func resourceFronteggWebhook() *schema.Resource {
 				Type:        schema.TypeString,
 				Computed:    true,
 			},
-			"tenant_id": {
-				Description: "The ID of the tenant that owns the webhook.",
-				Type:        schema.TypeString,
-				Optional:    true,
-			},
 			"environment_id": {
 				Description: "The ID of the environment of webhook.",
 				Type:        schema.TypeString,
@@ -136,7 +130,6 @@ func resourceFronteggWebhookSerialize(d *schema.ResourceData) fronteggWebhook {
 		URL:           d.Get("url").(string),
 		Secret:        d.Get("secret").(string),
 		EventKeys:     stringSetToList(d.Get("events").(*schema.Set)),
-		TenantID:      d.Get("tenant_id").(string),
 		EnvironmentID: d.Get("environment_id").(string),
 	}
 }
@@ -165,9 +158,6 @@ func resourceFronteggWebhookDeserialize(d *schema.ResourceData, f fronteggWebhoo
 		return err
 	}
 	if err := d.Set("type", f.Type); err != nil {
-		return err
-	}
-	if err := d.Set("tenant_id", f.TenantID); err != nil {
 		return err
 	}
 	if err := d.Set("environment_id", f.EnvironmentID); err != nil {
@@ -240,11 +230,8 @@ func resourceFronteggWebhookDelete(ctx context.Context, d *schema.ResourceData, 
 func resourceFronteggWebhookTenantHeader(d *schema.ResourceData) http.Header {
 	header := http.Header{}
 	environment_id := d.Get("environment_id").(string)
-	tenant_id := d.Get("tenant_id").(string)
 	if environment_id != "" {
 		header.Add("frontegg-environment-id", environment_id)
-	} else if tenant_id != "" {
-		header.Add("frontegg-tenant-id", tenant_id)
 	} else {
 		header = nil
 	}
