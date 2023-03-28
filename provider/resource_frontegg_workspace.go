@@ -59,6 +59,7 @@ type fronteggAuth struct {
 	JWTAlgorithm                  string `json:"jwtAlgorithm"`
 	PublicKey                     string `json:"publicKey"`
 	AuthStrategy                  string `json:"authStrategy"`
+	MachineToMachineAuthStrategy  string `json:"machineToMachineAuthStrategy"`
 }
 
 type fronteggMFA struct {
@@ -488,6 +489,14 @@ per Frontegg provider.`,
 							Description: "Whether users can create API tokens.",
 							Type:        schema.TypeBool,
 							Required:    true,
+						},
+						"machine_to_machine_auth_strategy": {
+							Description: `Type of tokens users will be able to generate.
+							Must be one of "ClientCredentials" or "AccessToken".`,
+							Type:         schema.TypeString,
+							Optional:     true,
+							Default:      "ClientCredentials",
+							ValidateFunc: validation.StringInSlice([]string{"ClientCredentials", "AccessToken"}, false),
 						},
 						"enable_roles": {
 							Description: "Whether granular roles and permissions are enabled.",
@@ -964,16 +973,17 @@ func resourceFronteggWorkspaceRead(ctx context.Context, d *schema.ResourceData, 
 			return diag.FromErr(err)
 		}
 		auth_policy := map[string]interface{}{
-			"allow_unverified_users":       out.AllowNotVerifiedUsersLogin,
-			"allow_signups":                out.AllowSignups,
-			"enable_api_tokens":            out.APITokensEnabled,
-			"enable_roles":                 out.ForcePermissions,
-			"jwt_algorithm":                out.JWTAlgorithm,
-			"jwt_access_token_expiration":  out.DefaultTokenExpiration,
-			"jwt_refresh_token_expiration": out.DefaultRefreshTokenExpiration,
-			"jwt_public_key":               out.PublicKey,
-			"same_site_cookie_policy":      strings.ToLower(out.CookieSameSite),
-			"auth_strategy":                out.AuthStrategy,
+			"allow_unverified_users":           out.AllowNotVerifiedUsersLogin,
+			"allow_signups":                    out.AllowSignups,
+			"enable_api_tokens":                out.APITokensEnabled,
+			"machine_to_machine_auth_strategy": out.MachineToMachineAuthStrategy,
+			"enable_roles":                     out.ForcePermissions,
+			"jwt_algorithm":                    out.JWTAlgorithm,
+			"jwt_access_token_expiration":      out.DefaultTokenExpiration,
+			"jwt_refresh_token_expiration":     out.DefaultRefreshTokenExpiration,
+			"jwt_public_key":                   out.PublicKey,
+			"same_site_cookie_policy":          strings.ToLower(out.CookieSameSite),
+			"auth_strategy":                    out.AuthStrategy,
 		}
 		if err := d.Set("auth_policy", []interface{}{auth_policy}); err != nil {
 			return diag.FromErr(err)
@@ -1316,6 +1326,7 @@ func resourceFronteggWorkspaceUpdate(ctx context.Context, d *schema.ResourceData
 			AllowNotVerifiedUsersLogin:    d.Get("auth_policy.0.allow_unverified_users").(bool),
 			AllowSignups:                  d.Get("auth_policy.0.allow_signups").(bool),
 			APITokensEnabled:              d.Get("auth_policy.0.enable_api_tokens").(bool),
+			MachineToMachineAuthStrategy:  d.Get("auth_policy.0.machine_to_machine_auth_strategy").(string),
 			ForcePermissions:              d.Get("auth_policy.0.enable_roles").(bool),
 			JWTAlgorithm:                  d.Get("auth_policy.0.jwt_algorithm").(string),
 			DefaultTokenExpiration:        d.Get("auth_policy.0.jwt_access_token_expiration").(int),
