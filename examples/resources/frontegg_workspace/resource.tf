@@ -13,15 +13,16 @@ resource "frontegg_workspace" "example" {
   allowed_origins = ["https://yourcompany.com"]
 
   auth_policy {
-    allow_unverified_users       = true
-    allow_signups                = true
-    enable_api_tokens            = true
-    enable_roles                 = true
-    jwt_algorithm                = "RS256"
-    jwt_access_token_expiration  = 86400   # 1 day
-    jwt_refresh_token_expiration = 2592000 # 30 days
-    same_site_cookie_policy      = "strict"
-    auth_strategy                = "Code"
+    allow_unverified_users           = true
+    allow_signups                    = true
+    enable_api_tokens                = true
+    enable_roles                     = true
+    jwt_algorithm                    = "RS256"
+    machine_to_machine_auth_strategy = "ClientCredentials"
+    jwt_access_token_expiration      = 86400   # 1 day
+    jwt_refresh_token_expiration     = 2592000 # 30 days
+    same_site_cookie_policy          = "strict"
+    auth_strategy                    = "Code"
   }
 
   mfa_policy {

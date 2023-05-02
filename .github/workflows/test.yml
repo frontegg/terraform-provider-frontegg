@@ -7,7 +7,7 @@ on:
     paths-ignore:
       - README.md
   schedule:
-    - cron: '0 13 * * *'
+    - cron: "0 13 * * *"
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -15,16 +15,16 @@ jobs:
       fail-fast: false
       matrix:
         terraform:
-          - '1.0.3'
+          - "1.0.3"
     steps:
-    - uses: actions/checkout@v3.0.2
-    - uses: actions/setup-go@v4
-      with:
-        go-version: '1.16.5'
-    - run: go mod download
-    - run: go test -v -cover ./provider/
-      env:
-        TF_ACC: "1"
-        TF_ACC_TERRAFORM_VERSION: ${{ matrix.terraform }}
-        FRONTEGG_API_KEY: ${{ secrets.FRONTEGG_API_KEY }}
-        FRONTEGG_CLIENT_ID: ${{ secrets.FRONTEGG_CLIENT_ID }}
+      - uses: actions/checkout@v3.1.0
+      - uses: actions/setup-go@v4
+        with:
+          go-version: "1.18.10"
+      - run: go mod download
+      - run: go test -v -cover ./provider/
+        env:
+          TF_ACC: "1"
+          TF_ACC_TERRAFORM_VERSION: ${{ matrix.terraform }}
+          FRONTEGG_API_KEY: ${{ secrets.FRONTEGG_API_KEY }}
+          FRONTEGG_CLIENT_ID: ${{ secrets.FRONTEGG_CLIENT_ID }}
