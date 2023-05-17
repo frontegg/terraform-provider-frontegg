@@ -57,6 +57,7 @@ func New(version string) func() *schema.Provider {
 				"frontegg_user":                resourceFronteggUser(),
 				"frontegg_redirect_uri":        resourceFronteggRedirectUri(),
 				"frontegg_allowed_origin":      resourceFronteggAllowedOrigin(),
+				"frontegg_loginbox":            resourceFronteggLoginBox(),
 			},
 			ConfigureContextFunc: func(ctx context.Context, d *schema.ResourceData) (interface{}, diag.Diagnostics) {
 				apiClient := restclient.MakeRestClient(d.Get("api_base_url").(string))

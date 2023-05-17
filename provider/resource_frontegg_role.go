@@ -3,7 +3,6 @@ package provider
 import (
 	"context"
 	"fmt"
-	"net/http"
 
 	"github.com/frontegg/terraform-provider-frontegg/internal/restclient"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -76,7 +75,7 @@ func resourceFronteggRole() *schema.Resource {
 			"tenant_id": {
 				Description: "The ID of the tenant that owns the role.",
 				Type:        schema.TypeString,
-				Optional: 	 true,
+				Optional:    true,
 			},
 			"vendor_id": {
 				Description: "The ID of the vendor that owns the role.",
@@ -138,18 +137,6 @@ func resourceFronteggRoleDeserialize(d *schema.ResourceData, f fronteggRole) err
 		return err
 	}
 	return nil
-}
-
-
-func getTenantIdHeaders(d *schema.ResourceData) http.Header{
-	headers := http.Header{}
-	tenant_id := d.Get("tenant_id").(string)
-	if tenant_id != "" {
-		headers.Add("frontegg-tenant-id", tenant_id)
-	} else {
-		headers = nil
-	}
-	return headers
 }
 
 func resourceFronteggRoleCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
