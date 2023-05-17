@@ -25,33 +25,33 @@ resource "frontegg_loginbox" "example" {
 
   palette {
     primary {
-      active       = "#278854"
-      contrastText = "#eeeef0"
-      dark         = "#36A76A"
-      hover        = "#32A265"
-      light        = "#A2E1BF"
-      main         = "#43BB7A"
+      active        = "#278854"
+      contrast_text = "#eeeef0"
+      dark          = "#36A76A"
+      hover         = "#32A265"
+      light         = "#A2E1BF"
+      main          = "#43BB7A"
     }
     secondary {
-      active       = "#E6ECF4"
-      contrastText = "#eeeef0"
-      dark         = "#E6ECF4"
-      hover        = "#F0F3F8"
-      light        = "#FBFBFC"
-      main         = "#FBFBFC"
+      active        = "#E6ECF4"
+      contrast_text = "#eeeef0"
+      dark          = "#E6ECF4"
+      hover         = "#F0F3F8"
+      light         = "#FBFBFC"
+      main          = "#FBFBFC"
     }
   }
 
-  themeName = "modern"
-  tenantId  = "your_tenant_id"
+  theme_name = "modern"
+  tenant_id  = "your_tenant_id"
 
-  socialLogins {
-    socialLoginsLayout {
-      mainButton = "google"
+  social_logins {
+    social_logins_layout {
+      main_button = "google"
     }
   }
 
-  activateAccount {
+  activate_account {
     disclaimer {
       terms {
         enabled = true

@@ -40,33 +40,33 @@ resource "frontegg_loginbox" "example" {
 
   palette {
     primary {
-      active       = "#278854"
-      contrastText = "#eeeef0"
-      dark         = "#36A76A"
-      hover        = "#32A265"
-      light        = "#A2E1BF"
-      main         = "#43BB7A"
+      active        = "#278854"
+      contrast_text = "#eeeef0"
+      dark          = "#36A76A"
+      hover         = "#32A265"
+      light         = "#A2E1BF"
+      main          = "#43BB7A"
     }
     secondary {
-      active       = "#E6ECF4"
-      contrastText = "#eeeef0"
-      dark         = "#E6ECF4"
-      hover        = "#F0F3F8"
-      light        = "#FBFBFC"
-      main         = "#FBFBFC"
+      active        = "#E6ECF4"
+      contrast_text = "#eeeef0"
+      dark          = "#E6ECF4"
+      hover         = "#F0F3F8"
+      light         = "#FBFBFC"
+      main          = "#FBFBFC"
     }
   }
 
-  themeName = "modern"
-  tenantId  = "your_tenant_id"
+  theme_name = "modern"
+  tenant_id  = "your_tenant_id"
 
-  socialLogins {
-    socialLoginsLayout {
-      mainButton = "google"
+  social_logins {
+    social_logins_layout {
+      main_button = "google"
     }
   }
 
-  activateAccount {
+  activate_account {
     disclaimer {
       terms {
         enabled = true
@@ -89,15 +89,15 @@ resource "frontegg_loginbox" "example" {
 - `login` (Block List, Max: 1) Login configurations. (see [below for nested schema](#nestedblock--login))
 - `signup` (Block List, Max: 1) Signup configurations. (see [below for nested schema](#nestedblock--signup))
 - `palette` (Block List, Max: 1) Login palette configurations. (see [below for nested schema](#nestedblock--palette))
-- `themeName` (String) "Name of theme type. Must be one of: 'modern', 'classic', 'vivid', 'dark'.",
-- `socialLogins` (Block List, Max: 1) Social logins configurations.
+- `theme_name` (String) "Name of theme type. Must be one of: 'modern', 'classic', 'vivid', 'dark'.",
+- `social_logins` (Block List, Max: 1) Social logins configurations.
   (see [below for nested schema](#nestedblock--social_logins))
-- `activateAccount` (Block List, Max: 1) Activate account configurations. (see [below for nested schema](#nestedblock--activate_account))
+- `activate_account` (Block List, Max: 1) Activate account configurations. (see [below for nested schema](#nestedblock--activate_account))
 - `tenantId` (String) The ID of the tenant that owns the login box.
 
 ### Read-Only
 
-- `createdAt` (String) The timestamp at which the login box was created.
+- `created_at` (String) The timestamp at which the login box was created.
 - `id` (String) The ID of this resource.
 - `vendorId` (String) The ID of the vendor that owns the login box.
 
@@ -166,7 +166,7 @@ Required:
 Required:
 
 - `active` (String) active color.
-- `contrastText` (String) contrastText color.
+- `contrast_text` (String) contrast_text color.
 - `dark` (String) dark color.
 - `hover` (String) hover color.
 - `light` (String) light color.
@@ -178,7 +178,7 @@ Required:
 
 Required:
 
-- `socialLoginsLayout` (Block List, Max: 1) Configure layout of social logins. (see [below for nested schema](#nestedblock--social_logins_layout))
+- `social_logins_layout` (Block List, Max: 1) Configure layout of social logins. (see [below for nested schema](#nestedblock--social_logins_layout))
 
 <a id="nestedblock--social_logins_layout"></a>
 
@@ -186,4 +186,4 @@ Required:
 
 Required:
 
-- `mainButton` (String) Configure main social logins button. Must be one of: 'google', 'facebook', 'microsoft', 'github', 'slack', 'apple', 'linkedin'.
+- `main_button` (String) Configure main social logins button. Must be one of: 'google', 'facebook', 'microsoft', 'github', 'slack', 'apple', 'linkedin'.

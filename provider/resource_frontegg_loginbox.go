@@ -130,7 +130,7 @@ func resourceFronteggLoginBox() *schema.Resource {
 	resourceFronteggSocialLoginsLayout := func() *schema.Resource {
 		return &schema.Resource{
 			Schema: map[string]*schema.Schema{
-				"mainButton": {
+				"main_button": {
 					Description:  "Configure main social logins button. Must be one of: 'google', 'facebook', 'microsoft', 'github', 'slack', 'apple', 'linkedin'.",
 					Type:         schema.TypeString,
 					Optional:     true,
@@ -233,14 +233,14 @@ func resourceFronteggLoginBox() *schema.Resource {
 				MaxItems:    1,
 				Elem:        resourceFronteggPalette(),
 			},
-			"themeName": {
+			"theme_name": {
 				Description:  "Name of theme type. Must be one of: 'modern', 'classic', 'vivid', 'dark'.",
 				Type:         schema.TypeString,
 				Optional:     true,
 				Default:      "modern",
 				ValidateFunc: validation.StringInSlice([]string{"modern", "classic", "vivid", "dark"}, false),
 			},
-			"socialLogins": {
+			"social_logins": {
 				Description: "Social logins configurations.",
 				Type:        schema.TypeList,
 				Required:    true,
@@ -248,7 +248,7 @@ func resourceFronteggLoginBox() *schema.Resource {
 				MaxItems:    1,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
-						"socialLoginsLayout": {
+						"social_logins_layout": {
 							Description: "Configure layout of social logins.",
 							Type:        schema.TypeList,
 							Required:    true,
@@ -259,7 +259,7 @@ func resourceFronteggLoginBox() *schema.Resource {
 					},
 				},
 			},
-			"activateAccount": {
+			"activate_account": {
 				Description: "Activate account configurations.",
 				Type:        schema.TypeList,
 				Required:    true,
@@ -273,7 +273,7 @@ func resourceFronteggLoginBox() *schema.Resource {
 							Required:    true,
 							MinItems:    1,
 							MaxItems:    1,
-							Elem:        resourceFronteggDisclaimer("activateAccount"),
+							Elem:        resourceFronteggDisclaimer("activate_account"),
 						},
 					},
 				},
@@ -283,12 +283,12 @@ func resourceFronteggLoginBox() *schema.Resource {
 				Type:        schema.TypeString,
 				Required:    true,
 			},
-			"vendorId": {
+			"vendor_id": {
 				Description: "The ID of the vendor that owns the login box.",
 				Type:        schema.TypeString,
 				Computed:    true,
 			},
-			"createdAt": {
+			"created_at": {
 				Description: "The timestamp at which the role was created.",
 				Type:        schema.TypeString,
 				Computed:    true,
@@ -313,12 +313,12 @@ func resourceFronteggDisclaimerDeserialize(disclaimer fronteggDisclaimer) []inte
 func resourceFronteggLoginBoxPaletteDeserialize(paletteColor fronteggLoginBoxPaletteColor) []interface{} {
 	var paletteColorItems []interface{}
 	paletteColorItems = append(paletteColorItems, map[string]interface{}{
-		"light":        paletteColor.Light,
-		"main":         paletteColor.Main,
-		"dark":         paletteColor.Dark,
-		"hover":        paletteColor.Hover,
-		"active":       paletteColor.Active,
-		"contrastText": paletteColor.ContrastText,
+		"light":         paletteColor.Light,
+		"main":          paletteColor.Main,
+		"dark":          paletteColor.Dark,
+		"hover":         paletteColor.Hover,
+		"active":        paletteColor.Active,
+		"contrast_text": paletteColor.ContrastText,
 	})
 	return paletteColorItems
 }
@@ -352,31 +352,31 @@ func resourceFronteggLoginBoxRead(ctx context.Context, d *schema.ResourceData, m
 	if err := d.Set("palette", []interface{}{paletteItems}); err != nil {
 		return diag.FromErr(err)
 	}
-	if err := d.Set("themeName", out.ThemeName); err != nil {
+	if err := d.Set("theme_name", out.ThemeName); err != nil {
 		return diag.FromErr(err)
 	}
 	var socialLoginsItems []interface{}
 	socialLoginsItems = append(socialLoginsItems, map[string]interface{}{
-		"socialLoginsLayout": map[string]interface{}{
-			"mainButton": out.SocialLogins.SocialLoginsLayout.MainButton,
+		"social_logins_layout": map[string]interface{}{
+			"main_button": out.SocialLogins.SocialLoginsLayout.MainButton,
 		},
 	})
-	if err := d.Set("socialLogins", []interface{}{socialLoginsItems}); err != nil {
+	if err := d.Set("social_logins", []interface{}{socialLoginsItems}); err != nil {
 		return diag.FromErr(err)
 	}
 	activateAccountItems := append(loginItems, map[string]interface{}{
 		"disclaimer": resourceFronteggDisclaimerDeserialize(out.ActivateAccount.Disclaimer),
 	})
-	if err := d.Set("activateAccount", []interface{}{activateAccountItems}); err != nil {
+	if err := d.Set("activate_account", []interface{}{activateAccountItems}); err != nil {
 		return diag.FromErr(err)
 	}
-	if err := d.Set("tenantId", out.TenantID); err != nil {
+	if err := d.Set("tenant_id", out.TenantID); err != nil {
 		return diag.FromErr(err)
 	}
-	if err := d.Set("vendorId", out.VendorID); err != nil {
+	if err := d.Set("vendor_id", out.VendorID); err != nil {
 		return diag.FromErr(err)
 	}
-	if err := d.Set("createdAt", out.CreatedAt); err != nil {
+	if err := d.Set("created_at", out.CreatedAt); err != nil {
 		return diag.FromErr(err)
 	}
 	return diag.Diagnostics{}
@@ -421,16 +421,16 @@ func resourceFronteggLoginBoxSerialize(d *schema.ResourceData) fronteggLoginBox 
 
 	serializeLoginBoxSocialLoginsLayout := func(key string) fronteggSocialLoginsLayout {
 		return fronteggSocialLoginsLayout{
-			MainButton: d.Get(fmt.Sprintf("%s.0.mainButton", key)).(string),
+			MainButton: d.Get(fmt.Sprintf("%s.0.main_button", key)).(string),
 		}
 	}
 
 	loginBox.Login.Disclaimer = serializeLoginBoxDisclaimer("login")
 	loginBox.Signup.Disclaimer = serializeLoginBoxDisclaimer("signup")
 	loginBox.Palette = serializeLoginBoxPalettte("palette")
-	loginBox.ThemeName = d.Get("themeName").(string)
-	loginBox.SocialLogins.SocialLoginsLayout = serializeLoginBoxSocialLoginsLayout("socialLogins")
-	loginBox.ActivateAccount.Disclaimer = serializeLoginBoxDisclaimer("activateAccount")
+	loginBox.ThemeName = d.Get("theme_name").(string)
+	loginBox.SocialLogins.SocialLoginsLayout = serializeLoginBoxSocialLoginsLayout("social_logins")
+	loginBox.ActivateAccount.Disclaimer = serializeLoginBoxDisclaimer("activate_account")
 
 	return loginBox
 }

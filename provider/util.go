@@ -16,7 +16,7 @@ func stringSetToList(set *schema.Set) []string {
 
 func getTenantIdHeaders(d *schema.ResourceData) http.Header {
 	headers := http.Header{}
-	tenant_id := d.Get("tenantId").(string)
+	tenant_id := d.Get("tenant_id").(string)
 	if tenant_id != "" {
 		headers.Add("frontegg-tenant-id", tenant_id)
 	} else {
