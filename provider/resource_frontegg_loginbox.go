@@ -278,7 +278,7 @@ func resourceFronteggLoginBox() *schema.Resource {
 					},
 				},
 			},
-			"tenantId": {
+			"tenant_id": {
 				Description: "The ID of the tenant that owns the login box.",
 				Type:        schema.TypeString,
 				Required:    true,
