@@ -65,24 +65,28 @@ resource "frontegg_workspace" "example" {
     client_id    = "fake-client-id"
     redirect_url = "fake-redirect-url"
     secret       = "fake-secret"
+    customised   = false
   }
 
   github_social_login {
     client_id    = "fake-client-id"
     redirect_url = "fake-redirect-url"
     secret       = "fake-secret"
+    customised   = false
   }
 
   google_social_login {
     client_id    = "fake-client-id"
     redirect_url = "fake-redirect-url"
     secret       = "fake-secret"
+    customised   = false
   }
 
   microsoft_social_login {
     client_id    = "fake-client-id"
     redirect_url = "fake-redirect-url"
     secret       = "fake-secret"
+    customised   = false
   }
 
   saml {
