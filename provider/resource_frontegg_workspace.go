@@ -27,7 +27,7 @@ const fronteggPasswordHistoryPolicyURL = "/identity/resources/configurations/v1/
 const fronteggCaptchaPolicyURL = "/identity/resources/configurations/v1/captcha-policy"
 const fronteggOAuthURL = "/oauth/resources/configurations/v1"
 const fronteggOAuthRedirectURIsURL = "/oauth/resources/configurations/v1/redirect-uri"
-const fronteggSSOURL = "/identity/resources/sso/v1"
+const fronteggSSOURL = "/identity/resources/sso/v2"
 const fronteggSSOSAMLURL = "/metadata?entityName=saml"
 const fronteggEmailTemplatesURL = "/identity/resources/mail/v1/configs/templates"
 const fronteggAdminPortalURL = "/metadata?entityName=adminBox"
@@ -122,6 +122,7 @@ type fronteggSSO struct {
 	RedirectURL string `json:"redirectUrl"`
 	Secret      string `json:"secret"`
 	Type        string `json:"type"`
+	Cusomised   bool   `json:"customised"`
 }
 
 type fronteggSSOSAML struct {
@@ -376,9 +377,9 @@ func resourceFronteggWorkspace() *schema.Resource {
 		return &schema.Resource{
 			Schema: map[string]*schema.Schema{
 				"client_id": {
-					Description: fmt.Sprintf("The client ID of the %s application to authenticate with.", name),
+					Description: fmt.Sprintf("The client ID of the %s application to authenticate with. Required when setting **`customised`** parameter to true.", name),
 					Type:        schema.TypeString,
-					Required:    true,
+					Optional:    true,
 				},
 				"redirect_url": {
 					Description: "The URL to redirect to after a successful authentication.",
@@ -386,10 +387,16 @@ func resourceFronteggWorkspace() *schema.Resource {
 					Required:    true,
 				},
 				"secret": {
-					Description: fmt.Sprintf("The secret associated with the %s application.", name),
+					Description: fmt.Sprintf("The secret associated with the %s application. Required when setting **`customised`** parameter to true.", name),
 					Type:        schema.TypeString,
-					Required:    true,
+					Optional:    true,
 					Sensitive:   true,
+				},
+				"customised": {
+					Description: "Determine whether the SSO should use customized secret and client ID. When passing true, clientId and secret are also required.",
+					Type:        schema.TypeBool,
+					Optional:    true,
+					Default:     true,
 				},
 			},
 		}
@@ -1097,6 +1104,7 @@ func resourceFronteggWorkspaceRead(ctx context.Context, d *schema.ResourceData, 
 				"client_id":    out.ClientID,
 				"redirect_url": out.RedirectURL,
 				"secret":       out.Secret,
+				"customised":   out.Cusomised,
 			})
 		}
 		if err := d.Set(fmt.Sprintf("%s_social_login", typ), items); err != nil {
@@ -1487,6 +1495,7 @@ func resourceFronteggWorkspaceUpdate(ctx context.Context, d *schema.ResourceData
 				ClientID:    d.Get(fmt.Sprintf("%s.0.client_id", name)).(string),
 				RedirectURL: d.Get(fmt.Sprintf("%s.0.redirect_url", name)).(string),
 				Secret:      d.Get(fmt.Sprintf("%s.0.secret", name)).(string),
+				Cusomised:   d.Get(fmt.Sprintf("%s.0.customised", name)).(bool),
 				Type:        typ,
 			}
 			if err := clientHolder.ApiClient.Post(ctx, fronteggSSOURL, in, nil); err != nil {

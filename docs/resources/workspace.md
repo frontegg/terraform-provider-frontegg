@@ -85,24 +85,28 @@ resource "frontegg_workspace" "example" {
     client_id    = "fake-client-id"
     redirect_url = "fake-redirect-url"
     secret       = "fake-secret"
+    customised   = false
   }
 
   github_social_login {
     client_id    = "fake-client-id"
     redirect_url = "fake-redirect-url"
     secret       = "fake-secret"
+    customised   = false
   }
 
   google_social_login {
     client_id    = "fake-client-id"
     redirect_url = "fake-redirect-url"
     secret       = "fake-secret"
+    customised   = false
   }
 
   microsoft_social_login {
     client_id    = "fake-client-id"
     redirect_url = "fake-redirect-url"
     secret       = "fake-secret"
+    customised   = false
   }
 
   saml {
@@ -435,9 +439,13 @@ Optional:
 
 Required:
 
-- `client_id` (String) The client ID of the Facebook application to authenticate with.
 - `redirect_url` (String) The URL to redirect to after a successful authentication.
-- `secret` (String, Sensitive) The secret associated with the Facebook application.
+
+Optional:
+
+- `client_id` (String) The client ID of the Facebook application to authenticate with. Required when setting **`customised`** parameter to true.
+- `secret` (String, Sensitive) The secret associated with the Facebook application. Required when setting **`customised`** parameter to true.
+- `customised` (Boolean) Determine whether the SSO should use customized secret and client ID. When passing true, clientId and secret are also required.
 
 <a id="nestedblock--github_social_login"></a>
 
@@ -445,9 +453,13 @@ Required:
 
 Required:
 
-- `client_id` (String) The client ID of the GitHub application to authenticate with.
 - `redirect_url` (String) The URL to redirect to after a successful authentication.
-- `secret` (String, Sensitive) The secret associated with the GitHub application.
+
+Optional:
+
+- `client_id` (String) The client ID of the Facebook application to authenticate with. Required when setting **`customised`** parameter to true.
+- `secret` (String, Sensitive) The secret associated with the Facebook application. Required when setting **`customised`** parameter to true.
+- `customised` (Boolean) Determine whether the SSO should use customized secret and client ID. When passing true, clientId and secret are also required.
 
 <a id="nestedblock--google_social_login"></a>
 
@@ -455,9 +467,13 @@ Required:
 
 Required:
 
-- `client_id` (String) The client ID of the Google application to authenticate with.
 - `redirect_url` (String) The URL to redirect to after a successful authentication.
-- `secret` (String, Sensitive) The secret associated with the Google application.
+
+Optional:
+
+- `client_id` (String) The client ID of the Facebook application to authenticate with. Required when setting **`customised`** parameter to true.
+- `secret` (String, Sensitive) The secret associated with the Facebook application. Required when setting **`customised`** parameter to true.
+- `customised` (Boolean) Determine whether the SSO should use customized secret and client ID. When passing true, clientId and secret are also required.
 
 <a id="nestedblock--hosted_login"></a>
 
@@ -527,9 +543,13 @@ Required:
 
 Required:
 
-- `client_id` (String) The client ID of the Microsoft application to authenticate with.
 - `redirect_url` (String) The URL to redirect to after a successful authentication.
-- `secret` (String, Sensitive) The secret associated with the Microsoft application.
+
+Optional:
+
+- `client_id` (String) The client ID of the Facebook application to authenticate with. Required when setting **`customised`** parameter to true.
+- `secret` (String, Sensitive) The secret associated with the Facebook application. Required when setting **`customised`** parameter to true.
+- `customised` (Boolean) Determine whether the SSO should use customized secret and client ID. When passing true, clientId and secret are also required.
 
 <a id="nestedblock--new_device_connected_email"></a>
 
