@@ -254,18 +254,21 @@ Required:
 - `enable_usage` (Boolean) Enable access to usage information in the admin portal.
 - `enable_users` (Boolean) Enable access to user management in the admin portal.
 - `enable_webhooks` (Boolean) Enable access to webhooks in the admin portal.
+
+Optional:
+
 - `palette` (Block List, Min: 1, Max: 1) Configures the color palette for the admin portal. (see [below for nested schema](#nestedblock--admin_portal--palette))
 
 <a id="nestedblock--admin_portal--palette"></a>
 
 ### Nested Schema for `admin_portal.palette`
 
-Required:
+Optional:
 
-- `error` (Block List, Min: 1) Error color. (see [below for nested schema](#nestedblock--admin_portal--palette--error))
-- `info` (Block List, Min: 1) Info color. (see [below for nested schema](#nestedblock--admin_portal--palette--info))
 - `primary` (Block List, Min: 1) Primary color. (see [below for nested schema](#nestedblock--admin_portal--palette--primary))
 - `secondary` (Block List, Min: 1) Secondary color. (see [below for nested schema](#nestedblock--admin_portal--palette--secondary))
+- `error` (Block List, Min: 1) Error color. (see [below for nested schema](#nestedblock--admin_portal--palette--error))
+- `info` (Block List, Min: 1) Info color. (see [below for nested schema](#nestedblock--admin_portal--palette--info))
 - `success` (Block List, Min: 1) Success color. (see [below for nested schema](#nestedblock--admin_portal--palette--success))
 - `warning` (Block List, Min: 1) Warning color. (see [below for nested schema](#nestedblock--admin_portal--palette--warning))
 
