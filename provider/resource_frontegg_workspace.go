@@ -51,6 +51,7 @@ type fronteggAuth struct {
 	ID                            string `json:"id"`
 	AllowNotVerifiedUsersLogin    bool   `json:"allowNotVerifiedUsersLogin"`
 	AllowSignups                  bool   `json:"allowSignups"`
+	AllowTenantInvitations        bool   `json:"allowTenantInvitations"`
 	APITokensEnabled              bool   `json:"apiTokensEnabled"`
 	CookieSameSite                string `json:"cookieSameSite"`
 	DefaultRefreshTokenExpiration int    `json:"defaultRefreshTokenExpiration"`
@@ -489,6 +490,11 @@ per Frontegg provider.`,
 						},
 						"allow_signups": {
 							Description: "Whether users are allowed to sign up.",
+							Type:        schema.TypeBool,
+							Required:    true,
+						},
+						"allow_tenant_invitations": {
+							Description: "Allow tenants to invite new users via an invitation link.",
 							Type:        schema.TypeBool,
 							Required:    true,
 						},
@@ -982,6 +988,7 @@ func resourceFronteggWorkspaceRead(ctx context.Context, d *schema.ResourceData, 
 		auth_policy := map[string]interface{}{
 			"allow_unverified_users":           out.AllowNotVerifiedUsersLogin,
 			"allow_signups":                    out.AllowSignups,
+			"allow_tenant_invitations":         out.AllowTenantInvitations,
 			"enable_api_tokens":                out.APITokensEnabled,
 			"machine_to_machine_auth_strategy": out.MachineToMachineAuthStrategy,
 			"enable_roles":                     out.ForcePermissions,
@@ -1333,6 +1340,7 @@ func resourceFronteggWorkspaceUpdate(ctx context.Context, d *schema.ResourceData
 		in := fronteggAuth{
 			AllowNotVerifiedUsersLogin:    d.Get("auth_policy.0.allow_unverified_users").(bool),
 			AllowSignups:                  d.Get("auth_policy.0.allow_signups").(bool),
+			AllowTenantInvitations:        d.Get("auth_policy.0.allow_tenant_invitations").(bool),
 			APITokensEnabled:              d.Get("auth_policy.0.enable_api_tokens").(bool),
 			MachineToMachineAuthStrategy:  d.Get("auth_policy.0.machine_to_machine_auth_strategy").(string),
 			ForcePermissions:              d.Get("auth_policy.0.enable_roles").(bool),
