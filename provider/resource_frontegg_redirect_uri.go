@@ -70,7 +70,7 @@ func resourceFronteggRedirectUriCreate(ctx context.Context, d *schema.ResourceDa
 	var out struct {
 		RedirectURIs []fronteggRedirectUri `json:"redirectUris"`
 	}
-	if err := clientHolder.ApiClient.Get(ctx, fmt.Sprintf("%s", fronteggRedirectUriPath), &out); err != nil {
+	if err := clientHolder.ApiClient.Get(ctx, fronteggRedirectUriPath, &out); err != nil {
 		return diag.FromErr(err)
 	}
 	for _, c := range out.RedirectURIs {
@@ -89,7 +89,7 @@ func resourceFronteggRedirectUriRead(ctx context.Context, d *schema.ResourceData
 	var out struct {
 		RedirectURIs []fronteggRedirectUri `json:"redirectUris"`
 	}
-	if err := clientHolder.ApiClient.Get(ctx, fmt.Sprintf("%s", fronteggRedirectUriPath), &out); err != nil {
+	if err := clientHolder.ApiClient.Get(ctx, fronteggRedirectUriPath, &out); err != nil {
 		return diag.FromErr(err)
 	}
 	for _, c := range out.RedirectURIs {
