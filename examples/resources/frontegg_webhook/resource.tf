@@ -3,7 +3,7 @@ resource "frontegg_webhook" "example" {
   name        = "Example webhook"
   description = "An example of a webhook"
   url         = "https://example.com/webhook"
-  secret      = "example-sekret"
+  secret      = "example-secret"
   events = [
     "frontegg.user.authenticated"
   ]
