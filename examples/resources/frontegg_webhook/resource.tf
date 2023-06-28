@@ -7,5 +7,4 @@ resource "frontegg_webhook" "example" {
   events = [
     "frontegg.user.authenticated"
   ]
-  environment_id = "environment_id"
 }
