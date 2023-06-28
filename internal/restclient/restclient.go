@@ -16,18 +16,15 @@ type Client struct {
 	baseURL             string
 	conflictRetryMethod string
 	ignore404           bool
-	vendorId            string
+	environmentId       string
 }
 
-func MakeRestClient(baseURL string) Client {
+func MakeRestClient(baseURL string, environmentId string) Client {
 	return Client{
-		client:  http.Client{},
-		baseURL: baseURL,
+		client:        http.Client{},
+		baseURL:       baseURL,
+		environmentId: environmentId,
 	}
-}
-
-func (c *Client) SpecifyVendor(vendorId string) {
-	c.vendorId = vendorId
 }
 
 func (c *Client) Authenticate(token string) {
@@ -107,6 +104,9 @@ func (c *Client) RequestWithHeaders(ctx context.Context, method string, url stri
 	req.Header.Set("Content-Type", "application/json")
 	if c.token != "" {
 		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", c.token))
+	}
+	if c.environmentId != "" {
+		req.Header.Set("frontegg-environment-id", c.environmentId)
 	}
 	log.Printf("[TRACE] Sending request %+v", req)
 	res, err := c.client.Do(req)

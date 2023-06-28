@@ -44,10 +44,10 @@ func New(version string) func() *schema.Provider {
 					DefaultFunc: schema.EnvDefaultFunc("FRONTEGG_SECRET_KEY", nil),
 				},
 				"environment_id": {
-					Description: "The environment ID for a Frontegg portal API key.",
+					Description: "The client ID from environment settings.",
 					Type:        schema.TypeString,
 					Optional:    true,
-					DefaultFunc: schema.EnvDefaultFunc("FRONTEGG_ENVIRONMENT_ID", nil),
+					Sensitive:   true,
 				},
 			},
 			DataSourcesMap: map[string]*schema.Resource{
@@ -65,8 +65,9 @@ func New(version string) func() *schema.Provider {
 				"frontegg_allowed_origin":      resourceFronteggAllowedOrigin(),
 			},
 			ConfigureContextFunc: func(ctx context.Context, d *schema.ResourceData) (interface{}, diag.Diagnostics) {
-				apiClient := restclient.MakeRestClient(d.Get("api_base_url").(string))
-				portalClient := restclient.MakeRestClient(d.Get("portal_base_url").(string))
+				environmentId := d.Get("environment_id").(string)
+				apiClient := restclient.MakeRestClient(d.Get("api_base_url").(string), environmentId)
+				portalClient := restclient.MakeRestClient(d.Get("portal_base_url").(string), environmentId)
 				{
 					in := struct {
 						ClientId  string `json:"clientId"`
@@ -84,11 +85,6 @@ func New(version string) func() *schema.Provider {
 					}
 					portalClient.Authenticate(out.AccessToken)
 					apiClient.Authenticate(out.AccessToken)
-
-					environmentId := d.Get("environment_id").(string)
-					// TODO: check if both are required
-					portalClient.SpecifyVendor(environmentId)
-					apiClient.SpecifyVendor(environmentId)
 				}
 				return &restclient.ClientHolder{
 					ApiClient:    apiClient,
