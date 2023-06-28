@@ -16,6 +16,7 @@ type Client struct {
 	baseURL             string
 	conflictRetryMethod string
 	ignore404           bool
+	vendorId            string
 }
 
 func MakeRestClient(baseURL string) Client {
@@ -23,6 +24,10 @@ func MakeRestClient(baseURL string) Client {
 		client:  http.Client{},
 		baseURL: baseURL,
 	}
+}
+
+func (c *Client) SpecifyVendor(vendorId string) {
+	c.vendorId = vendorId
 }
 
 func (c *Client) Authenticate(token string) {

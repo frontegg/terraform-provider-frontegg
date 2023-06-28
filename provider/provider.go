@@ -43,6 +43,12 @@ func New(version string) func() *schema.Provider {
 					Sensitive:   true,
 					DefaultFunc: schema.EnvDefaultFunc("FRONTEGG_SECRET_KEY", nil),
 				},
+				"environment_id": {
+					Description: "The environment ID for a Frontegg portal API key.",
+					Type:        schema.TypeString,
+					Optional:    true,
+					DefaultFunc: schema.EnvDefaultFunc("FRONTEGG_ENVIRONMENT_ID", nil),
+				},
 			},
 			DataSourcesMap: map[string]*schema.Resource{
 				"frontegg_permission": dataSourceFronteggPermission(),
@@ -78,6 +84,11 @@ func New(version string) func() *schema.Provider {
 					}
 					portalClient.Authenticate(out.AccessToken)
 					apiClient.Authenticate(out.AccessToken)
+
+					environmentId := d.Get("environment_id").(string)
+					// TODO: check if both are required
+					portalClient.SpecifyVendor(environmentId)
+					apiClient.SpecifyVendor(environmentId)
 				}
 				return &restclient.ClientHolder{
 					ApiClient:    apiClient,
