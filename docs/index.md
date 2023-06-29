@@ -21,6 +21,12 @@ portal:
 
 ![API key generation example](https://user-images.githubusercontent.com/882976/132739276-bc72aa75-8c30-452c-b929-85a8d7ffa4d0.png)
 
+In order to interact with specific environment management capabilities you can
+provide environment ID, that is displayed on environment settings at the Frontegg
+portal. To configure multiple environments you will need to configure multiple
+copies of provider with one environment ID per each. If no environment ID was
+provided the configuration will be cross-environments.
+
 ## Example Usage
 
 ```terraform
