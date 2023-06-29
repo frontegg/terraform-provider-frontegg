@@ -45,7 +45,7 @@ func resourceFronteggAllowedOriginCreate(ctx context.Context, d *schema.Resource
 
 	newOrigin := d.Get("allowed_origin").(string)
 	if containsAllowedOrigin(allowedOrigins, newOrigin) {
-		return diag.FromErr(fmt.Errorf("Origin '%s' already exists", newOrigin))
+		return diag.FromErr(fmt.Errorf("origin '%s' already exists", newOrigin))
 	}
 
 	allowedOrigins.AllowedOrigins = append(allowedOrigins.AllowedOrigins, newOrigin)
@@ -86,7 +86,7 @@ func resourceFronteggAllowedOriginDelete(ctx context.Context, d *schema.Resource
 
 	originToDelete := d.Get("allowed_origin").(string)
 	if !containsAllowedOrigin(allowedOrigins, originToDelete) {
-		return diag.FromErr(fmt.Errorf("Origin '%s' does not exist", originToDelete))
+		return diag.FromErr(fmt.Errorf("origin '%s' does not exist", originToDelete))
 	}
 
 	newOrigins := make([]string, 0, len(allowedOrigins.AllowedOrigins)-1)

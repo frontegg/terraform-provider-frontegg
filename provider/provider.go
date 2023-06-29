@@ -43,6 +43,12 @@ func New(version string) func() *schema.Provider {
 					Sensitive:   true,
 					DefaultFunc: schema.EnvDefaultFunc("FRONTEGG_SECRET_KEY", nil),
 				},
+				"environment_id": {
+					Description: "The client ID from environment settings.",
+					Type:        schema.TypeString,
+					Optional:    true,
+					Sensitive:   true,
+				},
 			},
 			DataSourcesMap: map[string]*schema.Resource{
 				"frontegg_permission": dataSourceFronteggPermission(),
@@ -59,8 +65,9 @@ func New(version string) func() *schema.Provider {
 				"frontegg_allowed_origin":      resourceFronteggAllowedOrigin(),
 			},
 			ConfigureContextFunc: func(ctx context.Context, d *schema.ResourceData) (interface{}, diag.Diagnostics) {
-				apiClient := restclient.MakeRestClient(d.Get("api_base_url").(string))
-				portalClient := restclient.MakeRestClient(d.Get("portal_base_url").(string))
+				environmentId := d.Get("environment_id").(string)
+				apiClient := restclient.MakeRestClient(d.Get("api_base_url").(string), environmentId)
+				portalClient := restclient.MakeRestClient(d.Get("portal_base_url").(string), environmentId)
 				{
 					in := struct {
 						ClientId  string `json:"clientId"`

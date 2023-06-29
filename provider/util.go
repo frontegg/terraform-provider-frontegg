@@ -1,6 +1,8 @@
 package provider
 
-import "github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+import (
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+)
 
 func stringSetToList(set *schema.Set) []string {
 	out := make([]string, 0, set.Len())

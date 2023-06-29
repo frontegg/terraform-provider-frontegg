@@ -3,7 +3,6 @@ package provider
 import (
 	"context"
 	"fmt"
-	"net/http"
 
 	"github.com/frontegg/terraform-provider-frontegg/internal/restclient"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -14,17 +13,16 @@ import (
 const fronteggWebhookPath = "/webhook"
 
 type fronteggWebhook struct {
-	ID            string   `json:"_id,omitempty"`
-	DisplayName   string   `json:"displayName,omitempty"`
-	Description   string   `json:"description,omitempty"`
-	URL           string   `json:"url,omitempty"`
-	Secret        string   `json:"secret,omitempty"`
-	EventKeys     []string `json:"eventKeys,omitempty"`
-	IsActive      bool     `json:"isActive"`
-	Type          string   `json:"type,omitempty"`
-	VendorID      string   `json:"vendorId,omitempty"`
-	CreatedAt     string   `json:"createdAt,omitempty"`
-	EnvironmentID string   `json:"environmentId,omitempty"`
+	ID          string   `json:"_id,omitempty"`
+	DisplayName string   `json:"displayName,omitempty"`
+	Description string   `json:"description,omitempty"`
+	URL         string   `json:"url,omitempty"`
+	Secret      string   `json:"secret,omitempty"`
+	EventKeys   []string `json:"eventKeys,omitempty"`
+	IsActive    bool     `json:"isActive"`
+	Type        string   `json:"type,omitempty"`
+	VendorID    string   `json:"vendorId,omitempty"`
+	CreatedAt   string   `json:"createdAt,omitempty"`
 }
 
 func resourceFronteggWebhook() *schema.Resource {
@@ -103,11 +101,6 @@ func resourceFronteggWebhook() *schema.Resource {
 				Type:        schema.TypeString,
 				Computed:    true,
 			},
-			"environment_id": {
-				Description: "The ID of the environment of webhook.",
-				Type:        schema.TypeString,
-				Optional:    true,
-			},
 			"vendor_id": {
 				Description: "The ID of the vendor that owns the webhook.",
 				Type:        schema.TypeString,
@@ -124,13 +117,12 @@ func resourceFronteggWebhook() *schema.Resource {
 
 func resourceFronteggWebhookSerialize(d *schema.ResourceData) fronteggWebhook {
 	return fronteggWebhook{
-		IsActive:      d.Get("enabled").(bool),
-		DisplayName:   d.Get("name").(string),
-		Description:   d.Get("description").(string),
-		URL:           d.Get("url").(string),
-		Secret:        d.Get("secret").(string),
-		EventKeys:     stringSetToList(d.Get("events").(*schema.Set)),
-		EnvironmentID: d.Get("environment_id").(string),
+		IsActive:    d.Get("enabled").(bool),
+		DisplayName: d.Get("name").(string),
+		Description: d.Get("description").(string),
+		URL:         d.Get("url").(string),
+		Secret:      d.Get("secret").(string),
+		EventKeys:   stringSetToList(d.Get("events").(*schema.Set)),
 	}
 }
 
@@ -160,9 +152,6 @@ func resourceFronteggWebhookDeserialize(d *schema.ResourceData, f fronteggWebhoo
 	if err := d.Set("type", f.Type); err != nil {
 		return err
 	}
-	if err := d.Set("environment_id", f.EnvironmentID); err != nil {
-		return err
-	}
 	if err := d.Set("vendor_id", f.VendorID); err != nil {
 		return err
 	}
@@ -176,8 +165,7 @@ func resourceFronteggWebhookCreate(ctx context.Context, d *schema.ResourceData, 
 	clientHolder := meta.(*restclient.ClientHolder)
 	in := resourceFronteggWebhookSerialize(d)
 	var out fronteggWebhook
-	headers := resourceFronteggWebhookTenantHeader(d)
-	if err := clientHolder.PortalClient.PostWithHeaders(ctx, fronteggWebhookPath+"/custom", headers, in, &out); err != nil {
+	if err := clientHolder.PortalClient.Post(ctx, fronteggWebhookPath+"/custom", in, &out); err != nil {
 		return diag.FromErr(err)
 	}
 	if err := resourceFronteggWebhookDeserialize(d, out); err != nil {
@@ -189,8 +177,7 @@ func resourceFronteggWebhookCreate(ctx context.Context, d *schema.ResourceData, 
 func resourceFronteggWebhookRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	clientHolder := meta.(*restclient.ClientHolder)
 	var out []fronteggWebhook
-	headers := resourceFronteggWebhookTenantHeader(d)
-	if err := clientHolder.PortalClient.GetWithHeaders(ctx, fronteggWebhookPath, headers, &out); err != nil {
+	if err := clientHolder.PortalClient.Get(ctx, fronteggWebhookPath, &out); err != nil {
 		return diag.FromErr(err)
 	}
 	for _, c := range out {
@@ -208,8 +195,7 @@ func resourceFronteggWebhookUpdate(ctx context.Context, d *schema.ResourceData, 
 	clientHolder := meta.(*restclient.ClientHolder)
 	in := resourceFronteggWebhookSerialize(d)
 	var out fronteggWebhook
-	headers := resourceFronteggWebhookTenantHeader(d)
-	if err := clientHolder.PortalClient.PatchWithHeaders(ctx, fmt.Sprintf("%s/%s", fronteggWebhookPath, d.Id()), headers, in, &out); err != nil {
+	if err := clientHolder.PortalClient.Patch(ctx, fmt.Sprintf("%s/%s", fronteggWebhookPath, d.Id()), in, &out); err != nil {
 		return diag.FromErr(err)
 	}
 	if err := resourceFronteggWebhookDeserialize(d, out); err != nil {
@@ -220,20 +206,8 @@ func resourceFronteggWebhookUpdate(ctx context.Context, d *schema.ResourceData, 
 
 func resourceFronteggWebhookDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	clientHolder := meta.(*restclient.ClientHolder)
-	headers := resourceFronteggWebhookTenantHeader(d)
-	if err := clientHolder.PortalClient.DeleteWithHeaders(ctx, fmt.Sprintf("%s/%s", fronteggWebhookPath, d.Id()), headers, nil); err != nil {
+	if err := clientHolder.PortalClient.Delete(ctx, fmt.Sprintf("%s/%s", fronteggWebhookPath, d.Id()), nil); err != nil {
 		return diag.FromErr(err)
 	}
 	return nil
-}
-
-func resourceFronteggWebhookTenantHeader(d *schema.ResourceData) http.Header {
-	header := http.Header{}
-	environment_id := d.Get("environment_id").(string)
-	if environment_id != "" {
-		header.Add("frontegg-environment-id", environment_id)
-	} else {
-		header = nil
-	}
-	return header
 }
