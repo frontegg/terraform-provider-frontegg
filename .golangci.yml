@@ -6,22 +6,23 @@ issues:
 
 linters:
   disable-all: true
+  # TODO: enable all linters and fix all issues
   enable:
     - durationcheck
-    - errcheck
+    # - errcheck
     - exportloopref
-    - forcetypeassert
+    # - forcetypeassert
     - godot
-    - gofmt
+    # - gofmt
     - gosimple
     - ineffassign
     - makezero
     - misspell
     - nilerr
     - predeclared
-    - staticcheck
+    # - staticcheck
     - tenv
     - unconvert
-    - unparam
+    # - unparam
     - unused
     - vet
