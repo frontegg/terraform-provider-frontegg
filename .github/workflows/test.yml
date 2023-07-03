@@ -1,13 +1,12 @@
 name: Tests
 on:
-  push:
-    branches:
-      - master
-      - main
   pull_request:
     paths-ignore:
       - README.md
   push:
+    branches:
+      - master
+      - main
     paths-ignore:
       - README.md
   schedule:
