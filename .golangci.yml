@@ -13,7 +13,7 @@ linters:
     - exportloopref
     # - forcetypeassert
     - godot
-    # - gofmt
+    - gofmt
     - gosimple
     - ineffassign
     - makezero

@@ -76,7 +76,7 @@ func resourceFronteggRole() *schema.Resource {
 			"tenant_id": {
 				Description: "The ID of the tenant that owns the role.",
 				Type:        schema.TypeString,
-				Optional: 	 true,
+				Optional:    true,
 			},
 			"vendor_id": {
 				Description: "The ID of the vendor that owns the role.",
@@ -140,8 +140,7 @@ func resourceFronteggRoleDeserialize(d *schema.ResourceData, f fronteggRole) err
 	return nil
 }
 
-
-func getTenantIdHeaders(d *schema.ResourceData) http.Header{
+func getTenantIdHeaders(d *schema.ResourceData) http.Header {
 	headers := http.Header{}
 	tenant_id := d.Get("tenant_id").(string)
 	if tenant_id != "" {
