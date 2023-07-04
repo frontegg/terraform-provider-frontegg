@@ -222,7 +222,7 @@ type fronteggPaletteSeverityColor struct {
 }
 
 func resourceFronteggWorkspace() *schema.Resource {
-	resourceFronteggPaletteSeverityColor := func(name string) *schema.Resource {
+	resourceFronteggPaletteSeverityColor := func() *schema.Resource {
 		return &schema.Resource{
 			Schema: map[string]*schema.Schema{
 				"light": {
@@ -249,7 +249,7 @@ func resourceFronteggWorkspace() *schema.Resource {
 		}
 	}
 
-	resourceFronteggPaletteColor := func(name string) *schema.Resource {
+	resourceFronteggPaletteColor := func() *schema.Resource {
 		return &schema.Resource{
 			Schema: map[string]*schema.Schema{
 				"light": {
@@ -286,7 +286,7 @@ func resourceFronteggWorkspace() *schema.Resource {
 		}
 	}
 
-	resourceFronteggPalette := func(name string) *schema.Resource {
+	resourceFronteggPalette := func() *schema.Resource {
 		return &schema.Resource{
 			Schema: map[string]*schema.Schema{
 				"success": {
@@ -294,48 +294,48 @@ func resourceFronteggWorkspace() *schema.Resource {
 					Type:        schema.TypeList | schema.TypeString,
 					Optional:    true,
 					MinItems:    1,
-					Elem:        resourceFronteggPaletteSeverityColor("success"),
+					Elem:        resourceFronteggPaletteSeverityColor(),
 				},
 				"info": {
 					Description: "Info color.",
 					Type:        schema.TypeList | schema.TypeString,
 					Optional:    true,
 					MinItems:    1,
-					Elem:        resourceFronteggPaletteSeverityColor("info"),
+					Elem:        resourceFronteggPaletteSeverityColor(),
 				},
 				"warning": {
 					Description: "Warning color.",
 					Type:        schema.TypeList | schema.TypeString,
 					Optional:    true,
 					MinItems:    1,
-					Elem:        resourceFronteggPaletteSeverityColor("warning"),
+					Elem:        resourceFronteggPaletteSeverityColor(),
 				},
 				"error": {
 					Description: "Error color.",
 					Type:        schema.TypeList | schema.TypeString,
 					Optional:    true,
 					MinItems:    1,
-					Elem:        resourceFronteggPaletteSeverityColor("error"),
+					Elem:        resourceFronteggPaletteSeverityColor(),
 				},
 				"primary": {
 					Description: "Primary color.",
 					Type:        schema.TypeList | schema.TypeString,
 					Optional:    true,
 					MinItems:    1,
-					Elem:        resourceFronteggPaletteColor("primary"),
+					Elem:        resourceFronteggPaletteColor(),
 				},
 				"secondary": {
 					Description: "Secondary color.",
 					Type:        schema.TypeList | schema.TypeString,
 					Optional:    true,
 					MinItems:    1,
-					Elem:        resourceFronteggPaletteColor("secondary"),
+					Elem:        resourceFronteggPaletteColor(),
 				},
 			},
 		}
 	}
 
-	resourceFronteggEmail := func(typ string) *schema.Resource {
+	resourceFronteggEmail := func() *schema.Resource {
 		return &schema.Resource{
 			Schema: map[string]*schema.Schema{
 				"from_address": {
@@ -760,70 +760,70 @@ per Frontegg provider.`,
 				Type:        schema.TypeList,
 				Optional:    true,
 				MaxItems:    1,
-				Elem:        resourceFronteggEmail("ResetPassword"),
+				Elem:        resourceFronteggEmail(),
 			},
 			"user_activation_email": {
 				Description: "Configures the user activation email.",
 				Type:        schema.TypeList,
 				Optional:    true,
 				MaxItems:    1,
-				Elem:        resourceFronteggEmail("ActivateUser"),
+				Elem:        resourceFronteggEmail(),
 			},
 			"user_invitation_email": {
 				Description: "Configures the user invitation email.",
 				Type:        schema.TypeList,
 				Optional:    true,
 				MaxItems:    1,
-				Elem:        resourceFronteggEmail("InviteToTenant"),
+				Elem:        resourceFronteggEmail(),
 			},
 			"pwned_password_email": {
 				Description: "Configures the pwned password email.",
 				Type:        schema.TypeList,
 				Optional:    true,
 				MaxItems:    1,
-				Elem:        resourceFronteggEmail("PwnedPassword"),
+				Elem:        resourceFronteggEmail(),
 			},
 			"magic_link_email": {
 				Description: "Configures the magic link email.",
 				Type:        schema.TypeList,
 				Optional:    true,
 				MaxItems:    1,
-				Elem:        resourceFronteggEmail("MagicLink"),
+				Elem:        resourceFronteggEmail(),
 			},
 			"magic_code_email": {
 				Description: "Configures the one time code email.",
 				Type:        schema.TypeList,
 				Optional:    true,
 				MaxItems:    1,
-				Elem:        resourceFronteggEmail("OTC"),
+				Elem:        resourceFronteggEmail(),
 			},
 			"new_device_connected_email": {
 				Description: "Configures the new device connected email.",
 				Type:        schema.TypeList,
 				Optional:    true,
 				MaxItems:    1,
-				Elem:        resourceFronteggEmail("ConnectNewDevice"),
+				Elem:        resourceFronteggEmail(),
 			},
 			"user_used_invitation_email": {
 				Description: "Configures the user used invitation email.",
 				Type:        schema.TypeList,
 				Optional:    true,
 				MaxItems:    1,
-				Elem:        resourceFronteggEmail("UserUsedInvitation"),
+				Elem:        resourceFronteggEmail(),
 			},
 			"reset_phone_number_email": {
 				Description: "Configures the reset phone number email.",
 				Type:        schema.TypeList,
 				Optional:    true,
 				MaxItems:    1,
-				Elem:        resourceFronteggEmail("ResetPhoneNumber"),
+				Elem:        resourceFronteggEmail(),
 			},
 			"bulk_tenants_invites_email": {
 				Description: "Configures the bulk tenants invite email.",
 				Type:        schema.TypeList,
 				Optional:    true,
 				MaxItems:    1,
-				Elem:        resourceFronteggEmail("BulkInvitesToTenant"),
+				Elem:        resourceFronteggEmail(),
 			},
 			"admin_portal": {
 				Description: "Configures the admin portal.",
@@ -904,7 +904,7 @@ per Frontegg provider.`,
 							Optional:    true,
 							MinItems:    1,
 							MaxItems:    1,
-							Elem:        resourceFronteggPalette("palette"),
+							Elem:        resourceFronteggPalette(),
 						},
 					},
 				},
@@ -925,16 +925,16 @@ func resourceFronteggWorkspaceSerializeMFAEnforce(s string) string {
 	panic("unreachable")
 }
 
-func resourceFronteggWorkspaceDeserializeMFAEnforce(s string) (string, error) {
+func resourceFronteggWorkspaceDeserializeMFAEnforce(s string) string {
 	switch s {
 	case "DontForce":
-		return "off", nil
+		return "off"
 	case "Force":
-		return "on", nil
+		return "on"
 	case "ForceExceptSAML":
-		return "unless-saml", nil
+		return "unless-saml"
 	default:
-		return "off", nil
+		return "off"
 	}
 }
 
@@ -1012,10 +1012,7 @@ func resourceFronteggWorkspaceRead(ctx context.Context, d *schema.ResourceData, 
 		if err := clientHolder.ApiClient.Get(ctx, fronteggMFAPolicyURL, &out); err != nil {
 			return diag.FromErr(err)
 		}
-		enforce, err := resourceFronteggWorkspaceDeserializeMFAEnforce(out.EnforceMFAType)
-		if err != nil {
-			return diag.FromErr(err)
-		}
+		enforce := resourceFronteggWorkspaceDeserializeMFAEnforce(out.EnforceMFAType)
 
 		mfa_policy := map[string]interface{}{
 			"allow_remember_device": out.AllowRememberMyDevice,
