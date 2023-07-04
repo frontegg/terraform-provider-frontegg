@@ -55,7 +55,9 @@ func resourceFronteggAllowedOriginCreate(ctx context.Context, d *schema.Resource
 	}
 
 	d.SetId(newOrigin)
-	d.Set("allowed_origin", newOrigin)
+	if err := d.Set("allowed_origin", newOrigin); err != nil {
+		return diag.FromErr(err)
+	}
 
 	return nil
 }
@@ -73,7 +75,9 @@ func resourceFronteggAllowedOriginRead(ctx context.Context, d *schema.ResourceDa
 	}
 
 	d.SetId(origin)
-	d.Set("allowed_origin", origin)
+	if err := d.Set("allowed_origin", origin); err != nil {
+		return diag.FromErr(err)
+	}
 
 	return nil
 }

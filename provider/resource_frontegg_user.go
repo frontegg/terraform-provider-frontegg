@@ -170,7 +170,10 @@ func resourceFronteggUserUpdate(ctx context.Context, d *schema.ResourceData, met
 		}{email}, nil); err != nil {
 			return diag.FromErr(err)
 		}
-		d.Set("email", email)
+
+		if err := d.Set("email", email); err != nil {
+			return diag.FromErr(err)
+		}
 	}
 
 	// Password:
@@ -188,7 +191,10 @@ func resourceFronteggUserUpdate(ctx context.Context, d *schema.ResourceData, met
 		}{oldPw, newPw}, nil); err != nil {
 			return diag.FromErr(err)
 		}
-		d.Set("password", newPw)
+
+		if err := d.Set("password", newPw); err != nil {
+			return diag.FromErr(err)
+		}
 	}
 
 	// Roles:
@@ -226,7 +232,10 @@ func resourceFronteggUserUpdate(ctx context.Context, d *schema.ResourceData, met
 				return diag.FromErr(err)
 			}
 		}
-		d.Set("role_ids", news)
+
+		if err := d.Set("role_ids", news); err != nil {
+			return diag.FromErr(err)
+		}
 	}
 
 	d.SetId(d.Id())
