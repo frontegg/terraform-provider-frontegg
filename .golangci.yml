@@ -9,7 +9,7 @@ linters:
   # TODO: enable all linters and fix all issues
   enable:
     - durationcheck
-    # - errcheck
+    - errcheck
     - exportloopref
     # - forcetypeassert
     - godot

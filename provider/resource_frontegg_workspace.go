@@ -978,7 +978,10 @@ func resourceFronteggWorkspaceRead(ctx context.Context, d *schema.ResourceData, 
 		if err := clientHolder.ApiClient.Get(ctx, fronteggCustomDomainURL, &out); err != nil {
 			return diag.FromErr(err)
 		}
-		d.Set("custom_domain", out.CustomDomain)
+
+		if err := d.Set("custom_domain", out.CustomDomain); err != nil {
+			return diag.FromErr(err)
+		}
 	}
 	{
 		var out fronteggAuth
@@ -1181,7 +1184,9 @@ func resourceFronteggWorkspaceRead(ctx context.Context, d *schema.ResourceData, 
 							"success_redirect_url": t.SuccessRedirectURL,
 						})
 					}
-					d.Set(field, items)
+					if err := d.Set(field, items); err != nil {
+						return err
+					}
 					return nil
 				}
 			}
