@@ -20,7 +20,7 @@ linters:
     - misspell
     - nilerr
     - predeclared
-    # - staticcheck
+    - staticcheck
     - tenv
     - unconvert
     - unparam
