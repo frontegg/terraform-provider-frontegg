@@ -4,6 +4,9 @@ on:
     paths-ignore:
       - README.md
   push:
+    branches:
+      - master
+      - main
     paths-ignore:
       - README.md
   schedule:
