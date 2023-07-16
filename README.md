@@ -54,7 +54,7 @@ resource "frontegg_workspace" "example" {
     ]
     backend_stack       = "Python"
     country             = "US"
-    frontegg_domain     = "yourcopmany.frontegg.com"
+    frontegg_domain     = "yourcompany.frontegg.com"
     # ...
 }
 ```
