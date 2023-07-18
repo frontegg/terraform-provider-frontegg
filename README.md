@@ -6,7 +6,7 @@ platform.
 ## Requirements
 
 - [Terraform](https://www.terraform.io/downloads.html) >= 1.0.3
-- [Go](https://golang.org/doc/install) >= 1.18
+- [Go](https://golang.org/doc/install) >= 1.20
   **pay attention to install platform compatible version**
 
 ## Using the provider
