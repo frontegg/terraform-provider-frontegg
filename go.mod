@@ -1,6 +1,6 @@
 module github.com/frontegg/terraform-provider-frontegg
 
-go 1.18
+go 1.20
 
 require (
 	github.com/hashicorp/terraform-plugin-docs v0.13.0
