@@ -458,9 +458,8 @@ per Frontegg provider.`,
 			},
 			"custom_domain": {
 				Description: `A custom domain at which Frontegg services will be reachable.
-
     You must configure a CNAME record for this domain that points to
-    "ssl.frontegg.com" before setting this field.
+    "ssl.frontegg.com" (or "ssl.<your-region>.frontegg.com") and a TXT record for domain-challenge.<custom_domain> that points to your client ID before setting this field.
 `,
 				Type:     schema.TypeString,
 				Optional: true,
