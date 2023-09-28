@@ -6,6 +6,7 @@ resource "frontegg_workspace" "example" {
   open_saas_installed = false
 
   # If you've configured a CNAME record to point a domain to "ssl.frontegg.com",
+  # and a TXT record to point domain-challenge.<custom_domain> to your client ID,
   # you can use that custom domain like so:
   # custom_domain = "frontegg.yourcompany.com"
 
