@@ -223,6 +223,7 @@ resource "frontegg_workspace" "example" {
 - `mfa_authentication_app` (Block List, Max: 1) Configures the multi-factor authentication (MFA) via an authentication app. (see [below for nested schema](#nestedblock--mfa_authentication_app))
 - `microsoft_social_login` (Block List, Max: 1) Configures social login with Google. (see [below for nested schema](#nestedblock--microsoft_social_login))
 - `new_device_connected_email` (Block List, Max: 1) Configures the new device connected email. (see [below for nested schema](#nestedblock--new_device_connected_email))
+- `oidc` (Block List, Max: 1) Configures SSO via OIDC. (see [below for nested schema](#nestedblock--oidc))
 - `pwned_password_email` (Block List, Max: 1) Configures the pwned password email. (see [below for nested schema](#nestedblock--pwned_password_email))
 - `reset_password_email` (Block List, Max: 1) Configures the password reset email. (see [below for nested schema](#nestedblock--reset_password_email))
 - `reset_phone_number_email` (Block List, Max: 1) Configures the reset phone number email. (see [below for nested schema](#nestedblock--reset_phone_number_email))
@@ -563,6 +564,14 @@ Optional:
 - `success_redirect_url` (String) The success redirect URL to use, if applicable.
 
 
+<a id="nestedblock--oidc"></a>
+### Nested Schema for `oidc`
+
+Required:
+
+- `redirect_url` (String) The URL to redirect to after the OIDC exchange.
+
+
 <a id="nestedblock--pwned_password_email"></a>
 ### Nested Schema for `pwned_password_email`
 
@@ -627,7 +636,7 @@ Required:
 
 Optional:
 
-- `redirect_url` (String) The redirect URL to redirect after the SAML
+- `redirect_url` (String) The URL to redirect to after the SAML exchange.
 
 
 <a id="nestedblock--user_activation_email"></a>
