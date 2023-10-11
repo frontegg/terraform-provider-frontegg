@@ -25,6 +25,8 @@ resource "frontegg_workspace" "example" {
     jwt_access_token_expiration  = 86400   # 1 day
     jwt_refresh_token_expiration = 2592000 # 30 days
     same_site_cookie_policy      = "strict"
+    auth_strategy                = "EmailAndPassword"
+    allow_tenant_invitations     = true
   }
 
   mfa_policy {
@@ -170,7 +172,6 @@ resource "frontegg_webhook" "example" {
   events = [
     "frontegg.user.authenticated"
   ]
-  tenant_id = "TenantId"
 }
 
 resource "frontegg_permission_category" "example" {
