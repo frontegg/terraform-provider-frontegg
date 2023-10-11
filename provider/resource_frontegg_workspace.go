@@ -29,6 +29,7 @@ const fronteggOAuthURL = "/oauth/resources/configurations/v1"
 const fronteggOAuthRedirectURIsURL = "/oauth/resources/configurations/v1/redirect-uri"
 const fronteggSSOURL = "/identity/resources/sso/v2"
 const fronteggSSOSAMLURL = "/metadata?entityName=saml"
+const fronteggOIDCURL = "/team/resources/sso/v1/oidc/configurations"
 const fronteggEmailTemplatesURL = "/identity/resources/mail/v1/configs/templates"
 const fronteggAdminPortalURL = "/metadata?entityName=adminBox"
 
@@ -136,6 +137,11 @@ type fronteggSSOSAMLConfiguration struct {
 	ACSUrl      string `json:"acsUrl"`
 	SPEntityID  string `json:"spEntityId"`
 	RedirectUrl string `json:"redirectUri"`
+}
+
+type fronteggOIDC struct {
+	Active      bool   `json:"active"`
+	RedirectUri string `json:"redirectUri,omitempty"`
 }
 
 type fronteggEmailTemplate struct {
@@ -747,9 +753,24 @@ per Frontegg provider.`,
 							Required:    true,
 						},
 						"redirect_url": {
-							Description: "The redirect URL to redirect after the SAML ",
+							Description: "The URL to redirect to after the SAML exchange.",
 							Type:        schema.TypeString,
 							Optional:    true,
+						},
+					},
+				},
+			},
+			"oidc": {
+				Description: "Configures SSO via OIDC.",
+				Type:        schema.TypeList,
+				Optional:    true,
+				MaxItems:    1,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"redirect_url": {
+							Description: "The URL to redirect to after the OIDC exchange.",
+							Type:        schema.TypeString,
+							Required:    true,
 						},
 					},
 				},
@@ -1133,6 +1154,21 @@ func resourceFronteggWorkspaceRead(ctx context.Context, d *schema.ResourceData, 
 			})
 		}
 		if err := d.Set("saml", items); err != nil {
+			return diag.FromErr(err)
+		}
+	}
+	{
+		var out fronteggOIDC
+		if err := clientHolder.ApiClient.Get(ctx, fronteggOIDCURL, &out); err != nil {
+			return diag.FromErr(err)
+		}
+		items := []interface{}{}
+		if out.Active {
+			items = append(items, map[string]interface{}{
+				"redirect_url": out.RedirectUri,
+			})
+		}
+		if err := d.Set("oidc", items); err != nil {
 			return diag.FromErr(err)
 		}
 	}
@@ -1528,6 +1564,17 @@ func resourceFronteggWorkspaceUpdate(ctx context.Context, d *schema.ResourceData
 			in.IsActive = true
 		}
 		if err := clientHolder.ApiClient.Post(ctx, fronteggSSOSAMLURL, in, nil); err != nil {
+			return diag.FromErr(err)
+		}
+	}
+	{
+		oidc := d.Get("oidc").([]interface{})
+		in := fronteggOIDC{}
+		if len(oidc) > 0 {
+			in.Active = true
+			in.RedirectUri = d.Get("oidc.0.redirect_url").(string)
+		}
+		if err := clientHolder.ApiClient.Post(ctx, fronteggOIDCURL, in, nil); err != nil {
 			return diag.FromErr(err)
 		}
 	}

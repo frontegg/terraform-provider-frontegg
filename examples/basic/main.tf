@@ -25,6 +25,8 @@ resource "frontegg_workspace" "example" {
     jwt_access_token_expiration  = 86400   # 1 day
     jwt_refresh_token_expiration = 2592000 # 30 days
     same_site_cookie_policy      = "strict"
+    allow_tenant_invitations     = true
+    auth_strategy                = "EmailAndPassword"
   }
 
   mfa_policy {
@@ -90,6 +92,10 @@ resource "frontegg_workspace" "example" {
   saml {
     acs_url      = "https://mycompany.com/saml"
     sp_entity_id = "my-company"
+    redirect_url = "http://localhost:3000"
+  }
+
+  oidc {
     redirect_url = "http://localhost:3000"
   }
 
@@ -170,7 +176,6 @@ resource "frontegg_webhook" "example" {
   events = [
     "frontegg.user.authenticated"
   ]
-  tenant_id = "TenantId"
 }
 
 resource "frontegg_permission_category" "example" {
