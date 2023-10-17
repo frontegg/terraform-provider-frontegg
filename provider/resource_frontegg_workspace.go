@@ -1356,11 +1356,11 @@ func resourceFronteggWorkspaceUpdate(ctx context.Context, d *schema.ResourceData
 		}
 		if domain, ok := d.GetOk("custom_domain"); ok {
 			in := fronteggCustomDomain{CustomDomain: domain.(string)}
-			// Retry for up to a minute if the CName is not found, in case it
+			// Retry for up to a minute if the CName or TXT record is not found, in case it
 			// was just installed and DNS is still propagating.
-			err := resource.RetryContext(ctx, time.Minute, func() *resource.RetryError {
+			err := resource.RetryContext(ctx, 30*time.Second, func() *resource.RetryError {
 				if err := clientHolder.ApiClient.Post(ctx, fronteggCustomDomainURL, in, nil); err != nil {
-					if strings.Contains(err.Error(), "CName not found") {
+					if strings.Contains(err.Error(), "CName not found") || strings.Contains(err.Error(), "TXT record not found") {
 						return resource.RetryableError(err)
 					} else {
 						return resource.NonRetryableError(err)
