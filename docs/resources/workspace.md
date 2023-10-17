@@ -43,7 +43,8 @@ resource "frontegg_workspace" "example" {
     jwt_access_token_expiration      = 86400   # 1 day
     jwt_refresh_token_expiration     = 2592000 # 30 days
     same_site_cookie_policy          = "strict"
-    auth_strategy                    = "Code"
+    auth_strategy                    = "EmailAndPassword"
+    allow_tenant_invitations         = true
   }
 
   mfa_policy {
@@ -115,7 +116,7 @@ resource "frontegg_workspace" "example" {
     sp_entity_id = "my-company"
     redirect_url = "http://localhost:3000"
   }
-  
+
   oidc {
     redirect_url = "http://localhost:3000"
   }
@@ -227,11 +228,11 @@ resource "frontegg_workspace" "example" {
 - `mfa_authentication_app` (Block List, Max: 1) Configures the multi-factor authentication (MFA) via an authentication app. (see [below for nested schema](#nestedblock--mfa_authentication_app))
 - `microsoft_social_login` (Block List, Max: 1) Configures social login with Google. (see [below for nested schema](#nestedblock--microsoft_social_login))
 - `new_device_connected_email` (Block List, Max: 1) Configures the new device connected email. (see [below for nested schema](#nestedblock--new_device_connected_email))
+- `oidc` (Block List, Max: 1) Configures SSO via OIDC. (see [below for nested schema](#nestedblock--oidc))
 - `pwned_password_email` (Block List, Max: 1) Configures the pwned password email. (see [below for nested schema](#nestedblock--pwned_password_email))
 - `reset_password_email` (Block List, Max: 1) Configures the password reset email. (see [below for nested schema](#nestedblock--reset_password_email))
 - `reset_phone_number_email` (Block List, Max: 1) Configures the reset phone number email. (see [below for nested schema](#nestedblock--reset_phone_number_email))
 - `saml` (Block List, Max: 1) Configures SSO via SAML. (see [below for nested schema](#nestedblock--saml))
-- `oidc` (Block List, Max: 1) Configures SSO via OIDC. (see [below for nested schema](#nestedblock--oidc))
 - `user_activation_email` (Block List, Max: 1) Configures the user activation email. (see [below for nested schema](#nestedblock--user_activation_email))
 - `user_invitation_email` (Block List, Max: 1) Configures the user invitation email. (see [below for nested schema](#nestedblock--user_invitation_email))
 - `user_used_invitation_email` (Block List, Max: 1) Configures the user used invitation email. (see [below for nested schema](#nestedblock--user_used_invitation_email))
