@@ -11,13 +11,14 @@ import (
 
 	"github.com/frontegg/terraform-provider-frontegg/internal/restclient"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 )
 
 const fronteggVendorURL = "/vendors"
 const fronteggCustomDomainURL = "/vendors/custom-domains"
+const fronteggCustomDomainVerifyURL = "/vendors/custom-domains/verify"
 const fronteggAuthURL = "/identity/resources/configurations/v1"
 const fronteggMFAURL = "/identity/resources/configurations/v1/mfa"
 const fronteggMFAPolicyURL = "/identity/resources/configurations/v1/mfa-policy"
@@ -1356,19 +1357,31 @@ func resourceFronteggWorkspaceUpdate(ctx context.Context, d *schema.ResourceData
 		}
 		if domain, ok := d.GetOk("custom_domain"); ok {
 			in := fronteggCustomDomain{CustomDomain: domain.(string)}
-			// Retry for up to half a minute if the CName or TXT record are not found, in case it
-			// was just installed and DNS is still propagating.
-			err := resource.RetryContext(ctx, 30*time.Second, func() *resource.RetryError {
-				if err := clientHolder.ApiClient.Post(ctx, fronteggCustomDomainURL, in, nil); err != nil {
-					if strings.Contains(err.Error(), "CName not found") || strings.Contains(err.Error(), "TXT record not found") {
-						return resource.RetryableError(err)
-					} else {
-						return resource.NonRetryableError(err)
+
+			customDomainErr := clientHolder.ApiClient.Post(ctx, fronteggCustomDomainURL, in, nil)
+
+			var err error
+			verified := false
+			if customDomainErr != nil && strings.Contains(customDomainErr.Error(), "CName not found") {
+				// Retry for up to a minute if the CName is not found, in case it
+				// was just installed and DNS is still propagating.
+				err = retry.RetryContext(ctx, time.Minute, func() *retry.RetryError {
+					if err := clientHolder.ApiClient.Post(ctx, fronteggCustomDomainVerifyURL, verified, nil); err != nil || !verified {
+						if strings.Contains(err.Error(), "CName not found") || !verified {
+							return retry.RetryableError(err)
+						} else {
+							return retry.NonRetryableError(err)
+						}
 					}
-				}
-				return nil
-			})
-			if err != nil {
+					return nil
+				})
+			}
+
+			if verified {
+				err = clientHolder.ApiClient.Post(ctx, fronteggCustomDomainURL, in, nil)
+			}
+
+			if !verified || err != nil {
 				return diag.FromErr(err)
 			}
 		}
