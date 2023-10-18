@@ -1713,13 +1713,19 @@ func resourceFronteggWorkspaceUpdate(ctx context.Context, d *schema.ResourceData
 			return diag.FromErr(err)
 		}
 
-		var configuration fronteggAdminPortalConfiguration
+		var configuration *fronteggAdminPortalConfiguration
 		var adminPortal fronteggAdminPortal
 		// adminBox is only defined when the default style of the web page has been modified, if not it's 0 rows and
 		// this is not an error.
-		if len(out.Rows) > 0 {
+		switch len(out.Rows) {
+		case 0:
+			log.Printf("[DEBUG] no admin portal found, creating one with default config.")
+			configuration = &adminPortal.Configuration
+		case 1:
 			adminPortal = out.Rows[0]
-			configuration = adminPortal.Configuration
+			configuration = &adminPortal.Configuration
+		default:
+			return diag.FromErr(fmt.Errorf("Too many admin portals!"))
 		}
 
 		configuration.Navigation.Account = serializeVisibility("admin_portal.0.enable_account_settings")
