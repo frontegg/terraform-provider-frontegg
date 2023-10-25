@@ -132,7 +132,7 @@ func resourceFronteggUserCreate(ctx context.Context, d *schema.ResourceData, met
 	}
 
 	superUser := d.Get("superuser").(bool)
-	if superUser == true {
+	if superUser {
 		in := fronteggSuperUser{
 			SuperUser: superUser,
 		}
