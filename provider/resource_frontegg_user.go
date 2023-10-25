@@ -12,7 +12,7 @@ import (
 )
 
 type fronteggSuperUser struct {
-    SuperUser bool `json:"superuser,omitempty"`
+    SuperUser bool `json:"superUser"`
 }
 
 type fronteggUserRole struct {
