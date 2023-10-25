@@ -11,6 +11,10 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
+type fronteggSuperUser struct {
+    SuperUser bool `json:"superuser,omitempty"`
+}
+
 type fronteggUserRole struct {
 	Id  string `json:"id,omitempty"`
 	Key string `json:"key,omitempty"`
@@ -82,7 +86,7 @@ func resourceFronteggUser() *schema.Resource {
 			    Description: "Whether the user is a super user.",
 			    Type:        schema.TypeBool,
 			    Required:    false,
-			}
+			},
 		},
 	}
 }
@@ -122,9 +126,20 @@ func resourceFronteggUserCreate(ctx context.Context, d *schema.ResourceData, met
 	if err := clientHolder.ApiClient.RequestWithHeaders(ctx, "POST", fronteggUserPath, headers, in, &out); err != nil {
 		return diag.FromErr(err)
 	}
+
 	if err := resourceFronteggUserDeserialize(d, out); err != nil {
 		return diag.FromErr(err)
 	}
+
+    superUser := d.Get("super_user").(bool)
+    if superUser == true {
+        in := fronteggSuperUser {
+        SuperUser: superUser,
+        }
+        if err := clientHolder.ApiClient.Put(ctx, fmt.Sprintf("%s/%s/superuser", fronteggUserPathV1, out.Key), in, nil); err != nil {
+            return diag.FromErr(err)
+        }
+    }
 
 	if !d.Get("automatically_verify").(bool) {
 		return nil
@@ -203,6 +218,17 @@ func resourceFronteggUserUpdate(ctx context.Context, d *schema.ResourceData, met
 			return diag.FromErr(err)
 		}
 	}
+
+	// Super User:
+	if d.HasChange("super_user") {
+	    superUser := d.Get("super_user").(bool)
+	    in := fronteggSuperUser {
+	        SuperUser: superUser,
+        }
+        if err := clientHolder.ApiClient.Put(ctx, fmt.Sprintf("%s/%s/superuser", fronteggUserPathV1, d.Id()), in, nil); err != nil {
+            return diag.FromErr(err)
+        }
+    }
 
 	// Roles:
 	if d.HasChange("role_ids") {
