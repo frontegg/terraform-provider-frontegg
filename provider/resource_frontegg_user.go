@@ -12,7 +12,7 @@ import (
 )
 
 type fronteggSuperUser struct {
-    SuperUser bool `json:"superUser"`
+	SuperUser bool `json:"superUser"`
 }
 
 type fronteggUserRole struct {
@@ -83,9 +83,9 @@ func resourceFronteggUser() *schema.Resource {
 				Required:    true,
 			},
 			"superuser": {
-			    Description: "Whether the user is a super user.",
-			    Type:        schema.TypeBool,
-			    Optional:    true,
+				Description: "Whether the user is a super user.",
+				Type:        schema.TypeBool,
+				Optional:    true,
 			},
 		},
 	}
@@ -131,15 +131,15 @@ func resourceFronteggUserCreate(ctx context.Context, d *schema.ResourceData, met
 		return diag.FromErr(err)
 	}
 
-    superUser := d.Get("superuser").(bool)
-    if superUser == true {
-        in := fronteggSuperUser {
-        SuperUser: superUser,
-        }
-        if err := clientHolder.ApiClient.Put(ctx, fmt.Sprintf("%s/%s/superuser", fronteggUserPathV1, out.Key), in, nil); err != nil {
-            return diag.FromErr(err)
-        }
-    }
+	superUser := d.Get("superuser").(bool)
+	if superUser == true {
+		in := fronteggSuperUser{
+			SuperUser: superUser,
+		}
+		if err := clientHolder.ApiClient.Put(ctx, fmt.Sprintf("%s/%s/superuser", fronteggUserPathV1, out.Key), in, nil); err != nil {
+			return diag.FromErr(err)
+		}
+	}
 
 	if !d.Get("automatically_verify").(bool) {
 		return nil
@@ -221,14 +221,14 @@ func resourceFronteggUserUpdate(ctx context.Context, d *schema.ResourceData, met
 
 	// Super User:
 	if d.HasChange("superuser") {
-	    superUser := d.Get("superuser").(bool)
-	    in := fronteggSuperUser {
-	        SuperUser: superUser,
-        }
-        if err := clientHolder.ApiClient.Put(ctx, fmt.Sprintf("%s/%s/superuser", fronteggUserPathV1, d.Id()), in, nil); err != nil {
-            return diag.FromErr(err)
-        }
-    }
+		superUser := d.Get("superuser").(bool)
+		in := fronteggSuperUser{
+			SuperUser: superUser,
+		}
+		if err := clientHolder.ApiClient.Put(ctx, fmt.Sprintf("%s/%s/superuser", fronteggUserPathV1, d.Id()), in, nil); err != nil {
+			return diag.FromErr(err)
+		}
+	}
 
 	// Roles:
 	if d.HasChange("role_ids") {
