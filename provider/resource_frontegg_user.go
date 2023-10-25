@@ -82,10 +82,10 @@ func resourceFronteggUser() *schema.Resource {
 				Type:        schema.TypeString,
 				Required:    true,
 			},
-			"super_user": {
+			"superuser": {
 			    Description: "Whether the user is a super user.",
 			    Type:        schema.TypeBool,
-			    Required:    false,
+			    Optional:    true,
 			},
 		},
 	}
@@ -98,7 +98,7 @@ func resourceFronteggUserSerialize(d *schema.ResourceData) fronteggUser {
 		Password:        d.Get("password").(string),
 		SkipInviteEmail: d.Get("skip_invite_email").(bool),
 		CreateRoleIDs:   d.Get("role_ids").(*schema.Set).List(),
-		SuperUser:       d.Get("super_user").(bool),
+		SuperUser:       d.Get("superuser").(bool),
 	}
 }
 
@@ -131,7 +131,7 @@ func resourceFronteggUserCreate(ctx context.Context, d *schema.ResourceData, met
 		return diag.FromErr(err)
 	}
 
-    superUser := d.Get("super_user").(bool)
+    superUser := d.Get("superuser").(bool)
     if superUser == true {
         in := fronteggSuperUser {
         SuperUser: superUser,
@@ -220,8 +220,8 @@ func resourceFronteggUserUpdate(ctx context.Context, d *schema.ResourceData, met
 	}
 
 	// Super User:
-	if d.HasChange("super_user") {
-	    superUser := d.Get("super_user").(bool)
+	if d.HasChange("superuser") {
+	    superUser := d.Get("superuser").(bool)
 	    in := fronteggSuperUser {
 	        SuperUser: superUser,
         }
