@@ -11,6 +11,10 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
+type fronteggSuperUser struct {
+	SuperUser bool `json:"superUser"`
+}
+
 type fronteggUserRole struct {
 	Id  string `json:"id,omitempty"`
 	Key string `json:"key,omitempty"`
@@ -24,6 +28,7 @@ type fronteggUser struct {
 	ReadRoleIDs     []fronteggUserRole `json:"roles,omitempty"`
 	SkipInviteEmail bool               `json:"skipInviteEmail,omitempty"`
 	Verified        bool               `json:"verified,omitempty"`
+	SuperUser       bool               `json:"superUser,omitempty"`
 }
 
 const fronteggUserPath = "/identity/resources/users/v2"
@@ -77,6 +82,11 @@ func resourceFronteggUser() *schema.Resource {
 				Type:        schema.TypeString,
 				Required:    true,
 			},
+			"superuser": {
+				Description: "Whether the user is a super user.",
+				Type:        schema.TypeBool,
+				Optional:    true,
+			},
 		},
 	}
 }
@@ -88,6 +98,7 @@ func resourceFronteggUserSerialize(d *schema.ResourceData) fronteggUser {
 		Password:        d.Get("password").(string),
 		SkipInviteEmail: d.Get("skip_invite_email").(bool),
 		CreateRoleIDs:   d.Get("role_ids").(*schema.Set).List(),
+		SuperUser:       d.Get("superuser").(bool),
 	}
 }
 
@@ -115,8 +126,19 @@ func resourceFronteggUserCreate(ctx context.Context, d *schema.ResourceData, met
 	if err := clientHolder.ApiClient.RequestWithHeaders(ctx, "POST", fronteggUserPath, headers, in, &out); err != nil {
 		return diag.FromErr(err)
 	}
+
 	if err := resourceFronteggUserDeserialize(d, out); err != nil {
 		return diag.FromErr(err)
+	}
+
+	superUser := d.Get("superuser").(bool)
+	if superUser {
+		in := fronteggSuperUser{
+			SuperUser: superUser,
+		}
+		if err := clientHolder.ApiClient.Put(ctx, fmt.Sprintf("%s/%s/superuser", fronteggUserPathV1, out.Key), in, nil); err != nil {
+			return diag.FromErr(err)
+		}
 	}
 
 	if !d.Get("automatically_verify").(bool) {
@@ -193,6 +215,17 @@ func resourceFronteggUserUpdate(ctx context.Context, d *schema.ResourceData, met
 		}
 
 		if err := d.Set("password", newPw); err != nil {
+			return diag.FromErr(err)
+		}
+	}
+
+	// Super User:
+	if d.HasChange("superuser") {
+		superUser := d.Get("superuser").(bool)
+		in := fronteggSuperUser{
+			SuperUser: superUser,
+		}
+		if err := clientHolder.ApiClient.Put(ctx, fmt.Sprintf("%s/%s/superuser", fronteggUserPathV1, d.Id()), in, nil); err != nil {
 			return diag.FromErr(err)
 		}
 	}

@@ -26,6 +26,7 @@ Configures a Frontegg user.
 - `automatically_verify` (Boolean) Whether the user gets verified upon creation.
 - `password` (String, Sensitive) The user's login password.
 - `skip_invite_email` (Boolean) Skip sending the invite email. If true, user is automatically verified on creation.
+- `superuser` (Boolean) Whether the user is a super user.
 
 ### Read-Only
 
