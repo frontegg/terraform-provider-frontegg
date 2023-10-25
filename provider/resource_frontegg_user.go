@@ -24,6 +24,7 @@ type fronteggUser struct {
 	ReadRoleIDs     []fronteggUserRole `json:"roles,omitempty"`
 	SkipInviteEmail bool               `json:"skipInviteEmail,omitempty"`
 	Verified        bool               `json:"verified,omitempty"`
+	SuperUser       bool               `json:"superUser,omitempty"`
 }
 
 const fronteggUserPath = "/identity/resources/users/v2"
@@ -77,6 +78,11 @@ func resourceFronteggUser() *schema.Resource {
 				Type:        schema.TypeString,
 				Required:    true,
 			},
+			"super_user": {
+			    Description: "Whether the user is a super user.",
+			    Type:        schema.TypeBool,
+			    Required:    false,
+			}
 		},
 	}
 }
@@ -88,6 +94,7 @@ func resourceFronteggUserSerialize(d *schema.ResourceData) fronteggUser {
 		Password:        d.Get("password").(string),
 		SkipInviteEmail: d.Get("skip_invite_email").(bool),
 		CreateRoleIDs:   d.Get("role_ids").(*schema.Set).List(),
+		SuperUser:       d.Get("super_user").(bool),
 	}
 }
 
