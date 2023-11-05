@@ -19,8 +19,8 @@ import (
 )
 
 const fronteggVendorURL = "/vendors"
-const fronteggCustomDomainURL = "/vendors/custom-domains"
-const fronteggCustomDomainVerifyURL = "/vendors/custom-domains/verify"
+const fronteggCustomDomainURL = "/vendors/custom-domains/v2"
+const fronteggCustomDomainCreateEndpoint = "verify"
 const fronteggAuthURL = "/identity/resources/configurations/v1"
 const fronteggMFAURL = "/identity/resources/configurations/v1/mfa"
 const fronteggMFAPolicyURL = "/identity/resources/configurations/v1/mfa-policy"
@@ -49,8 +49,18 @@ type fronteggVendor struct {
 	AllowedOrigins    []string `json:"allowedOrigins"`
 }
 
+type fronteggCustomDomainStatus string
+
+const (
+	Active   fronteggCustomDomainStatus = `Active`
+	Pending  fronteggCustomDomainStatus = `Pending`
+	Inactive fronteggCustomDomainStatus = `Inactive`
+)
+
 type fronteggCustomDomain struct {
-	CustomDomain string `json:"customDomain"`
+	ID           string                     `json:"id"`
+	CustomDomain string                     `json:"customDomain"`
+	Status       fronteggCustomDomainStatus `json:"status"`
 }
 
 type fronteggCustomDomainVerification struct {
@@ -485,12 +495,14 @@ per Frontegg provider.`,
 					"host must be a valid subdomain of .frontegg.com",
 				),
 			},
-			"custom_domain": {
-				Description: `A custom domain at which Frontegg services will be reachable.
-    You must configure a CNAME record for this domain that points to
-    "ssl.frontegg.com" (or "ssl.<your-region>.frontegg.com") and a TXT record for domain-challenge.<custom_domain> that points to your client ID before setting this field.
-`,
-				Type:     schema.TypeString,
+			"custom_domains": {
+				Description: `List of custom domains at which Frontegg services will be reachable. Can contain maximum 2 domains.
+				You must configure CNAME and TXT records for each domain, you can get record values from the portal.`,
+				Type: schema.TypeSet,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+				MaxItems: 2,
 				Optional: true,
 			},
 			"allowed_origins": {
@@ -1072,13 +1084,18 @@ func resourceFronteggWorkspaceRead(ctx context.Context, d *schema.ResourceData, 
 		}
 	}
 	{
-		var out fronteggCustomDomain
+		var out []fronteggCustomDomain
 		clientHolder.ApiClient.Ignore404()
 		if err := clientHolder.ApiClient.Get(ctx, fronteggCustomDomainURL, &out); err != nil {
 			return diag.FromErr(err)
 		}
 
-		if err := d.Set("custom_domain", out.CustomDomain); err != nil {
+		var customDomains []string
+		for _, cd := range out {
+			customDomains = append(customDomains, cd.CustomDomain)
+		}
+
+		if err := d.Set("custom_domains", customDomains); err != nil {
 			return diag.FromErr(err)
 		}
 	}
@@ -1462,38 +1479,71 @@ func resourceFronteggWorkspaceUpdate(ctx context.Context, d *schema.ResourceData
 			return diag.FromErr(err)
 		}
 	}
-	if d.HasChange("custom_domain") {
-		clientHolder.ApiClient.Ignore404()
-		if err := clientHolder.ApiClient.Delete(ctx, fronteggCustomDomainURL, nil); err != nil {
+	if d.HasChange("custom_domains") {
+		// Get all configured custom domains
+		var outCustomDomains []fronteggCustomDomain
+		if err := clientHolder.ApiClient.Get(ctx, fronteggCustomDomainURL, &outCustomDomains); err != nil {
 			return diag.FromErr(err)
 		}
-		if domain, ok := d.GetOk("custom_domain"); ok {
-			in := fronteggCustomDomain{CustomDomain: domain.(string)}
 
-			customDomainErr := clientHolder.ApiClient.Post(ctx, fronteggCustomDomainURL, in, nil)
-			if customDomainErr != nil {
-				diag.FromErr(customDomainErr)
+		// Get list of custom domains from API response
+		var outCustomDomainsList []string
+		for _, cd := range outCustomDomains {
+			outCustomDomainsList = append(outCustomDomainsList, cd.CustomDomain)
+		}
+
+		// Get all custom domains from the state
+		customDomains := stringSetToList(d.Get("custom_domains").(*schema.Set))
+
+		// Remove custom domains that are not in state but are in the API
+		for _, cd := range outCustomDomains {
+			if !stringInSlice(cd.CustomDomain, customDomains) {
+				err := clientHolder.ApiClient.Delete(ctx, fmt.Sprintf("%s/%s", fronteggCustomDomainURL, cd.CustomDomain), nil)
+				if err != nil {
+					return diag.FromErr(err)
+				}
 			}
+		}
 
-			var err error
-			var out fronteggCustomDomainVerification
-			err = retry.RetryContext(ctx, time.Minute, func() *retry.RetryError {
-				if err := clientHolder.ApiClient.Post(ctx, fronteggCustomDomainVerifyURL, nil, &out); err != nil {
-					if strings.Contains(err.Error(), "CName not found") {
-						return retry.RetryableError(err)
-					} else {
-						return retry.NonRetryableError(err)
-					}
-				}
-				if !out.Verified {
-					return retry.RetryableError(errors.New("domain not yet verified"))
-				} else {
-					return nil
-				}
-			})
+		// Add custom domains that are in state but not in the API
+		for _, cd := range customDomains {
+			if !stringInSlice(cd, outCustomDomainsList) {
+				in := fronteggCustomDomain{CustomDomain: cd}
+				customDomainError := clientHolder.ApiClient.Post(ctx, fmt.Sprintf("%s/%s", fronteggCustomDomainURL, fronteggCustomDomainCreateEndpoint), in, nil)
 
-			if err != nil {
-				return diag.FromErr(err)
+				var err error
+				if customDomainError != nil && strings.Contains(customDomainError.Error(), "CName not found") {
+					// Retry for up to a minute if the CName is not found, in case it
+					// was just installed and DNS is still propagating.
+					err = retry.RetryContext(ctx, time.Minute, func() *retry.RetryError {
+						// Get again all custom domains
+						var newOutCustomDomains []fronteggCustomDomain
+						if err := clientHolder.ApiClient.Get(ctx, fronteggCustomDomainURL, &newOutCustomDomains); err != nil {
+							return retry.NonRetryableError(err)
+						}
+
+						// Out of newOutCustomDomains get customDomain that matches cd
+						for _, ncd := range newOutCustomDomains {
+							if ncd.CustomDomain == cd {
+								if ncd.Status == Active {
+									return nil
+								} else {
+									return retry.RetryableError(customDomainError)
+								}
+							}
+						}
+
+						return retry.NonRetryableError(customDomainError)
+					})
+				}
+
+				if customDomainError != nil && err == nil {
+					err = clientHolder.ApiClient.Post(ctx, fmt.Sprintf("%s/%s", fronteggCustomDomainURL, fronteggCustomDomainCreateEndpoint), in, nil)
+				}
+
+				if customDomainError != nil && err != nil {
+					return diag.FromErr(err)
+				}
 			}
 		}
 	}

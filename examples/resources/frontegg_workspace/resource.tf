@@ -5,10 +5,9 @@ resource "frontegg_workspace" "example" {
   frontend_stack      = "React"
   open_saas_installed = false
 
-  # If you've configured a CNAME record to point a domain to "ssl.frontegg.com",
-  # and a TXT record to point domain-challenge.<custom_domain> to your client ID,
+  # If you've configured CNAME and TXT records,
   # you can use that custom domain like so:
-  # custom_domain = "frontegg.yourcompany.com"
+  # custom_domains = ["frontegg.yourcompany.com"]
 
   frontegg_domain = "blah.frontegg.com"
   allowed_origins = ["https://yourcompany.com"]
