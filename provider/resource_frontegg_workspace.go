@@ -496,13 +496,12 @@ per Frontegg provider.`,
 				),
 			},
 			"custom_domains": {
-				Description: `List of custom domains at which Frontegg services will be reachable. Can contain maximum 2 domains.
+				Description: `List of custom domains at which Frontegg services will be reachable.
 				You must configure CNAME and TXT records for each domain, you can get record values from the portal.`,
 				Type: schema.TypeSet,
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
-				MaxItems: 2,
 				Optional: true,
 			},
 			"allowed_origins": {
@@ -1480,22 +1479,17 @@ func resourceFronteggWorkspaceUpdate(ctx context.Context, d *schema.ResourceData
 		}
 	}
 	if d.HasChange("custom_domains") {
-		// Get all configured custom domains
 		var outCustomDomains []fronteggCustomDomain
 		if err := clientHolder.ApiClient.Get(ctx, fronteggCustomDomainURL, &outCustomDomains); err != nil {
 			return diag.FromErr(err)
 		}
 
-		// Get list of custom domains from API response
 		var outCustomDomainsList []string
 		for _, cd := range outCustomDomains {
 			outCustomDomainsList = append(outCustomDomainsList, cd.CustomDomain)
 		}
 
-		// Get all custom domains from the state
 		customDomains := stringSetToList(d.Get("custom_domains").(*schema.Set))
-
-		// Remove custom domains that are not in state but are in the API
 		for _, cd := range outCustomDomains {
 			if !stringInSlice(cd.CustomDomain, customDomains) {
 				err := clientHolder.ApiClient.Delete(ctx, fmt.Sprintf("%s/%s", fronteggCustomDomainURL, cd.CustomDomain), nil)
@@ -1505,7 +1499,6 @@ func resourceFronteggWorkspaceUpdate(ctx context.Context, d *schema.ResourceData
 			}
 		}
 
-		// Add custom domains that are in state but not in the API
 		for _, cd := range customDomains {
 			if !stringInSlice(cd, outCustomDomainsList) {
 				in := fronteggCustomDomain{CustomDomain: cd}
@@ -1513,16 +1506,12 @@ func resourceFronteggWorkspaceUpdate(ctx context.Context, d *schema.ResourceData
 
 				var err error
 				if customDomainError != nil && strings.Contains(customDomainError.Error(), "CName not found") {
-					// Retry for up to a minute if the CName is not found, in case it
-					// was just installed and DNS is still propagating.
 					err = retry.RetryContext(ctx, time.Minute, func() *retry.RetryError {
-						// Get again all custom domains
 						var newOutCustomDomains []fronteggCustomDomain
 						if err := clientHolder.ApiClient.Get(ctx, fronteggCustomDomainURL, &newOutCustomDomains); err != nil {
 							return retry.NonRetryableError(err)
 						}
 
-						// Out of newOutCustomDomains get customDomain that matches cd
 						for _, ncd := range newOutCustomDomains {
 							if ncd.CustomDomain == cd {
 								if ncd.Status == Active {

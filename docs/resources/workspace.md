@@ -217,7 +217,7 @@ resource "frontegg_workspace" "example" {
 
 - `bulk_tenants_invites_email` (Block List, Max: 1) Configures the bulk tenants invite email. (see [below for nested schema](#nestedblock--bulk_tenants_invites_email))
 - `captcha_policy` (Block List, Max: 1) Configures the CAPTCHA policy in the signup form. (see [below for nested schema](#nestedblock--captcha_policy))
-- `custom_domains` (Set of String) List of custom domains at which Frontegg services will be reachable. Can contain maximum 2 domains.
+- `custom_domains` (Set of String) List of custom domains at which Frontegg services will be reachable.
   You must configure CNAME and TXT records for each domain, you can get record values from the portal.
 - `facebook_social_login` (Block List, Max: 1) Configures social login with Facebook. (see [below for nested schema](#nestedblock--facebook_social_login))
 - `github_social_login` (Block List, Max: 1) Configures social login with GitHub. (see [below for nested schema](#nestedblock--github_social_login))
