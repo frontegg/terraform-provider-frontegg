@@ -5,7 +5,7 @@ resource "frontegg_workspace" "example" {
   frontend_stack      = "React"
   open_saas_installed = false
 
-  # If you've configured CNAME and TXT records,
+  # If you've configured CNAME record,
   # you can use that custom domain like so:
   # custom_domains = ["frontegg.yourcompany.com"]
 
