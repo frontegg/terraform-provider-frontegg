@@ -57,10 +57,25 @@ const (
 	Inactive fronteggCustomDomainStatus = `Inactive`
 )
 
+type fronteggCustomDomainRecord struct {
+	Type  string `json:"type"`
+	Name  string `json:"name"`
+	Value string `json:"value"`
+}
+
 type fronteggCustomDomain struct {
-	ID           string                     `json:"id"`
-	CustomDomain string                     `json:"customDomain"`
-	Status       fronteggCustomDomainStatus `json:"status"`
+	ID           string                       `json:"id,omitempty"`
+	CustomDomain string                       `json:"domain,omitempty"`
+	Status       string                       `json:"status,omitempty"`
+	Records      []fronteggCustomDomainRecord `json:"records,omitempty"`
+}
+
+type fronteggCustomDomainCreate struct {
+	CustomDomain string `json:"customDomain,omitempty"`
+}
+
+type fronteggCustomDomains struct {
+	CustomDomains []fronteggCustomDomain `json:"customDomains,omitempty"`
 }
 
 type fronteggCustomDomainVerification struct {
@@ -497,7 +512,7 @@ per Frontegg provider.`,
 			},
 			"custom_domains": {
 				Description: `List of custom domains at which Frontegg services will be reachable.
-				You must configure CNAME and TXT records for each domain, you can get record values from the portal.`,
+				You must configure CNAME for each domain, you can get record values from the portal.`,
 				Type: schema.TypeSet,
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
@@ -1083,14 +1098,14 @@ func resourceFronteggWorkspaceRead(ctx context.Context, d *schema.ResourceData, 
 		}
 	}
 	{
-		var out []fronteggCustomDomain
+		var outCustomDomains fronteggCustomDomains
 		clientHolder.ApiClient.Ignore404()
-		if err := clientHolder.ApiClient.Get(ctx, fronteggCustomDomainURL, &out); err != nil {
+		if err := clientHolder.ApiClient.Get(ctx, fronteggCustomDomainURL, &outCustomDomains); err != nil {
 			return diag.FromErr(err)
 		}
 
 		var customDomains []string
-		for _, cd := range out {
+		for _, cd := range outCustomDomains.CustomDomains {
 			customDomains = append(customDomains, cd.CustomDomain)
 		}
 
@@ -1479,20 +1494,20 @@ func resourceFronteggWorkspaceUpdate(ctx context.Context, d *schema.ResourceData
 		}
 	}
 	if d.HasChange("custom_domains") {
-		var outCustomDomains []fronteggCustomDomain
+		var outCustomDomains fronteggCustomDomains
 		if err := clientHolder.ApiClient.Get(ctx, fronteggCustomDomainURL, &outCustomDomains); err != nil {
 			return diag.FromErr(err)
 		}
 
 		var outCustomDomainsList []string
-		for _, cd := range outCustomDomains {
+		for _, cd := range outCustomDomains.CustomDomains {
 			outCustomDomainsList = append(outCustomDomainsList, cd.CustomDomain)
 		}
 
 		customDomains := stringSetToList(d.Get("custom_domains").(*schema.Set))
-		for _, cd := range outCustomDomains {
+		for _, cd := range outCustomDomains.CustomDomains {
 			if !stringInSlice(cd.CustomDomain, customDomains) {
-				err := clientHolder.ApiClient.Delete(ctx, fmt.Sprintf("%s/%s", fronteggCustomDomainURL, cd.CustomDomain), nil)
+				err := clientHolder.ApiClient.Delete(ctx, fmt.Sprintf("%s/%s", fronteggCustomDomainURL, cd.ID), nil)
 				if err != nil {
 					return diag.FromErr(err)
 				}
@@ -1501,36 +1516,19 @@ func resourceFronteggWorkspaceUpdate(ctx context.Context, d *schema.ResourceData
 
 		for _, cd := range customDomains {
 			if !stringInSlice(cd, outCustomDomainsList) {
-				in := fronteggCustomDomain{CustomDomain: cd}
-				customDomainError := clientHolder.ApiClient.Post(ctx, fmt.Sprintf("%s/%s", fronteggCustomDomainURL, fronteggCustomDomainCreateEndpoint), in, nil)
+				in := fronteggCustomDomainCreate{CustomDomain: cd}
 
-				var err error
-				if customDomainError != nil && strings.Contains(customDomainError.Error(), "CName not found") {
-					err = retry.RetryContext(ctx, time.Minute, func() *retry.RetryError {
-						var newOutCustomDomains []fronteggCustomDomain
-						if err := clientHolder.ApiClient.Get(ctx, fronteggCustomDomainURL, &newOutCustomDomains); err != nil {
-							return retry.NonRetryableError(err)
-						}
+				err := retry.RetryContext(ctx, time.Minute, func() *retry.RetryError {
+					if err := clientHolder.ApiClient.Post(ctx, fmt.Sprintf("%s/%s", fronteggCustomDomainURL, fronteggCustomDomainCreateEndpoint), in, nil); err != nil && strings.Contains(err.Error(), "CName not found") {
+						return retry.RetryableError(err)
+					} else if err != nil {
+						return retry.NonRetryableError(err)
+					}
 
-						for _, ncd := range newOutCustomDomains {
-							if ncd.CustomDomain == cd {
-								if ncd.Status == Active {
-									return nil
-								} else {
-									return retry.RetryableError(customDomainError)
-								}
-							}
-						}
+					return nil
+				})
 
-						return retry.NonRetryableError(customDomainError)
-					})
-				}
-
-				if customDomainError != nil && err == nil {
-					err = clientHolder.ApiClient.Post(ctx, fmt.Sprintf("%s/%s", fronteggCustomDomainURL, fronteggCustomDomainCreateEndpoint), in, nil)
-				}
-
-				if customDomainError != nil && err != nil {
+				if err != nil {
 					return diag.FromErr(err)
 				}
 			}
