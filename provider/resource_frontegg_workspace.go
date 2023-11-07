@@ -1479,18 +1479,21 @@ func resourceFronteggWorkspaceRead(ctx context.Context, d *schema.ResourceData, 
 func resourceFronteggWorkspaceUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	clientHolder := meta.(*restclient.ClientHolder)
 	{
-		in := fronteggVendor{
-			ID:                d.Id(),
-			Name:              d.Get("name").(string),
-			Country:           d.Get("country").(string),
-			BackendStack:      d.Get("backend_stack").(string),
-			FrontendStack:     d.Get("frontend_stack").(string),
-			OpenSAASInstalled: d.Get("open_saas_installed").(bool),
-			Host:              d.Get("frontegg_domain").(string),
-			AllowedOrigins:    stringSetToList(d.Get("allowed_origins").(*schema.Set)),
-		}
-		if err := clientHolder.ApiClient.Put(ctx, fronteggVendorURL, in, nil); err != nil {
-			return diag.FromErr(err)
+		if d.HasChange("name") || d.HasChange("country") || d.HasChange("backend_stack") || d.HasChange("frontend_stack") ||
+			d.HasChange("open_saas_installed") || d.HasChange("frontegg_domain") || d.HasChange("allowed_origins") {
+			in := fronteggVendor{
+				ID:                d.Id(),
+				Name:              d.Get("name").(string),
+				Country:           d.Get("country").(string),
+				BackendStack:      d.Get("backend_stack").(string),
+				FrontendStack:     d.Get("frontend_stack").(string),
+				OpenSAASInstalled: d.Get("open_saas_installed").(bool),
+				Host:              d.Get("frontegg_domain").(string),
+				AllowedOrigins:    stringSetToList(d.Get("allowed_origins").(*schema.Set)),
+			}
+			if err := clientHolder.ApiClient.Put(ctx, fronteggVendorURL, in, nil); err != nil {
+				return diag.FromErr(err)
+			}
 		}
 	}
 	if d.HasChange("custom_domains") {
