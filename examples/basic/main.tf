@@ -206,6 +206,15 @@ resource "frontegg_role" "example" {
   ]
 }
 
+resource "frontegg_tenant" "example" {
+  name    = "Example"
+  key     = "fake-tenant-id"
+
+  desired_metadata = {
+    "test_key_1": "value_3",
+  }
+}
+
 output "public_key" {
   value = resource.frontegg_workspace.example.auth_policy.0.jwt_public_key
 }

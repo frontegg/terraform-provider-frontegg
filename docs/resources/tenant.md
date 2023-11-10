@@ -23,6 +23,7 @@ Configures a Frontegg tenant.
 ### Optional
 
 - `application_uri` (String) The application URI for this tenant.
+- `desired_metadata` (Map of String) Metadata to set and manage; will be merged with upstream metadata fields set outside of terraform.
 
 ### Read-Only
 
