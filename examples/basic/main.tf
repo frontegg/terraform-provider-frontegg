@@ -207,11 +207,11 @@ resource "frontegg_role" "example" {
 }
 
 resource "frontegg_tenant" "example" {
-  name    = "Example"
-  key     = "fake-tenant-id"
+  name = "Example"
+  key  = "example-tenant-id"
 
-  desired_metadata = {
-    "test_key_1": "value_3",
+  selected_metadata = {
+    "selected_metadata_key" : "selected_metadata_value",
   }
 }
 
