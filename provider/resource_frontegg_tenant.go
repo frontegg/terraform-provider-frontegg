@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	"github.com/frontegg/terraform-provider-frontegg/internal/restclient"
@@ -15,6 +16,13 @@ type fronteggTenant struct {
 	Key            string `json:"tenantId,omitempty"`
 	Name           string `json:"name,omitempty"`
 	ApplicationUri string `json:"applicationUrl,omitempty"`
+	// `Metadata` is only populated when deserializing an API response from JSON,
+	// since metadata is returned as a jsonified-string.
+	Metadata string `json:"metadata,omitempty"`
+}
+
+type fronteggTenantMetadata struct {
+	Metadata map[string]string `json:"metadata,omitempty"`
 }
 
 func resourceFronteggTenant() *schema.Resource {
@@ -46,6 +54,14 @@ func resourceFronteggTenant() *schema.Resource {
 				Type:        schema.TypeString,
 				Optional:    true,
 			},
+			"selected_metadata": {
+				Description: "Metadata to set and manage; will be merged with upstream metadata fields set outside of terraform.",
+				Type:        schema.TypeMap,
+				Optional:    true,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+			},
 		},
 	}
 }
@@ -55,6 +71,7 @@ func resourceFronteggTenantSerialize(d *schema.ResourceData) fronteggTenant {
 		Name:           d.Get("name").(string),
 		Key:            d.Get("key").(string),
 		ApplicationUri: d.Get("application_uri").(string),
+		// Don't serialize 'Metadata' here, since it will overwrite all upstream metadata.
 	}
 }
 
@@ -69,6 +86,33 @@ func resourceFronteggTenantDeserialize(d *schema.ResourceData, f fronteggTenant)
 	if err := d.Set("application_uri", f.ApplicationUri); err != nil {
 		return err
 	}
+
+	if len(f.Metadata) > 0 {
+		if err := resourceFronteggTenantMetadataDeserialize(d, f.Metadata); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func resourceFronteggTenantMetadataDeserialize(d *schema.ResourceData, metadata string) error {
+	// We only manage keys that are explicitly selected.
+	selectedMetadata := castResourceStringMap(d.Get("selected_metadata"))
+	var allUpstreamMetadata map[string]string
+	if err := json.Unmarshal([]byte(metadata), &allUpstreamMetadata); err != nil {
+		return err
+	}
+	for key := range selectedMetadata {
+		if newValue, ok := allUpstreamMetadata[key]; ok {
+			selectedMetadata[key] = newValue
+		} else {
+			delete(selectedMetadata, key)
+		}
+	}
+	if err := d.Set("selected_metadata", selectedMetadata); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -81,6 +125,18 @@ func resourceFronteggTenantCreate(ctx context.Context, d *schema.ResourceData, m
 	}
 	if err := resourceFronteggTenantDeserialize(d, out); err != nil {
 		return diag.FromErr(err)
+	}
+
+	// Metadata:
+	if selectedMetadata, is_set := d.GetOk("selected_metadata"); is_set {
+		in := fronteggTenantMetadata{castResourceStringMap(selectedMetadata)}
+		var out fronteggTenant
+		if err := clientHolder.ApiClient.Post(ctx, fmt.Sprintf("%s/%s/metadata", fronteggTenantPath, d.Id()), in, &out); err != nil {
+			return diag.FromErr(err)
+		}
+		if err := resourceFronteggTenantMetadataDeserialize(d, out.Metadata); err != nil {
+			return diag.FromErr(err)
+		}
 	}
 	return nil
 }
@@ -105,6 +161,30 @@ func resourceFronteggTenantRead(ctx context.Context, d *schema.ResourceData, met
 
 func resourceFronteggTenantUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	clientHolder := meta.(*restclient.ClientHolder)
+
+	// Metadata:
+	if d.HasChange("selected_metadata") {
+		oldMetadata, newMetadata := d.GetChange("selected_metadata")
+		newMetadataAsStringMap := castResourceStringMap(newMetadata)
+		for key := range castResourceStringMap(oldMetadata) {
+			if _, ok := newMetadataAsStringMap[key]; !ok {
+				if err := clientHolder.ApiClient.Delete(ctx, fmt.Sprintf("%s/%s/metadata/%s", fronteggTenantPath, d.Id(), key), nil); err != nil {
+					return diag.FromErr(err)
+				}
+			}
+		}
+
+		// Update all the keys in newMeta
+		in := fronteggTenantMetadata{newMetadataAsStringMap}
+		var out fronteggTenant
+		if err := clientHolder.ApiClient.Post(ctx, fmt.Sprintf("%s/%s/metadata", fronteggTenantPath, d.Id()), in, &out); err != nil {
+			return diag.FromErr(err)
+		}
+		if err := resourceFronteggTenantMetadataDeserialize(d, out.Metadata); err != nil {
+			return diag.FromErr(err)
+		}
+	}
+
 	var out fronteggTenant
 	in := resourceFronteggTenantSerialize(d)
 	if err := clientHolder.ApiClient.Put(ctx, fmt.Sprintf("%s/%s", fronteggTenantPath, d.Id()), in, &out); err != nil {

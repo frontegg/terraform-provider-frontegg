@@ -11,3 +11,11 @@ func stringSetToList(set *schema.Set) []string {
 	}
 	return out
 }
+
+func castResourceStringMap(resourceMapValue interface{}) map[string]string {
+	newStringMap := make(map[string]string)
+	for key, val := range resourceMapValue.(map[string]interface{}) {
+		newStringMap[key] = val.(string)
+	}
+	return newStringMap
+}
