@@ -98,13 +98,18 @@ func resourceFronteggTenantDeserialize(d *schema.ResourceData, f fronteggTenant)
 func resourceFronteggTenantMetadataDeserialize(d *schema.ResourceData, metadata string) error {
 	// We only manage keys that are explicitly selected.
 	selectedMetadata := castResourceStringMap(d.Get("selected_metadata"))
-	var allUpstreamMetadata map[string]string
+	var allUpstreamMetadata map[string]interface{}
 	if err := json.Unmarshal([]byte(metadata), &allUpstreamMetadata); err != nil {
 		return err
 	}
 	for key := range selectedMetadata {
 		if newValue, ok := allUpstreamMetadata[key]; ok {
-			selectedMetadata[key] = newValue
+			// All metadata keys managed by this provider must use string values
+			// so ignore the upstream value if it is not a string
+			newValueString, ok := newValue.(string)
+			if ok {
+				selectedMetadata[key] = newValueString
+			}
 		} else {
 			delete(selectedMetadata, key)
 		}
