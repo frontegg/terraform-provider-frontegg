@@ -252,6 +252,7 @@ Required:
 - `enable_personal_api_tokens` (Boolean) Enable access to personal API tokens in the admin portal.
 - `enable_privacy` (Boolean) Enable access to privacy settings in the admin portal.
 - `enable_profile` (Boolean) Enable access to profile settings in the admin portal.
+- `enable_provisioning` (Boolean) Enable access to provisioning settings in the admin portal.
 - `enable_roles` (Boolean) Enable access to roles and permissions in the admin portal.
 - `enable_security` (Boolean) Enable access to security settings in the admin portal.
 - `enable_sso` (Boolean) Enable access to SSO settings in the admin portal.

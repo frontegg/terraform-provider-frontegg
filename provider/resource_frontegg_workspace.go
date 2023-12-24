@@ -174,6 +174,7 @@ type fronteggAdminPortalNavigation struct {
 	PersonalAPITokens fronteggAdminPortalVisibility `json:"personalApiTokens"`
 	Privacy           fronteggAdminPortalVisibility `json:"privacy"`
 	Profile           fronteggAdminPortalVisibility `json:"profile"`
+	Provisioning      fronteggAdminPortalVisibility `json:"provisioning"`
 	Roles             fronteggAdminPortalVisibility `json:"roles"`
 	Security          fronteggAdminPortalVisibility `json:"security"`
 	SSO               fronteggAdminPortalVisibility `json:"sso"`
@@ -884,6 +885,11 @@ per Frontegg provider.`,
 							Type:        schema.TypeBool,
 							Required:    true,
 						},
+						"enable_provisioning": {
+							Description: "Enable access to provisioning settings in the admin portal.",
+							Type:        schema.TypeBool,
+							Required:    true,
+						},
 						"enable_roles": {
 							Description: "Enable access to roles and permissions in the admin portal.",
 							Type:        schema.TypeBool,
@@ -1317,6 +1323,7 @@ func resourceFronteggWorkspaceRead(ctx context.Context, d *schema.ResourceData, 
 			"enable_personal_api_tokens": nav.PersonalAPITokens.Visibility == "byPermissions",
 			"enable_privacy":             nav.Privacy.Visibility == "byPermissions",
 			"enable_profile":             nav.Profile.Visibility == "byPermissions",
+			"enable_provisioning":        nav.Profile.Visibility == "byPermissions",
 			"enable_roles":               nav.Roles.Visibility == "byPermissions",
 			"enable_security":            nav.Security.Visibility == "byPermissions",
 			"enable_sso":                 nav.SSO.Visibility == "byPermissions",
@@ -1734,6 +1741,7 @@ func resourceFronteggWorkspaceUpdate(ctx context.Context, d *schema.ResourceData
 		configuration.Navigation.PersonalAPITokens = serializeVisibility("admin_portal.0.enable_personal_api_tokens")
 		configuration.Navigation.Privacy = serializeVisibility("admin_portal.0.enable_privacy")
 		configuration.Navigation.Profile = serializeVisibility("admin_portal.0.enable_profile")
+		configuration.Navigation.Provisioning = serializeVisibility("admin_portal.0.enable_provisioning")
 		configuration.Navigation.Roles = serializeVisibility("admin_portal.0.enable_roles")
 		configuration.Navigation.Security = serializeVisibility("admin_portal.0.enable_security")
 		configuration.Navigation.SSO = serializeVisibility("admin_portal.0.enable_sso")

@@ -114,6 +114,7 @@ resource "frontegg_workspace" "example" {
     enable_personal_api_tokens = false
     enable_privacy             = false
     enable_profile             = false
+    enable_provisioning        = false
     enable_roles               = false
     enable_security            = false
     enable_sso                 = false
