@@ -30,6 +30,8 @@ const fronteggOAuthURL = "/oauth/resources/configurations/v1"
 const fronteggOAuthRedirectURIsURL = "/oauth/resources/configurations/v1/redirect-uri"
 const fronteggSSOURL = "/identity/resources/sso/v2"
 const fronteggSSOSAMLURL = "/metadata?entityName=saml"
+const fronteggSSOMultiTenantURL = "/team/resources/sso/v1/configurations/multiple-sso-per-domain"
+const fronteggSSODomainURL = "/team/resources/sso/v1/configurations/domains"
 const fronteggOIDCURL = "/team/resources/sso/v1/oidc/configurations"
 const fronteggEmailTemplatesURL = "/identity/resources/mail/v1/configs/templates"
 const fronteggAdminPortalURL = "/metadata?entityName=adminBox"
@@ -138,6 +140,18 @@ type fronteggSSOSAMLConfiguration struct {
 	ACSUrl      string `json:"acsUrl"`
 	SPEntityID  string `json:"spEntityId"`
 	RedirectUrl string `json:"redirectUri"`
+}
+
+type fronteggSSOMultiTenant struct {
+	Active                    bool   `json:"active"`
+	UnspecifiedTenantStrategy string `json:"unspecifiedTenantStrategy,omitempty"`
+	UseActiveTenant           bool   `json:"useActiveTenant"`
+}
+
+type fronteggSSODomain struct {
+	AllowVerifiedUsersToAddDomains bool `json:"allowVerifiedUsersToAddDomains"`
+	SkipDomainVerification         bool `json:"skipDomainVerification"`
+	BypassDomainCrossValidation    bool `json:"bypassDomainCrossValidation"`
 }
 
 type fronteggOIDC struct {
@@ -777,6 +791,52 @@ per Frontegg provider.`,
 					},
 				},
 			},
+			"sso_multi_tenant_policy": {
+				Description: "Configures how multiple tenants can claim the same SSO domain.",
+				Type:        schema.TypeList,
+				Optional:    true,
+				MaxItems:    1,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"unspecified_tenant_strategy": {
+							Description: "Strategy for logging in nonexisting users that match SSO configurations for multiple tenants when no tenant has been specified. Either BLOCK or FIRST_CREATED.",
+							Type:        schema.TypeString,
+							Optional:    true,
+							Default:     "BLOCK",
+						},
+						"use_active_tenant": {
+							Description: "Whether users with existing accounts that match SSO configurations for multiple tenants should be logged in using the SSO for their active (last logged into) account, or whether the unspecified tenant strategy should apply.",
+							Type:        schema.TypeBool,
+							Optional:    true,
+						},
+					},
+				},
+			},
+			"sso_domain_policy": {
+				Description: "Configures how SSO domains are validated.",
+				Type:        schema.TypeList,
+				Optional:    true,
+				MaxItems:    1,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"allow_verified_users_to_add_domains": {
+							Description: "Whether to allow users to add their own email domain without validating the domain through DNS.",
+							Type:        schema.TypeBool,
+							Optional:    true,
+						},
+						"skip_domain_verification": {
+							Description: "Whether to automatically mark new SSO domains as validated, without validating the domain through DNS.",
+							Type:        schema.TypeBool,
+							Optional:    true,
+						},
+						"bypass_domain_cross_validation": {
+							Description: "Whether to allow users to sign in even via SSO even if the associated domain has not been validated through DNS.",
+							Type:        schema.TypeBool,
+							Optional:    true,
+						},
+					},
+				},
+			},
 			"reset_password_email": {
 				Description: "Configures the password reset email.",
 				Type:        schema.TypeList,
@@ -1161,6 +1221,38 @@ func resourceFronteggWorkspaceRead(ctx context.Context, d *schema.ResourceData, 
 			})
 		}
 		if err := d.Set("saml", items); err != nil {
+			return diag.FromErr(err)
+		}
+	}
+	{
+		var out fronteggSSOMultiTenant
+		clientHolder.ApiClient.Ignore404()
+		if err := clientHolder.ApiClient.Get(ctx, fronteggSSOMultiTenantURL, &out); err != nil {
+			return diag.FromErr(err)
+		}
+		items := []interface{}{}
+		if out.Active {
+			items = append(items, map[string]interface{}{
+				"unspecified_tenant_strategy": out.UnspecifiedTenantStrategy,
+				"use_active_tenant":           out.UseActiveTenant,
+			})
+		}
+		if err := d.Set("sso_multi_tenant_policy", items); err != nil {
+			return diag.FromErr(err)
+		}
+	}
+	{
+		var out fronteggSSODomain
+		clientHolder.ApiClient.Ignore404()
+		if err := clientHolder.ApiClient.Get(ctx, fronteggSSODomainURL, &out); err != nil {
+			return diag.FromErr(err)
+		}
+		domain_policy := map[string]interface{}{
+			"allow_verified_users_to_add_domains": out.AllowVerifiedUsersToAddDomains,
+			"skip_domain_verification":            out.SkipDomainVerification,
+			"bypass_domain_cross_validation":      out.BypassDomainCrossValidation,
+		}
+		if err := d.Set("sso_domain_policy", []interface{}{domain_policy}); err != nil {
 			return diag.FromErr(err)
 		}
 	}
@@ -1584,6 +1676,30 @@ func resourceFronteggWorkspaceUpdate(ctx context.Context, d *schema.ResourceData
 			in.IsActive = true
 		}
 		if err := clientHolder.ApiClient.Post(ctx, fronteggSSOSAMLURL, in, nil); err != nil {
+			return diag.FromErr(err)
+		}
+	}
+	{
+		sso_multi_tenant := d.Get("sso_multi_tenant_policy").([]interface{})
+		in := fronteggSSOMultiTenant{}
+		if len(sso_multi_tenant) > 0 {
+			in.Active = true
+			in.UnspecifiedTenantStrategy = d.Get("sso_multi_tenant_policy.0.unspecified_tenant_strategy").(string)
+			in.UseActiveTenant = d.Get("sso_multi_tenant_policy.0.use_active_tenant").(bool)
+		}
+		if err := clientHolder.ApiClient.Put(ctx, fronteggSSOMultiTenantURL, in, nil); err != nil {
+			return diag.FromErr(err)
+		}
+	}
+	{
+		sso_domain := d.Get("sso_domain_policy").([]interface{})
+		in := fronteggSSODomain{}
+		if len(sso_domain) > 0 {
+			in.AllowVerifiedUsersToAddDomains = d.Get("sso_domain_policy.0.allow_verified_users_to_add_domains").(bool)
+			in.SkipDomainVerification = d.Get("sso_domain_policy.0.skip_domain_verification").(bool)
+			in.BypassDomainCrossValidation = d.Get("sso_domain_policy.0.bypass_domain_cross_validation").(bool)
+		}
+		if err := clientHolder.ApiClient.Put(ctx, fronteggSSODomainURL, in, nil); err != nil {
 			return diag.FromErr(err)
 		}
 	}

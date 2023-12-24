@@ -233,6 +233,8 @@ resource "frontegg_workspace" "example" {
 - `reset_password_email` (Block List, Max: 1) Configures the password reset email. (see [below for nested schema](#nestedblock--reset_password_email))
 - `reset_phone_number_email` (Block List, Max: 1) Configures the reset phone number email. (see [below for nested schema](#nestedblock--reset_phone_number_email))
 - `saml` (Block List, Max: 1) Configures SSO via SAML. (see [below for nested schema](#nestedblock--saml))
+- `sso_domain_policy` (Block List, Max: 1) Configures how SSO domains are validated. (see [below for nested schema](#nestedblock--sso_domain_policy))
+- `sso_multi_tenant_policy` (Block List, Max: 1) Configures how multiple tenants can claim the same SSO domain. (see [below for nested schema](#nestedblock--sso_multi_tenant_policy))
 - `user_activation_email` (Block List, Max: 1) Configures the user activation email. (see [below for nested schema](#nestedblock--user_activation_email))
 - `user_invitation_email` (Block List, Max: 1) Configures the user invitation email. (see [below for nested schema](#nestedblock--user_invitation_email))
 - `user_used_invitation_email` (Block List, Max: 1) Configures the user used invitation email. (see [below for nested schema](#nestedblock--user_used_invitation_email))
@@ -643,6 +645,25 @@ Required:
 Optional:
 
 - `redirect_url` (String) The URL to redirect to after the SAML exchange.
+
+
+<a id="nestedblock--sso_domain_policy"></a>
+### Nested Schema for `sso_domain_policy`
+
+Optional:
+
+- `allow_verified_users_to_add_domains` (Boolean) Whether to allow users to add their own email domain without validating the domain through DNS.
+- `bypass_domain_cross_validation` (Boolean) Whether to allow users to sign in even via SSO even if the associated domain has not been validated through DNS.
+- `skip_domain_verification` (Boolean) Whether to automatically mark new SSO domains as validated, without validating the domain through DNS.
+
+
+<a id="nestedblock--sso_multi_tenant_policy"></a>
+### Nested Schema for `sso_multi_tenant_policy`
+
+Optional:
+
+- `unspecified_tenant_strategy` (String) Strategy for logging in new users that match SSO configurations for multiple tenants when no tenant has been specified. Either BLOCK or FIRST_CREATED.
+- `use_active_tenant` (Boolean) Whether users with existing accounts that match SSO configurations for multiple tenants should be logged in using the SSO for their active (last logged into) account, or whether the unspecified tenant strategy should apply.
 
 
 <a id="nestedblock--user_activation_email"></a>

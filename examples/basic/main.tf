@@ -99,6 +99,17 @@ resource "frontegg_workspace" "example" {
     redirect_url = "http://localhost:3000"
   }
 
+  sso_multi_tenant_policy {
+    unspecified_tenant_strategy = "BLOCK"
+    use_active_tenant           = true
+  }
+
+  sso_domain_policy {
+    allow_verified_users_to_add_domains = false
+    skip_domain_verification            = false
+    bypass_domain_cross_validation      = true
+  }
+
   reset_password_email {
     from_address  = "me@company.com"
     from_name     = "Your Company"
