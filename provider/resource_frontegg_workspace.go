@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"reflect"
@@ -49,6 +50,10 @@ type fronteggVendor struct {
 
 type fronteggCustomDomain struct {
 	CustomDomain string `json:"customDomain"`
+}
+
+type fronteggCustomDomainVerification struct {
+	Verified bool `json:"verified"`
 }
 
 type fronteggAuth struct {
@@ -1458,29 +1463,28 @@ func resourceFronteggWorkspaceUpdate(ctx context.Context, d *schema.ResourceData
 			in := fronteggCustomDomain{CustomDomain: domain.(string)}
 
 			customDomainErr := clientHolder.ApiClient.Post(ctx, fronteggCustomDomainURL, in, nil)
+			if customDomainErr != nil {
+				diag.FromErr(customDomainErr)
+			}
 
 			var err error
-			verified := false
-			if customDomainErr != nil && strings.Contains(customDomainErr.Error(), "CName not found") {
-				// Retry for up to a minute if the CName is not found, in case it
-				// was just installed and DNS is still propagating.
-				err = retry.RetryContext(ctx, time.Minute, func() *retry.RetryError {
-					if err := clientHolder.ApiClient.Post(ctx, fronteggCustomDomainVerifyURL, verified, nil); err != nil || !verified {
-						if strings.Contains(err.Error(), "CName not found") || !verified {
-							return retry.RetryableError(err)
-						} else {
-							return retry.NonRetryableError(err)
-						}
+			var out fronteggCustomDomainVerification
+			err = retry.RetryContext(ctx, time.Minute, func() *retry.RetryError {
+				if err := clientHolder.ApiClient.Post(ctx, fronteggCustomDomainVerifyURL, nil, &out); err != nil {
+					if strings.Contains(err.Error(), "CName not found") {
+						return retry.RetryableError(err)
+					} else {
+						return retry.NonRetryableError(err)
 					}
+				}
+				if !out.Verified {
+					return retry.RetryableError(errors.New("domain not yet verified"))
+				} else {
 					return nil
-				})
-			}
+				}
+			})
 
-			if verified {
-				err = clientHolder.ApiClient.Post(ctx, fronteggCustomDomainURL, in, nil)
-			}
-
-			if !verified || err != nil {
+			if err != nil {
 				return diag.FromErr(err)
 			}
 		}
