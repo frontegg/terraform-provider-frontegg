@@ -40,6 +40,7 @@ resource "frontegg_role" "example" {
 
 ### Optional
 
+- `first_user` (Boolean) Whether the role should be applied to the first user in the tenant (new tenants only).
 - `tenant_id` (String) The ID of the tenant that owns the role.
 
 ### Read-Only
