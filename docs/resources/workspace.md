@@ -251,6 +251,7 @@ Required:
 - `enable_account_settings` (Boolean) Enable access to account settings in the admin portal.
 - `enable_api_tokens` (Boolean) Enable access to API tokens in the admin portal.
 - `enable_audit_logs` (Boolean) Enable access to audit logs in the admin portal.
+- `enable_groups` (Boolean) Enable access to groups in the admin portal.
 - `enable_personal_api_tokens` (Boolean) Enable access to personal API tokens in the admin portal.
 - `enable_privacy` (Boolean) Enable access to privacy settings in the admin portal.
 - `enable_profile` (Boolean) Enable access to profile settings in the admin portal.

@@ -122,6 +122,7 @@ resource "frontegg_workspace" "example" {
     enable_account_settings    = false
     enable_api_tokens          = false
     enable_audit_logs          = false
+    enable_groups              = false
     enable_personal_api_tokens = false
     enable_privacy             = false
     enable_profile             = false

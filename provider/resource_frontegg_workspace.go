@@ -190,6 +190,7 @@ type fronteggAdminPortalNavigation struct {
 	Account           fronteggAdminPortalVisibility `json:"account"`
 	APITokens         fronteggAdminPortalVisibility `json:"apiTokens"`
 	Audits            fronteggAdminPortalVisibility `json:"audits"`
+	Groups            fronteggAdminPortalVisibility `json:"groups"`
 	PersonalAPITokens fronteggAdminPortalVisibility `json:"personalApiTokens"`
 	Privacy           fronteggAdminPortalVisibility `json:"privacy"`
 	Profile           fronteggAdminPortalVisibility `json:"profile"`
@@ -935,6 +936,11 @@ per Frontegg provider.`,
 							Type:        schema.TypeBool,
 							Required:    true,
 						},
+						"enable_groups": {
+							Description: "Enable access to groups in the admin portal.",
+							Type:        schema.TypeBool,
+							Required:    true,
+						},
 						"enable_personal_api_tokens": {
 							Description: "Enable access to personal API tokens in the admin portal.",
 							Type:        schema.TypeBool,
@@ -1417,6 +1423,7 @@ func resourceFronteggWorkspaceRead(ctx context.Context, d *schema.ResourceData, 
 			"enable_account_settings":    nav.Account.Visibility == "byPermissions",
 			"enable_api_tokens":          nav.APITokens.Visibility == "byPermissions",
 			"enable_audit_logs":          nav.Audits.Visibility == "byPermissions",
+			"enable_groups":              nav.Groups.Visibility == "byPermissions",
 			"enable_personal_api_tokens": nav.PersonalAPITokens.Visibility == "byPermissions",
 			"enable_privacy":             nav.Privacy.Visibility == "byPermissions",
 			"enable_profile":             nav.Profile.Visibility == "byPermissions",
@@ -1858,6 +1865,7 @@ func resourceFronteggWorkspaceUpdate(ctx context.Context, d *schema.ResourceData
 		configuration.Navigation.Account = serializeVisibility("admin_portal.0.enable_account_settings")
 		configuration.Navigation.APITokens = serializeVisibility("admin_portal.0.enable_api_tokens")
 		configuration.Navigation.Audits = serializeVisibility("admin_portal.0.enable_audit_logs")
+		configuration.Navigation.Groups = serializeVisibility("admin_portal.0.enable_groups")
 		configuration.Navigation.PersonalAPITokens = serializeVisibility("admin_portal.0.enable_personal_api_tokens")
 		configuration.Navigation.Privacy = serializeVisibility("admin_portal.0.enable_privacy")
 		configuration.Navigation.Profile = serializeVisibility("admin_portal.0.enable_profile")
