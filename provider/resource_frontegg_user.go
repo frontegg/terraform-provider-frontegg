@@ -3,7 +3,7 @@ package provider
 import (
 	"context"
 	"fmt"
-	"log"
+	"log/slog"
 	"net/http"
 
 	"github.com/frontegg/terraform-provider-frontegg/internal/restclient"
@@ -92,7 +92,7 @@ func resourceFronteggUser() *schema.Resource {
 }
 
 func resourceFronteggUserSerialize(d *schema.ResourceData) fronteggUser {
-	log.Printf("role IDs: %#v", d.Get("role_ids").(*schema.Set).List())
+	slog.Debug("role IDs: %#v", d.Get("role_ids").(*schema.Set).List())
 	return fronteggUser{
 		Email:           d.Get("email").(string),
 		Password:        d.Get("password").(string),

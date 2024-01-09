@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"reflect"
 	"regexp"
 	"strings"
@@ -1462,6 +1462,7 @@ func resourceFronteggWorkspaceUpdate(ctx context.Context, d *schema.ResourceData
 		}
 	}
 	if d.HasChange("custom_domain") {
+		tflog.Debug(ctx, "found custom_domain changes, recreating custom_domain")
 		clientHolder.ApiClient.Ignore404()
 		if err := clientHolder.ApiClient.Delete(ctx, fronteggCustomDomainURL, nil); err != nil {
 			return diag.FromErr(err)
@@ -1471,6 +1472,7 @@ func resourceFronteggWorkspaceUpdate(ctx context.Context, d *schema.ResourceData
 
 			customDomainErr := clientHolder.ApiClient.Post(ctx, fronteggCustomDomainURL, in, nil)
 			if customDomainErr != nil {
+				tflog.Debug(ctx, "custom domain failed to post")
 				diag.FromErr(customDomainErr)
 			}
 
@@ -1479,12 +1481,17 @@ func resourceFronteggWorkspaceUpdate(ctx context.Context, d *schema.ResourceData
 			err = retry.RetryContext(ctx, time.Minute, func() *retry.RetryError {
 				if err := clientHolder.ApiClient.Post(ctx, fronteggCustomDomainVerifyURL, nil, &out); err != nil {
 					if strings.Contains(err.Error(), "CName not found") {
+						tflog.Debug(ctx, "custom_domain cname not found")
+						return retry.RetryableError(err)
+					} else if strings.Contains(err.Error(), "Custom domain is missing") {
+						tflog.Debug(ctx, "custom_domain not found while validating")
 						return retry.RetryableError(err)
 					} else {
 						return retry.NonRetryableError(err)
 					}
 				}
 				if !out.Verified {
+					tflog.Debug(ctx, "custom_domain is not yet verified, retrying")
 					return retry.RetryableError(errors.New("domain not yet verified"))
 				} else {
 					return nil
@@ -1492,6 +1499,7 @@ func resourceFronteggWorkspaceUpdate(ctx context.Context, d *schema.ResourceData
 			})
 
 			if err != nil {
+				tflog.Debug(ctx, "Failed custom domain registration after retries")
 				return diag.FromErr(err)
 			}
 		}
@@ -1853,7 +1861,7 @@ func resourceFronteggWorkspaceUpdate(ctx context.Context, d *schema.ResourceData
 		// this is not an error.
 		switch len(out.Rows) {
 		case 0:
-			log.Printf("[DEBUG] no admin portal found, creating one with default config.")
+			tflog.Debug(ctx, "no admin portal found, creating one with default config.")
 			configuration = &adminPortal.Configuration
 		case 1:
 			adminPortal = out.Rows[0]
@@ -1893,7 +1901,7 @@ func resourceFronteggWorkspaceUpdate(ctx context.Context, d *schema.ResourceData
 }
 
 func resourceFronteggWorkspaceDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	log.Printf("[WARN] Cannot destroy workspace. Terraform will remove this resource from the " +
+	tflog.Warn(ctx, "Cannot destroy workspace. Terraform will remove this resource from the "+
 		"state file, but the workspace will remain in its last-applied state.")
 	return nil
 }
