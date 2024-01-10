@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
@@ -1840,17 +1841,30 @@ func resourceFronteggWorkspaceUpdate(ctx context.Context, d *schema.ResourceData
 			}
 		}
 
-		var out struct {
-			Rows []fronteggAdminPortal `json:"rows"`
-		}
-		if err := clientHolder.ApiClient.Get(ctx, fronteggAdminPortalURL, &out); err != nil {
+		var metadataResponse map[string]interface{}
+		if err := clientHolder.ApiClient.Get(ctx, fronteggAdminPortalURL, &metadataResponse); err != nil {
 			return diag.FromErr(err)
 		}
+		metadataResponseConfiguration := getMetadataUnstructuredConfiguration(metadataResponse)
 
 		var configuration *fronteggAdminPortalConfiguration
 		var adminPortal fronteggAdminPortal
 		// adminBox is only defined when the default style of the web page has been modified, if not it's 0 rows and
 		// this is not an error.
+
+		jsonData, err := json.Marshal(metadataResponse)
+		if err != nil {
+			return diag.FromErr(err)
+		}
+
+		var out struct {
+			Rows []fronteggAdminPortal `json:"rows"`
+		}
+		err = json.Unmarshal(jsonData, &out)
+		if err != nil {
+			return diag.FromErr(err)
+		}
+
 		switch len(out.Rows) {
 		case 0:
 			log.Printf("[DEBUG] no admin portal found, creating one with default config.")
@@ -1885,11 +1899,42 @@ func resourceFronteggWorkspaceUpdate(ctx context.Context, d *schema.ResourceData
 			configuration.Theme.PaletteV2 = serializeNewPalette("admin_portal.0.palette")
 		}
 
-		if err := clientHolder.ApiClient.Post(ctx, fronteggAdminPortalURL, adminPortal, nil); err != nil {
+		type MergedObject struct {
+			EntityName    string                 `json:"entityName"`
+			Configuration map[string]interface{} `json:"configuration"`
+		}
+		var mergedObject MergedObject
+		mergedObject.EntityName = adminPortal.EntityName
+
+		configMap := metadataResponseConfiguration
+		configMap["navigation"] = adminPortal.Configuration.Navigation
+		configMap["theme"] = adminPortal.Configuration.Theme
+		configMap["themeV2"] = adminPortal.Configuration.ThemeV2
+
+		mergedObject.Configuration = configMap
+
+		if err := clientHolder.ApiClient.Post(ctx, fronteggAdminPortalURL, mergedObject, nil); err != nil {
 			return diag.FromErr(err)
 		}
 	}
 	return resourceFronteggWorkspaceRead(ctx, d, meta)
+}
+
+func getMetadataUnstructuredConfiguration(metadataResponse map[string]interface{}) map[string]interface{} {
+	var metadataResponseConfiguration map[string]interface{}
+
+	rows, rowsExist := metadataResponse["rows"].([]interface{})
+	if rowsExist && len(rows) > 0 {
+		firstRow, firstRowIsMap := rows[0].(map[string]interface{})
+		if firstRowIsMap {
+			configuration, configIsMap := firstRow["configuration"].(map[string]interface{})
+			if configIsMap {
+				metadataResponseConfiguration = configuration
+			}
+		}
+	}
+
+	return metadataResponseConfiguration
 }
 
 func resourceFronteggWorkspaceDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
