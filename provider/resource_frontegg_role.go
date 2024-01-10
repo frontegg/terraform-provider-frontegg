@@ -13,16 +13,17 @@ import (
 const fronteggRolePath = "/identity/resources/roles/v1"
 
 type fronteggRole struct {
-	ID          string   `json:"id,omitempty"`
-	Name        string   `json:"name,omitempty"`
-	Key         string   `json:"key,omitempty"`
-	Description string   `json:"description,omitempty"`
-	Level       int      `json:"level"`
-	IsDefault   bool     `json:"isDefault"`
-	Permissions []string `json:"permissions"`
-	TenantID    string   `json:"tenantId,omitempty"`
-	VendorID    string   `json:"vendorId,omitempty"`
-	CreatedAt   string   `json:"createdAt,omitempty"`
+	ID            string   `json:"id,omitempty"`
+	Name          string   `json:"name,omitempty"`
+	Key           string   `json:"key,omitempty"`
+	Description   string   `json:"description,omitempty"`
+	Level         int      `json:"level"`
+	IsDefault     bool     `json:"isDefault"`
+	FirstUserRole bool     `json:"firstUserRole"`
+	Permissions   []string `json:"permissions"`
+	TenantID      string   `json:"tenantId,omitempty"`
+	VendorID      string   `json:"vendorId,omitempty"`
+	CreatedAt     string   `json:"createdAt,omitempty"`
 }
 
 type fronteggRolePermissions struct {
@@ -62,6 +63,11 @@ func resourceFronteggRole() *schema.Resource {
 				Type:        schema.TypeBool,
 				Required:    true,
 			},
+			"first_user": {
+				Description: "Whether the role should be applied to the first user in the tenant (new tenants only).",
+				Type:        schema.TypeBool,
+				Optional:    true,
+			},
 			"level": {
 				Description: "The level of the role in the role hierarchy.",
 				Type:        schema.TypeInt,
@@ -94,11 +100,12 @@ func resourceFronteggRole() *schema.Resource {
 
 func resourceFronteggRoleSerialize(d *schema.ResourceData) fronteggRole {
 	return fronteggRole{
-		Name:        d.Get("name").(string),
-		IsDefault:   d.Get("default").(bool),
-		Key:         d.Get("key").(string),
-		Description: d.Get("description").(string),
-		Level:       d.Get("level").(int),
+		Name:          d.Get("name").(string),
+		IsDefault:     d.Get("default").(bool),
+		FirstUserRole: d.Get("first_user").(bool),
+		Key:           d.Get("key").(string),
+		Description:   d.Get("description").(string),
+		Level:         d.Get("level").(int),
 	}
 }
 
@@ -120,6 +127,9 @@ func resourceFronteggRoleDeserialize(d *schema.ResourceData, f fronteggRole) err
 		return err
 	}
 	if err := d.Set("default", f.IsDefault); err != nil {
+		return err
+	}
+	if err := d.Set("first_user", f.FirstUserRole); err != nil {
 		return err
 	}
 	if err := d.Set("level", f.Level); err != nil {

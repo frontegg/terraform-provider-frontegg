@@ -211,6 +211,7 @@ resource "frontegg_role" "example" {
   name        = "Example"
   key         = "example"
   default     = true
+  first_user  = true
   description = "An example of a role"
   level       = 0
   permission_ids = [
