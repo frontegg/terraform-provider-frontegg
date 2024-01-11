@@ -1906,12 +1906,9 @@ func resourceFronteggWorkspaceUpdate(ctx context.Context, d *schema.ResourceData
 		var mergedObject MergedObject
 		mergedObject.EntityName = adminPortal.EntityName
 
-		configMap := metadataResponseConfiguration
-		configMap["navigation"] = adminPortal.Configuration.Navigation
-		configMap["theme"] = adminPortal.Configuration.Theme
-		configMap["themeV2"] = adminPortal.Configuration.ThemeV2
-
-		mergedObject.Configuration = configMap
+		var adminPortalMapped = structToMap(adminPortal.Configuration)
+		merged := mergeMaps(metadataResponseConfiguration, adminPortalMapped)
+		mergedObject.Configuration = merged
 
 		if err := clientHolder.ApiClient.Post(ctx, fronteggAdminPortalURL, mergedObject, nil); err != nil {
 			return diag.FromErr(err)
@@ -1935,6 +1932,36 @@ func getMetadataUnstructuredConfiguration(metadataResponse map[string]interface{
 	}
 
 	return metadataResponseConfiguration
+}
+
+func mergeMaps(m1, m2 map[string]interface{}) map[string]interface{} {
+	merged := make(map[string]interface{})
+
+	for k, v := range m1 {
+		merged[k] = v
+	}
+
+	for k, v := range m2 {
+		merged[k] = v
+	}
+
+	return merged
+}
+
+func structToMap(input interface{}) map[string]interface{} {
+	result := make(map[string]interface{})
+
+	val := reflect.ValueOf(input)
+	typ := reflect.TypeOf(input)
+
+	for i := 0; i < val.NumField(); i++ {
+		field := val.Field(i)
+		fieldType := typ.Field(i)
+		jsonTag := fieldType.Tag.Get("json")
+		result[jsonTag] = field.Interface()
+	}
+
+	return result
 }
 
 func resourceFronteggWorkspaceDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
