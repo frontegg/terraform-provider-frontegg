@@ -206,8 +206,17 @@ func resourceFronteggWebhookUpdate(ctx context.Context, d *schema.ResourceData, 
 
 func resourceFronteggWebhookDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	clientHolder := meta.(*restclient.ClientHolder)
-	if err := clientHolder.PortalClient.Delete(ctx, fmt.Sprintf("%s/%s", fronteggWebhookPath, d.Id()), nil); err != nil {
+
+	// Configure the client to ignore 404 errors
+	clientHolder.PortalClient.Ignore404()
+
+	// Attempt to delete the webhook
+	err := clientHolder.PortalClient.Delete(ctx, fmt.Sprintf("%s/%s", fronteggWebhookPath, d.Id()), nil)
+
+	// Handle errors other than 404
+	if err != nil {
 		return diag.FromErr(err)
 	}
+
 	return nil
 }
