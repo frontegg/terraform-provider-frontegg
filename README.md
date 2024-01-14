@@ -75,3 +75,7 @@ You can either query the [Frontegg API](https://docs.frontegg.com/reference)
 yourself to find these IDs, or you can use your browser's developer tools to
 sniff the IDs out of the network requests as you browse the [Frontegg
 Portal](https://portal.frontegg.com).
+
+### Contact us
+
+Please note that this provider may not offer full support for all Frontegg capabilities. If you require assistance or support for a specific functionality, please contact us at support@frontegg.com.
