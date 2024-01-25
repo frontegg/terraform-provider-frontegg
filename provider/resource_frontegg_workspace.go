@@ -77,10 +77,6 @@ type fronteggCustomDomains struct {
 	CustomDomains []fronteggCustomDomain `json:"customDomains,omitempty"`
 }
 
-type fronteggCustomDomainVerification struct {
-	Verified bool `json:"verified"`
-}
-
 type fronteggAuth struct {
 	ID                            string `json:"id"`
 	AllowNotVerifiedUsersLogin    bool   `json:"allowNotVerifiedUsersLogin"`
