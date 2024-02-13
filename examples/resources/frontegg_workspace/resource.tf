@@ -122,6 +122,8 @@ resource "frontegg_workspace" "example" {
     enable_usage               = false
     enable_users               = false
     enable_webhooks            = false
+    enable_groups              = false
+    enable_provisioning        = false
 
     palette {
       error {
