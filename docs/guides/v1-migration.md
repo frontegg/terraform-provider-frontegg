@@ -7,7 +7,7 @@ description: |-
 
 # V1 Migration Guide
 
-This guide will help you migrate from Frontegg's V1 to V2.
+This guide will help you migrate from Frontegg's V0 to V1.
 
 ## Provider Configuration
 
