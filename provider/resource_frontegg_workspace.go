@@ -1760,28 +1760,43 @@ func resourceFronteggWorkspaceUpdate(ctx context.Context, d *schema.ResourceData
 		}
 		if d.HasChange("hosted_login.0.allowed_redirect_urls") {
 			var outRedirects fronteggOAuthRedirectURIs
+			allowedRedirectURLs := d.Get("hosted_login.0.allowed_redirect_urls")
+			allowedRedirectURLsList := stringSetToList(allowedRedirectURLs.(*schema.Set))
+
 			if err := clientHolder.ApiClient.Get(ctx, fronteggOAuthRedirectURIsURL, &outRedirects); err != nil {
 				return diag.FromErr(err)
 			}
 			for _, r := range outRedirects.RedirectURIs {
-				err := clientHolder.ApiClient.Delete(ctx, fmt.Sprintf("%s/%s", fronteggOAuthRedirectURIsURL, r.ID), nil)
-				if err != nil {
-					return diag.FromErr(err)
+				if !stringInSlice(r.RedirectURI, allowedRedirectURLsList) {
+					err := clientHolder.ApiClient.Delete(ctx, fmt.Sprintf("%s/%s", fronteggOAuthRedirectURIsURL, r.ID), nil)
+					if err != nil {
+						return diag.FromErr(err)
+					}
 				}
 			}
-			allowedRedirectURLs := d.Get("hosted_login.0.allowed_redirect_urls")
 			if allowedRedirectURLs != nil {
-				for _, url := range allowedRedirectURLs.(*schema.Set).List() {
-					in := fronteggOAuthRedirectURI{
-						RedirectURI: url.(string),
+				for _, url := range allowedRedirectURLsList {
+
+					exists := false
+					for _, item := range outRedirects.RedirectURIs {
+						if item.RedirectURI == url {
+							exists = true
+						}
 					}
-					if err := clientHolder.ApiClient.Post(ctx, fronteggOAuthRedirectURIsURL, in, nil); err != nil {
-						return diag.FromErr(err)
+
+					if !exists {
+						in := fronteggOAuthRedirectURI{
+							RedirectURI: url,
+						}
+						if err := clientHolder.ApiClient.Post(ctx, fronteggOAuthRedirectURIsURL, in, nil); err != nil {
+							return diag.FromErr(err)
+						}
 					}
 				}
 			}
 		}
 	}
+
 	for _, typ := range []string{"facebook", "github", "google", "microsoft"} {
 		name := fmt.Sprintf("%s_social_login", typ)
 		if len(d.Get(name).([]interface{})) == 0 {
