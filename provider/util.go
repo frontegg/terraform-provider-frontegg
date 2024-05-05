@@ -1,13 +1,20 @@
 package provider
 
 import (
+	"strings"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
 func stringSetToList(set *schema.Set) []string {
+	return stringSetToListWithRightTrim(set, "")
+}
+
+func stringSetToListWithRightTrim(set *schema.Set, trimRight string) []string {
 	out := make([]string, 0, set.Len())
 	for _, v := range set.List() {
-		out = append(out, v.(string))
+		trimmed := strings.TrimRight(v.(string), trimRight)
+		out = append(out, trimmed)
 	}
 	return out
 }
