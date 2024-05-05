@@ -1761,13 +1761,13 @@ func resourceFronteggWorkspaceUpdate(ctx context.Context, d *schema.ResourceData
 		if d.HasChange("hosted_login.0.allowed_redirect_urls") {
 			var outRedirects fronteggOAuthRedirectURIs
 			allowedRedirectURLs := d.Get("hosted_login.0.allowed_redirect_urls")
-			allowedRedirectURLsList := stringSetToList(allowedRedirectURLs.(*schema.Set))
+			allowedRedirectURLsList := stringSetToListWithRightTrim(allowedRedirectURLs.(*schema.Set), "/")
 
 			if err := clientHolder.ApiClient.Get(ctx, fronteggOAuthRedirectURIsURL, &outRedirects); err != nil {
 				return diag.FromErr(err)
 			}
 			for _, r := range outRedirects.RedirectURIs {
-				if !stringInSlice(r.RedirectURI, allowedRedirectURLsList) {
+				if !stringInSlice(strings.TrimRight(r.RedirectURI, "/"), allowedRedirectURLsList) {
 					err := clientHolder.ApiClient.Delete(ctx, fmt.Sprintf("%s/%s", fronteggOAuthRedirectURIsURL, r.ID), nil)
 					if err != nil {
 						return diag.FromErr(err)
@@ -1776,10 +1776,9 @@ func resourceFronteggWorkspaceUpdate(ctx context.Context, d *schema.ResourceData
 			}
 			if allowedRedirectURLs != nil {
 				for _, url := range allowedRedirectURLsList {
-
 					exists := false
 					for _, item := range outRedirects.RedirectURIs {
-						if item.RedirectURI == url {
+						if strings.TrimRight(item.RedirectURI, "/") == strings.TrimRight(url, "/") {
 							exists = true
 						}
 					}
