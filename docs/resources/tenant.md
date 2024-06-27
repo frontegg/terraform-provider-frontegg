@@ -28,5 +28,3 @@ Configures a Frontegg tenant.
 ### Read-Only
 
 - `id` (String) The ID of this resource.
-
-

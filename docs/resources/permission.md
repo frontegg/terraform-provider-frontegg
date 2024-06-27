@@ -32,5 +32,3 @@ data "frontegg_permission" "read_users" {
 
 - `created_at` (String) The timestamp at which the permission was created.
 - `id` (String) The ID of this resource.
-
-

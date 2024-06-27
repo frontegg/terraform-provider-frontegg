@@ -31,5 +31,3 @@ resource "frontegg_permission_category" "example" {
 
 - `created_at` (String) The timestamp at which the permission category was created.
 - `id` (String) The ID of this resource.
-
-

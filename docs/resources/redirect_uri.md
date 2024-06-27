@@ -23,5 +23,3 @@ Configures a Frontegg Redirect URI.
 
 - `id` (String) The ID of this resource.
 - `key` (String) The redirect URI key.
-
-
