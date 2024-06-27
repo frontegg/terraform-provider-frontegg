@@ -107,7 +107,11 @@ func resourceFronteggEmailProviderSerialize(d *schema.ResourceData) fronteggEmai
 }
 
 func resourceFronteggEmailProviderDeserialize(d *schema.ResourceData, f *fronteggEmailProviderResponse) error {
-	d.Set("provider_name", d.Id())
+
+	if err := d.Set("provider_name", d.Id()); err != nil {
+		return err
+	}
+
 	fields := map[string]string{
 		"secret":     f.Secret,
 		"updated_at": f.UpdatedAt,
