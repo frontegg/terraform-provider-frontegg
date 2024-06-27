@@ -46,5 +46,3 @@ resource "frontegg_webhook" "example" {
 - `id` (String) The ID of this resource.
 - `type` (String) The type of the webhook.
 - `vendor_id` (String) The ID of the vendor that owns the webhook.
-
-

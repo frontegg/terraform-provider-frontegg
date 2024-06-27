@@ -2016,7 +2016,7 @@ func resourceFronteggWorkspaceUpdate(ctx context.Context, d *schema.ResourceData
 			adminPortal = out.Rows[0]
 			configuration = &adminPortal.Configuration
 		default:
-			return diag.FromErr(fmt.Errorf("Too many admin portals!"))
+			return diag.FromErr(fmt.Errorf("too many admin portals"))
 		}
 
 		configuration.Navigation.Account = serializeVisibility("admin_portal.0.enable_account_settings")
