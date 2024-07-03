@@ -36,5 +36,3 @@ output "permission_id" {
 - `description` (String) A human-readable description of the permission.
 - `id` (String) The ID of this resource.
 - `name` (String) A human-readable name for the permission.
-
-

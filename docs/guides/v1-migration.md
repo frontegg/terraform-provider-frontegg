@@ -1,3 +1,4 @@
+
 ---
 page_title: "frontegg_migration-v0 Migration - V0 to V1 migration"
 subcategory: ""
@@ -10,12 +11,10 @@ description: |-
 This guide will help you migrate from Frontegg's V0 to V1.
 
 > **This migration guide applies exclusively to users who have configured a custom domain with the provider.**
-
 ## Provider Configuration
 
 > [!IMPORTANT]
 > If you update your provider without proceeding with following guide, you'll get an error when running `terraform apply`.
-
 ### Custom Domains
 
 We've made a significant update to the provider configuration, introducing the `custom_domains` field to replace the previous `custom_domain` field. The `custom_domains` field now accepts a list of strings, allowing you to configure multiple custom domains for the Frontegg application.

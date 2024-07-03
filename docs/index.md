@@ -31,9 +31,8 @@ provided the configuration will be cross-environments.
 
 ```terraform
 provider "frontegg" {
-  client_id  = "[your-personal-token-client-id]"
-  secret_key = "[your-personal-token-api-key]"
-
+  client_id      = "[your-personal-token-client-id]"
+  secret_key     = "[your-personal-token-api-key]"
   environment_id = "[your-environment-id]"
 
   api_base_url    = "https://api.frontegg.com"

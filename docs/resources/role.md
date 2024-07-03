@@ -48,5 +48,3 @@ resource "frontegg_role" "example" {
 - `created_at` (String) The timestamp at which the role was created.
 - `id` (String) The ID of this resource.
 - `vendor_id` (String) The ID of the vendor that owns the role.
-
-
