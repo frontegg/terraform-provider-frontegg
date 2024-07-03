@@ -73,7 +73,7 @@ func resourceFronteggEmailProvider() *schema.Resource {
 				Required:    true,
 			},
 			"provider_name": {
-				Description:  "Name of the email provider.",
+				Description:  "Name of the email provider (If the provider is changed, the old provider's configuration will be deleted).",
 				Type:         schema.TypeString,
 				Required:     true,
 				ValidateFunc: validators.ValidateProvider,

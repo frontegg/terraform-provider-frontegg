@@ -25,7 +25,7 @@ func ValidateProvider(val interface{}, key string) (warns []string, errs []error
 	if !contain {
 		errs = append(errs, fmt.Errorf("%q must be either %v ,got: %s", key, strings.Join(ps, ", "), v))
 	}
-	return
+	return warns, errs
 }
 
 func ValidateRequiredFields(ctx context.Context, rd *schema.ResourceDiff, i interface{}) error {
