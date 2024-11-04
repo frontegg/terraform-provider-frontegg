@@ -202,9 +202,9 @@ type fronteggAdminPortal struct {
 }
 
 type fronteggAdminPortalConfiguration struct {
-	Navigation fronteggAdminPortalNavigation `json:"navigation"`
-	Theme      fronteggAdminPortalTheme      `json:"theme"`
-	ThemeV2    interface{}                   `json:"themeV2"`
+	Navigation fronteggAdminPortalNavigation  `json:"navigation"`
+	Theme      fronteggAdminPortalAdminPortal `json:"theme"`
+	ThemeV2    fronteggAdminPortalThemeV2     `json:"themeV2"`
 }
 
 type fronteggAdminPortalNavigation struct {
@@ -229,9 +229,15 @@ type fronteggAdminPortalVisibility struct {
 	Visibility string `json:"visibility"`
 }
 
-type fronteggAdminPortalTheme struct {
-	PaletteV2 fronteggAdminPortalPaletteV2 `json:"palette"`
-	PaletteV1 fronteggAdminPortalPaletteV1 `json:"Palette"`
+type fronteggAdminPortalThemeV2 struct {
+	LoginBox fronteggAdminPortalLoginBox `json:"loginBox"`
+}
+
+type fronteggAdminPortalAdminPortal struct {
+	Palette fronteggAdminPortalPaletteV1 `json:"palette"`
+}
+type fronteggAdminPortalLoginBox struct {
+	Palette fronteggAdminPortalPaletteV2 `json:"palette"`
 }
 
 type fronteggAdminPortalPaletteV1 struct {
@@ -1482,8 +1488,8 @@ func resourceFronteggWorkspaceRead(ctx context.Context, d *schema.ResourceData, 
 			return diag.FromErr(err)
 		}
 		nav := out.Rows[0].Configuration.Navigation
-		paletteV2 := out.Rows[0].Configuration.Theme.PaletteV2
-		paletteV1 := out.Rows[0].Configuration.Theme.PaletteV1
+		paletteV1 := out.Rows[0].Configuration.Theme.Palette
+		paletteV2 := out.Rows[0].Configuration.ThemeV2.LoginBox.Palette
 
 		var paletteItems []interface{}
 		if paletteV1.Error == "" && paletteV1.Success == "" {
@@ -2051,9 +2057,9 @@ func resourceFronteggWorkspaceUpdate(ctx context.Context, d *schema.ResourceData
 
 		paletteSuccess := d.Get("admin_portal.0.palette.0.success")
 		if reflect.TypeOf(paletteSuccess).Kind() == reflect.String {
-			configuration.Theme.PaletteV1 = serializeOldPalette("admin_portal.0.palette")
+			configuration.Theme.Palette = serializeOldPalette("admin_portal.0.palette")
 		} else {
-			configuration.Theme.PaletteV2 = serializeNewPalette("admin_portal.0.palette")
+			configuration.ThemeV2.LoginBox.Palette = serializeNewPalette("admin_portal.0.palette")
 		}
 
 		type MergedObject struct {
