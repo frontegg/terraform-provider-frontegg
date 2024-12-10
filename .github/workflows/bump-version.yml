@@ -5,7 +5,7 @@ on:
     branches:
       - master
   pull_request:
-    
+
 permissions:
   contents: write
 
@@ -15,6 +15,10 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.ref }}
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
 
       - name: Extract and Increment Version
         id: increment_version
@@ -45,4 +49,4 @@ jobs:
       - name: Commit updated GNUmakefile
         run: |
             git commit -am "Update GNUmakefile version to ${{ env.NEW_VERSION }}"
-            git push
+            git push origin ${{ github.event.pull_request.head.ref }}
