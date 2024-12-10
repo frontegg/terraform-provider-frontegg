@@ -1,0 +1,46 @@
+name: Bump Version
+
+on:
+  push:
+    branches:
+      - master
+permissions:
+  contents: write
+
+jobs:
+  update_version:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Extract and Increment Version
+        id: increment_version
+        run: |
+            TAG=${GITHUB_REF##*/}
+            # Strip the "v" prefix if it exists and split the version into components
+            VERSION=${TAG#v}
+            IFS='.' read -r MAJOR MINOR PATCH <<< "$VERSION"
+
+            # Increment the patch version by 2
+            PATCH=$((PATCH + 2))
+
+            # Create the new version
+            NEW_VERSION="$MAJOR.$MINOR.$PATCH"
+
+            # Export the new version to the environment
+            echo "NEW_VERSION=${NEW_VERSION}" >> $GITHUB_ENV
+
+      - name: Update version in GNUmakefile
+        run: |
+            sed -i "s|\(/registry.terraform.io/frontegg/frontegg/\)[^/]*|\1${{ env.NEW_VERSION }}|" GNUmakefile
+
+      - name: Configure Git
+        run: |
+            git config user.name "GitHub Actions"
+            git config user.email "actions@github.com"
+
+      - name: Commit updated GNUmakefile
+        run: |
+            git commit -am "Update GNUmakefile version to ${{ env.NEW_VERSION }}"
+            git push
