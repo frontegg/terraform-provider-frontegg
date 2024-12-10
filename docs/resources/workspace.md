@@ -278,7 +278,9 @@ Required:
 
 Optional:
 
-- `palette` (Block List, Max: 1) Configures the color palette for the admin portal. (see [below for nested schema](#nestedblock--admin_portal--palette))
+- `palette` (Block List, Max: 1, Deprecated) Configures the color palette for the admin portal. (see [below for nested schema](#nestedblock--admin_portal--palette))
+- `palette_admin_portal` (Block List, Max: 1) Configures the color palette for the admin portal. (see [below for nested schema](#nestedblock--admin_portal--palette_admin_portal))
+- `palette_login_box` (Block List, Max: 1) Configures the color palette for the admin portal. (see [below for nested schema](#nestedblock--admin_portal--palette_login_box))
 
 <a id="nestedblock--admin_portal--palette"></a>
 ### Nested Schema for `admin_portal.palette`
@@ -353,6 +355,172 @@ Required:
 
 <a id="nestedblock--admin_portal--palette--warning"></a>
 ### Nested Schema for `admin_portal.palette.warning`
+
+Required:
+
+- `contrast_text` (String) contrast_text color.
+- `dark` (String) dark color.
+- `light` (String) light color.
+- `main` (String) main color.
+
+
+
+<a id="nestedblock--admin_portal--palette_admin_portal"></a>
+### Nested Schema for `admin_portal.palette_admin_portal`
+
+Optional:
+
+- `error` (Block List) Error color. (see [below for nested schema](#nestedblock--admin_portal--palette_admin_portal--error))
+- `info` (Block List) Info color. (see [below for nested schema](#nestedblock--admin_portal--palette_admin_portal--info))
+- `primary` (Block List) Primary color. (see [below for nested schema](#nestedblock--admin_portal--palette_admin_portal--primary))
+- `secondary` (Block List) Secondary color. (see [below for nested schema](#nestedblock--admin_portal--palette_admin_portal--secondary))
+- `success` (Block List) Success color. (see [below for nested schema](#nestedblock--admin_portal--palette_admin_portal--success))
+- `warning` (Block List) Warning color. (see [below for nested schema](#nestedblock--admin_portal--palette_admin_portal--warning))
+
+<a id="nestedblock--admin_portal--palette_admin_portal--error"></a>
+### Nested Schema for `admin_portal.palette_admin_portal.error`
+
+Required:
+
+- `contrast_text` (String) contrast_text color.
+- `dark` (String) dark color.
+- `light` (String) light color.
+- `main` (String) main color.
+
+
+<a id="nestedblock--admin_portal--palette_admin_portal--info"></a>
+### Nested Schema for `admin_portal.palette_admin_portal.info`
+
+Required:
+
+- `contrast_text` (String) contrast_text color.
+- `dark` (String) dark color.
+- `light` (String) light color.
+- `main` (String) main color.
+
+
+<a id="nestedblock--admin_portal--palette_admin_portal--primary"></a>
+### Nested Schema for `admin_portal.palette_admin_portal.primary`
+
+Required:
+
+- `active` (String) active color.
+- `contrast_text` (String) contrast_text color.
+- `dark` (String) dark color.
+- `hover` (String) hover color.
+- `light` (String) light color.
+- `main` (String) main color.
+
+
+<a id="nestedblock--admin_portal--palette_admin_portal--secondary"></a>
+### Nested Schema for `admin_portal.palette_admin_portal.secondary`
+
+Required:
+
+- `active` (String) active color.
+- `contrast_text` (String) contrast_text color.
+- `dark` (String) dark color.
+- `hover` (String) hover color.
+- `light` (String) light color.
+- `main` (String) main color.
+
+
+<a id="nestedblock--admin_portal--palette_admin_portal--success"></a>
+### Nested Schema for `admin_portal.palette_admin_portal.success`
+
+Required:
+
+- `contrast_text` (String) contrast_text color.
+- `dark` (String) dark color.
+- `light` (String) light color.
+- `main` (String) main color.
+
+
+<a id="nestedblock--admin_portal--palette_admin_portal--warning"></a>
+### Nested Schema for `admin_portal.palette_admin_portal.warning`
+
+Required:
+
+- `contrast_text` (String) contrast_text color.
+- `dark` (String) dark color.
+- `light` (String) light color.
+- `main` (String) main color.
+
+
+
+<a id="nestedblock--admin_portal--palette_login_box"></a>
+### Nested Schema for `admin_portal.palette_login_box`
+
+Optional:
+
+- `error` (Block List) Error color. (see [below for nested schema](#nestedblock--admin_portal--palette_login_box--error))
+- `info` (Block List) Info color. (see [below for nested schema](#nestedblock--admin_portal--palette_login_box--info))
+- `primary` (Block List) Primary color. (see [below for nested schema](#nestedblock--admin_portal--palette_login_box--primary))
+- `secondary` (Block List) Secondary color. (see [below for nested schema](#nestedblock--admin_portal--palette_login_box--secondary))
+- `success` (Block List) Success color. (see [below for nested schema](#nestedblock--admin_portal--palette_login_box--success))
+- `warning` (Block List) Warning color. (see [below for nested schema](#nestedblock--admin_portal--palette_login_box--warning))
+
+<a id="nestedblock--admin_portal--palette_login_box--error"></a>
+### Nested Schema for `admin_portal.palette_login_box.error`
+
+Required:
+
+- `contrast_text` (String) contrast_text color.
+- `dark` (String) dark color.
+- `light` (String) light color.
+- `main` (String) main color.
+
+
+<a id="nestedblock--admin_portal--palette_login_box--info"></a>
+### Nested Schema for `admin_portal.palette_login_box.info`
+
+Required:
+
+- `contrast_text` (String) contrast_text color.
+- `dark` (String) dark color.
+- `light` (String) light color.
+- `main` (String) main color.
+
+
+<a id="nestedblock--admin_portal--palette_login_box--primary"></a>
+### Nested Schema for `admin_portal.palette_login_box.primary`
+
+Required:
+
+- `active` (String) active color.
+- `contrast_text` (String) contrast_text color.
+- `dark` (String) dark color.
+- `hover` (String) hover color.
+- `light` (String) light color.
+- `main` (String) main color.
+
+
+<a id="nestedblock--admin_portal--palette_login_box--secondary"></a>
+### Nested Schema for `admin_portal.palette_login_box.secondary`
+
+Required:
+
+- `active` (String) active color.
+- `contrast_text` (String) contrast_text color.
+- `dark` (String) dark color.
+- `hover` (String) hover color.
+- `light` (String) light color.
+- `main` (String) main color.
+
+
+<a id="nestedblock--admin_portal--palette_login_box--success"></a>
+### Nested Schema for `admin_portal.palette_login_box.success`
+
+Required:
+
+- `contrast_text` (String) contrast_text color.
+- `dark` (String) dark color.
+- `light` (String) light color.
+- `main` (String) main color.
+
+
+<a id="nestedblock--admin_portal--palette_login_box--warning"></a>
+### Nested Schema for `admin_portal.palette_login_box.warning`
 
 Required:
 
