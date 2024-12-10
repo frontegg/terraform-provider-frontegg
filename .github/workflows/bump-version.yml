@@ -32,6 +32,9 @@ jobs:
   
             # Update the GNUmakefile with the new version
             sed -i "s/^VERSION\s*=.*/VERSION = $NEW_VERSION/" GNUmakefile
+
+            echo "NEW_VERSION=$NEW_VERSION" >> $GITHUB_ENV
+            echo "Bumping version to: $NEW_VERSION"
   
       - name: Commit and push changes
         run: |
@@ -45,5 +48,5 @@ jobs:
               git config user.email "actions@github.com"
 
               # Commit and push changes
-              git commit -am "Bump version to $NEW_VERSION"
+              git commit -am "Bump version to ${{ env.NEW_VERSION }}"
               git push origin ${{ github.event.pull_request.head.ref }}
