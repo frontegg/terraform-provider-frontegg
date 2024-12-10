@@ -20,10 +20,16 @@ jobs:
           ref: ${{ github.event.pull_request.head.ref }}
           repository: ${{ github.event.pull_request.head.repo.full_name }}
 
+      - name: Fetch tags from master
+        run: |
+            git fetch origin master --tags # Fetch tags from the master branch
+            LATEST_TAG=$(git describe --tags $(git rev-list --tags --max-count=1) master)
+            echo "LATEST_TAG=${LATEST_TAG}" >> $GITHUB_ENV
+
       - name: Extract and Increment Version
         id: increment_version
         run: |
-            TAG=${GITHUB_REF##*/}
+            TAG=${LATEST_TAG}
             # Strip the "v" prefix if it exists and split the version into components
             VERSION=${TAG#v}
             IFS='.' read -r MAJOR MINOR PATCH <<< "$VERSION"
