@@ -1506,7 +1506,7 @@ func resourceFronteggWorkspaceRead(ctx context.Context, d *schema.ResourceData, 
 			return diag.FromErr(err)
 		}
 		nav := out.Rows[0].Configuration.Navigation
-		// Backward compability
+		// Backward compatibility
 		paletteV1 := out.Rows[0].Configuration.Theme.Palette
 		paletteV2 := out.Rows[0].Configuration.ThemeV2.LoginBox.Palette
 
@@ -1525,7 +1525,7 @@ func resourceFronteggWorkspaceRead(ctx context.Context, d *schema.ResourceData, 
 				"secondaryText": paletteV1.SecondaryText,
 			})
 		}
-		// End backward compability
+		// End backward compatibility
 
 		paletteV2LoginBox := out.Rows[0].Configuration.ThemeV2.LoginBox.Palette
 		paletteV2AdminPortal := out.Rows[0].Configuration.ThemeV2.AdminPortal.Palette
