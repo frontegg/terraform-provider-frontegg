@@ -18,10 +18,10 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Read and bump version in Makefile
+      - name: Read and bump version in GNUmakefile
         run: |
-            # Read current version from Makefile
-            CURRENT_VERSION=$(grep -E "^VERSION\s*=" Makefile | awk -F '=' '{print $2}' | xargs)
+            # Read current version from GNUmakefile
+            CURRENT_VERSION=$(grep -E "^VERSION\s*=" GNUmakefile | awk -F '=' '{print $2}' | xargs)
             echo "Current version: $CURRENT_VERSION"
   
             # Increment the patch version
@@ -30,8 +30,8 @@ jobs:
             NEW_VERSION="$MAJOR.$MINOR.$PATCH"
             echo "Bumping version to: $NEW_VERSION"
   
-            # Update the Makefile with the new version
-            sed -i "s/^VERSION\s*=.*/VERSION = $NEW_VERSION/" Makefile
+            # Update the GNUmakefile with the new version
+            sed -i "s/^VERSION\s*=.*/VERSION = $NEW_VERSION/" GNUmakefile
   
       - name: Commit and push changes
         run: |
