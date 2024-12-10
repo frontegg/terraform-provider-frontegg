@@ -230,7 +230,8 @@ type fronteggAdminPortalVisibility struct {
 }
 
 type fronteggAdminPortalThemeV2 struct {
-	LoginBox fronteggAdminPortalLoginBox `json:"loginBox"`
+	LoginBox    fronteggAdminPortalLoginBox `json:"loginBox"`
+	AdminPortal fronteggAdminPortalLoginBox `json:"adminPortal"`
 }
 
 type fronteggAdminPortalAdminPortal struct {
@@ -1112,6 +1113,23 @@ per Frontegg provider.`,
 							Description: "Configures the color palette for the admin portal.",
 							Type:        schema.TypeList,
 							Optional:    true,
+							Deprecated:  "Use `palette_admin_portal Or/And palette_login_box` instead.",
+							MinItems:    1,
+							MaxItems:    1,
+							Elem:        resourceFronteggPalette(),
+						},
+						"palette_login_box": {
+							Description: "Configures the color palette for the admin portal.",
+							Type:        schema.TypeList,
+							Optional:    true,
+							MinItems:    1,
+							MaxItems:    1,
+							Elem:        resourceFronteggPalette(),
+						},
+						"palette_admin_portal": {
+							Description: "Configures the color palette for the admin portal.",
+							Type:        schema.TypeList,
+							Optional:    true,
 							MinItems:    1,
 							MaxItems:    1,
 							Elem:        resourceFronteggPalette(),
@@ -1488,53 +1506,13 @@ func resourceFronteggWorkspaceRead(ctx context.Context, d *schema.ResourceData, 
 			return diag.FromErr(err)
 		}
 		nav := out.Rows[0].Configuration.Navigation
+		// Backward compability
 		paletteV1 := out.Rows[0].Configuration.Theme.Palette
 		paletteV2 := out.Rows[0].Configuration.ThemeV2.LoginBox.Palette
 
 		var paletteItems []interface{}
 		if paletteV1.Error == "" && paletteV1.Success == "" {
-			paletteItems = append(paletteItems, map[string]interface{}{
-				"success": []interface{}{map[string]interface{}{
-					"light":         paletteV2.Success.Light,
-					"main":          paletteV2.Success.Main,
-					"dark":          paletteV2.Success.Dark,
-					"contrast_text": paletteV2.Success.ContrastText,
-				}},
-				"info": []interface{}{map[string]interface{}{
-					"light":         paletteV2.Info.Light,
-					"main":          paletteV2.Info.Main,
-					"dark":          paletteV2.Info.Dark,
-					"contrast_text": paletteV2.Info.ContrastText,
-				}},
-				"warning": []interface{}{map[string]interface{}{
-					"light":         paletteV2.Warning.Light,
-					"main":          paletteV2.Warning.Main,
-					"dark":          paletteV2.Warning.Dark,
-					"contrast_text": paletteV2.Warning.ContrastText,
-				}},
-				"error": []interface{}{map[string]interface{}{
-					"light":         paletteV2.Error.Light,
-					"main":          paletteV2.Error.Main,
-					"dark":          paletteV2.Error.Dark,
-					"contrast_text": paletteV2.Error.ContrastText,
-				}},
-				"primary": []interface{}{map[string]interface{}{
-					"light":         paletteV2.Primary.Light,
-					"main":          paletteV2.Primary.Main,
-					"dark":          paletteV2.Primary.Dark,
-					"contrast_text": paletteV2.Primary.ContrastText,
-					"active":        paletteV2.Primary.Active,
-					"hover":         paletteV2.Primary.Hover,
-				}},
-				"secondary": []interface{}{map[string]interface{}{
-					"light":         paletteV2.Secondary.Light,
-					"main":          paletteV2.Secondary.Main,
-					"dark":          paletteV2.Secondary.Dark,
-					"contrast_text": paletteV2.Secondary.ContrastText,
-					"active":        paletteV2.Secondary.Active,
-					"hover":         paletteV2.Secondary.Hover,
-				}},
-			})
+			paletteItems = append(paletteItems, getPaletteItemsV2(paletteV2))
 		} else {
 			paletteItems = append(paletteItems, map[string]interface{}{
 				"success":       paletteV1.Success,
@@ -1547,6 +1525,10 @@ func resourceFronteggWorkspaceRead(ctx context.Context, d *schema.ResourceData, 
 				"secondaryText": paletteV1.SecondaryText,
 			})
 		}
+		// End backward compability
+
+		paletteV2LoginBox := out.Rows[0].Configuration.ThemeV2.LoginBox.Palette
+		paletteV2AdminPortal := out.Rows[0].Configuration.ThemeV2.AdminPortal.Palette
 
 		adminPortal := map[string]interface{}{
 			"enable_account_settings":    nav.Account.Visibility == "byPermissions",
@@ -1565,6 +1547,8 @@ func resourceFronteggWorkspaceRead(ctx context.Context, d *schema.ResourceData, 
 			"enable_users":               nav.Users.Visibility == "byPermissions",
 			"enable_webhooks":            nav.Webhooks.Visibility == "byPermissions",
 			"palette":                    paletteItems,
+			"palette_login_box":          getPaletteItemsV2(paletteV2LoginBox),
+			"palette_admin_portal":       getPaletteItemsV2(paletteV2AdminPortal),
 		}
 		if err := d.Set("admin_portal", []interface{}{adminPortal}); err != nil {
 			return diag.FromErr(err)
@@ -2014,7 +1998,6 @@ func resourceFronteggWorkspaceUpdate(ctx context.Context, d *schema.ResourceData
 		var adminPortal fronteggAdminPortal
 		// adminBox is only defined when the default style of the web page has been modified, if not it's 0 rows and
 		// this is not an error.
-
 		jsonData, err := json.Marshal(metadataResponse)
 		if err != nil {
 			return diag.FromErr(err)
@@ -2058,8 +2041,15 @@ func resourceFronteggWorkspaceUpdate(ctx context.Context, d *schema.ResourceData
 		paletteSuccess := d.Get("admin_portal.0.palette.0.success")
 		if reflect.TypeOf(paletteSuccess).Kind() == reflect.String {
 			configuration.Theme.Palette = serializeOldPalette("admin_portal.0.palette")
-		} else {
+		} else if isNonEmptySlice(paletteSuccess) {
 			configuration.ThemeV2.LoginBox.Palette = serializeNewPalette("admin_portal.0.palette")
+		} else {
+			if isNonEmptySlice(d.Get("admin_portal.0.palette_admin_portal.0.success")) {
+				configuration.ThemeV2.AdminPortal.Palette = serializeNewPalette("admin_portal.0.palette_admin_portal")
+			}
+			if isNonEmptySlice(d.Get("admin_portal.0.palette_login_box.0.success")) {
+				configuration.ThemeV2.LoginBox.Palette = serializeNewPalette("admin_portal.0.palette_login_box")
+			}
 		}
 
 		type MergedObject struct {
@@ -2131,4 +2121,56 @@ func resourceFronteggWorkspaceDelete(ctx context.Context, d *schema.ResourceData
 	log.Printf("[WARN] Cannot destroy workspace. Terraform will remove this resource from the " +
 		"state file, but the workspace will remain in its last-applied state.")
 	return nil
+}
+
+func isNonEmptySlice(value interface{}) bool {
+	return len(value.([]interface{})) > 0
+}
+
+func getPaletteItemsV2(palette fronteggAdminPortalPaletteV2) []map[string]interface{} {
+	var paletteItems []map[string]interface{}
+	palleteMap := map[string]interface{}{
+		"success": []interface{}{map[string]interface{}{
+			"light":         palette.Success.Light,
+			"main":          palette.Success.Main,
+			"dark":          palette.Success.Dark,
+			"contrast_text": palette.Success.ContrastText,
+		}},
+		"info": []interface{}{map[string]interface{}{
+			"light":         palette.Info.Light,
+			"main":          palette.Info.Main,
+			"dark":          palette.Info.Dark,
+			"contrast_text": palette.Info.ContrastText,
+		}},
+		"warning": []interface{}{map[string]interface{}{
+			"light":         palette.Warning.Light,
+			"main":          palette.Warning.Main,
+			"dark":          palette.Warning.Dark,
+			"contrast_text": palette.Warning.ContrastText,
+		}},
+		"error": []interface{}{map[string]interface{}{
+			"light":         palette.Error.Light,
+			"main":          palette.Error.Main,
+			"dark":          palette.Error.Dark,
+			"contrast_text": palette.Error.ContrastText,
+		}},
+		"primary": []interface{}{map[string]interface{}{
+			"light":         palette.Primary.Light,
+			"main":          palette.Primary.Main,
+			"dark":          palette.Primary.Dark,
+			"contrast_text": palette.Primary.ContrastText,
+			"active":        palette.Primary.Active,
+			"hover":         palette.Primary.Hover,
+		}},
+		"secondary": []interface{}{map[string]interface{}{
+			"light":         palette.Secondary.Light,
+			"main":          palette.Secondary.Main,
+			"dark":          palette.Secondary.Dark,
+			"contrast_text": palette.Secondary.ContrastText,
+			"active":        palette.Secondary.Active,
+			"hover":         palette.Secondary.Hover,
+		}},
+	}
+	paletteItems = append(paletteItems, palleteMap)
+	return paletteItems
 }
