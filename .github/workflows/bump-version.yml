@@ -1,0 +1,51 @@
+name: Bump Version
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+
+permissions:
+  contents: write
+
+jobs:
+  update_version:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Read and bump version in GNUmakefile
+        run: |
+            # Read current version from GNUmakefile
+            CURRENT_VERSION=$(grep -E "^VERSION\s*=" GNUmakefile | awk -F '=' '{print $2}' | xargs)
+            echo "Current version: $CURRENT_VERSION"
+  
+            # Increment the patch version
+            IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT_VERSION"
+            PATCH=$((PATCH + 1))
+            NEW_VERSION="$MAJOR.$MINOR.$PATCH"
+            echo "Bumping version to: $NEW_VERSION"
+
+            # Update the GNUmakefile with the new version
+            sed -i "s/^VERSION\s*=.*/VERSION = $NEW_VERSION/" GNUmakefile
+
+            echo "NEW_VERSION=$NEW_VERSION" >> $GITHUB_ENV
+            echo "Bumping version to: $NEW_VERSION"
+
+      - name: Commit and push changes
+        run: |
+              # Check out the correct branch
+              git branch
+              git checkout ${{ github.event.pull_request.head.ref }} # Checkout the PR branch
+              echo "Checked out branch: ${{ github.event.pull_request.head.ref }}"
+              
+              # Configure Git
+              git config user.name "GitHub Actions"
+              git config user.email "actions@github.com"
+              # Commit and push changes
+              git commit -am "Bump version to ${{ env.NEW_VERSION }}"
+              git push origin ${{ github.event.pull_request.head.ref }}

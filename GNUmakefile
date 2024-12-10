@@ -1,9 +1,10 @@
 PLATFORM ?= $(shell go env GOOS)_$(shell go env GOARCH)
+VERSION = 1.0.5
 
 default: testacc
 
 install:
-	@go build -o ~/.terraform.d/plugins/registry.terraform.io/frontegg/frontegg/1.0.5/$(PLATFORM)/terraform-provider-frontegg
+	@go build -o ~/.terraform.d/plugins/registry.terraform.io/frontegg/frontegg/$(VERSION)/$(PLATFORM)/terraform-provider-frontegg
 	@rm .terraform.lock.hcl
 
 .PHONY: testacc
