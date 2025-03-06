@@ -1510,9 +1510,9 @@ func resourceFronteggWorkspaceRead(ctx context.Context, d *schema.ResourceData, 
 		paletteV1 := out.Rows[0].Configuration.Theme.Palette
 		paletteV2 := out.Rows[0].Configuration.ThemeV2.LoginBox.Palette
 
-		var paletteItems []interface{}
+		var paletteItems []map[string]interface{}
 		if paletteV1.Error == "" && paletteV1.Success == "" {
-			paletteItems = append(paletteItems, getPaletteItemsV2(paletteV2))
+			paletteItems = getPaletteItemsV2(paletteV2)
 		} else {
 			paletteItems = append(paletteItems, map[string]interface{}{
 				"success":       paletteV1.Success,
