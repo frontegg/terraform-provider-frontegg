@@ -1530,9 +1530,6 @@ func resourceFronteggWorkspaceRead(ctx context.Context, d *schema.ResourceData, 
 		paletteV2LoginBox := out.Rows[0].Configuration.ThemeV2.LoginBox.Palette
 		paletteV2AdminPortal := out.Rows[0].Configuration.ThemeV2.AdminPortal.Palette
 
-		log.Printf("paletteV2LoginBox: %+v", paletteV2LoginBox)
-		log.Printf("paletteV2AdminPortal: %+v", paletteV2AdminPortal)
-
 		adminPortal := map[string]interface{}{
 			"enable_account_settings":    nav.Account.Visibility == "byPermissions",
 			"enable_api_tokens":          nav.APITokens.Visibility == "byPermissions",
