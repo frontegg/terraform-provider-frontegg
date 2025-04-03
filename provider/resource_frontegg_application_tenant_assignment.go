@@ -91,40 +91,8 @@ func resourceFronteggApplicationTenantAssignmentRead(ctx context.Context, d *sch
 	appID := d.Get("app_id").(string)
 	tenantID := d.Get("tenant_id").(string)
 
-	// Try a specialized endpoint first
-	var checkAssignment struct {
-		Exists bool `json:"exists"`
-	}
-	err := clientHolder.ApiClient.Get(ctx, fmt.Sprintf("%s/%s/%s/check", fronteggApplicationTenantAssignmentPath, appID, tenantID), &checkAssignment)
-	if err == nil {
-		if !checkAssignment.Exists {
-			d.SetId("")
-		}
-		return nil
-	}
-
-	// If that fails, try the standard endpoints
-
-	// First, try to unmarshal as an array of tenant assignments
-	var arrayResponse []fronteggApplicationTenantAssignment
-	err = clientHolder.ApiClient.Get(ctx, fmt.Sprintf("%s/%s", fronteggApplicationTenantAssignmentPath, appID), &arrayResponse)
-	if err == nil {
-		found := false
-		for _, assignment := range arrayResponse {
-			if assignment.TenantID == tenantID {
-				found = true
-				break
-			}
-		}
-		if !found {
-			d.SetId("")
-		}
-		return nil
-	}
-
-	// If the first attempt failed, try to unmarshal as an object with tenantIds field
 	var objectResponse fronteggApplicationTenantIds
-	err = clientHolder.ApiClient.Get(ctx, fmt.Sprintf("%s/%s", fronteggApplicationTenantAssignmentPath, appID), &objectResponse)
+	err := clientHolder.ApiClient.Get(ctx, fmt.Sprintf("%s/%s", fronteggApplicationTenantAssignmentPath, appID), &objectResponse)
 	if err == nil {
 		found := false
 		for _, id := range objectResponse.TenantIds {
