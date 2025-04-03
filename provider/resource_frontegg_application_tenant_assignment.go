@@ -71,6 +71,14 @@ func resourceFronteggApplicationTenantAssignmentCreate(ctx context.Context, d *s
 	appID := d.Get("app_id").(string)
 	tenantID := d.Get("tenant_id").(string)
 
+	// First check if the assignment already exists using the Read function
+	diags := resourceFronteggApplicationTenantAssignmentRead(ctx, d, meta)
+	if len(diags) == 0 && d.Id() != "" {
+		// Assignment already exists, just return
+		return nil
+	}
+
+	// If we get here, the assignment doesn't exist, so create it
 	in := struct {
 		TenantID string `json:"tenantId"`
 	}{
@@ -107,9 +115,7 @@ func resourceFronteggApplicationTenantAssignmentRead(ctx context.Context, d *sch
 		return nil
 	}
 
-	// If we know the assignment exists (from the 409 Conflict error), but we can't read it,
-	// just accept that it exists rather than returning an error
-	return nil
+	return diag.FromErr(err)
 }
 
 func resourceFronteggApplicationTenantAssignmentDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
