@@ -1,0 +1,106 @@
+version: 1.0
+
+rules:
+  # Makefile commands for more efficient provider development
+  - name: "make-install"
+    pattern: "^make install$"
+    command: "make install"
+    description: "Build and install provider to local Terraform plugins directory"
+
+  - name: "make-test"
+    pattern: "^make test$"
+    command: "make testacc"
+    description: "Run acceptance tests for the provider"
+
+  - name: "make-capply"
+    pattern: "^make capply$"
+    command: "make capply"
+    description: "Install provider and run terraform init + apply"
+
+  # Terraform commands with auto-approve for efficiency
+  - name: "terraform-apply-auto"
+    pattern: "^terraform apply$"
+    command: "terraform apply -auto-approve"
+    description: "Run terraform apply with auto-approve"
+
+  - name: "terraform-destroy-auto"
+    pattern: "^terraform destroy$"
+    command: "terraform destroy -auto-approve"
+    description: "Run terraform destroy with auto-approve"
+
+  # Helper commands for Terraform provider development
+  - name: "tf-init-upgrade"
+    pattern: "^tf init$"
+    command: "terraform init -upgrade"
+    description: "Initialize Terraform with plugin upgrades"
+
+  - name: "tf-plan"
+    pattern: "^tf plan$"
+    command: "terraform plan"
+    description: "Run terraform plan"
+
+  - name: "tf-install-apply"
+    pattern: "^tf capply$"
+    command: "make capply"
+    description: "Install provider and apply changes (shortcut to make capply)"
+
+  - name: "tf-test-user-sources"
+    pattern: "^tf test usersources$"
+    command: "terraform plan -target=frontegg_custom_code_user_source.custom_code_example -target=frontegg_firebase_user_source.firebase_example -target=frontegg_cognito_user_source.cognito_example -target=frontegg_auth0_user_source.auth0_example"
+    description: "Plan changes for all user source resources"
+
+  - name: "tf-apply-user-sources"
+    pattern: "^tf apply usersources$"
+    command: "terraform apply -auto-approve -target=frontegg_custom_code_user_source.custom_code_example -target=frontegg_firebase_user_source.firebase_example -target=frontegg_cognito_user_source.cognito_example -target=frontegg_auth0_user_source.auth0_example"
+    description: "Apply changes to all user source resources with auto-approve"
+
+  # Resource debugging
+  - name: "tf-show-resource"
+    pattern: "^tf show (.+)$"
+    command: "terraform state show $1"
+    description: "Show details for a specific resource"
+
+  # Compilation helpers (use makefile versions)
+  - name: "build-install"
+    pattern: "^build install$"
+    command: "make install"
+    description: "Build and install the Terraform provider using makefile"
+
+  - name: "build-test"
+    pattern: "^build test$"
+    command: "make testacc"
+    description: "Run provider acceptance tests using makefile"
+
+  # OpenAPI helpers
+  - name: "grep-openapi"
+    pattern: "^grep-api (.+)$"
+    command: "grep -r '$1' ./identity.json"
+    description: "Search the OpenAPI spec for a specific term"
+
+  # Resource development helpers
+  - name: "list-resources"
+    pattern: "^list-resources$"
+    command: "grep -r 'func resource' --include='*.go' ."
+    description: "List all resource functions in the codebase"
+
+  - name: "find-schema"
+    pattern: "^find-schema (.+)$"
+    command: "grep -r '$1' --include='*.go' ."
+    description: "Find schema definitions for a given resource"
+
+  # Check resource existence
+  - name: "tf-list-resources"
+    pattern: "^tf list$"
+    command: "terraform state list"
+    description: "List all resources in the Terraform state"
+
+  - name: "tf-list-user-sources"
+    pattern: "^tf list usersources$"
+    command: "terraform state list | grep -E 'frontegg_(custom_code|firebase|cognito|auth0)_user_source'"
+    description: "List all user source resources in the Terraform state"
+
+  # User source install and apply shortcut
+  - name: "install-apply-user-sources"
+    pattern: "^install apply usersources$"
+    command: "make install && terraform init && terraform apply -auto-approve -target=frontegg_custom_code_user_source.custom_code_example -target=frontegg_firebase_user_source.firebase_example -target=frontegg_cognito_user_source.cognito_example -target=frontegg_auth0_user_source.auth0_example"
+    description: "Install provider and apply user source changes"

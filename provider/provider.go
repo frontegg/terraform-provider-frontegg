@@ -66,6 +66,10 @@ func New(version string) func() *schema.Provider {
 				"frontegg_email_provider":                resourceFronteggEmailProvider(),
 				"frontegg_application":                   resourceFronteggApplication(),
 				"frontegg_application_tenant_assignment": resourceFronteggApplicationTenantAssignment(),
+				"frontegg_auth0_user_source":             resourceFronteggAuth0UserSource(),
+				"frontegg_cognito_user_source":           resourceFronteggCognitoUserSource(),
+				"frontegg_firebase_user_source":          resourceFronteggFirebaseUserSource(),
+				"frontegg_custom_code_user_source":       resourceFronteggCustomCodeUserSource(),
 			},
 			ConfigureContextFunc: func(ctx context.Context, d *schema.ResourceData) (interface{}, diag.Diagnostics) {
 				environmentId := d.Get("environment_id").(string)
