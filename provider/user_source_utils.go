@@ -22,6 +22,25 @@ type fronteggBaseUserSourceResponse struct {
 	Index       int      `json:"index"`
 }
 
+// TenantConfig interfaces
+type UserSourceDynamicTenantConfig struct {
+	TenantIDFieldName  string `json:"tenantIdFieldName"`
+	TenantResolverType string `json:"tenantResolverType"`
+}
+
+type UserSourceStaticTenantConfig struct {
+	TenantID           string `json:"tenantId"`
+	TenantResolverType string `json:"tenantResolverType"`
+}
+
+type UserSourceNewTenantConfig struct {
+	TenantResolverType string `json:"tenantResolverType"`
+}
+
+type UserSourceFromSourceTenantConfig struct {
+	TenantResolverType string `json:"tenantResolverType"`
+}
+
 // Builds the tenant configuration based on the terraform resource data
 func buildUserSourceTenantConfig(d *schema.ResourceData) (interface{}, error) {
 	resolverType := d.Get("tenant_resolver_type").(string)
@@ -32,22 +51,26 @@ func buildUserSourceTenantConfig(d *schema.ResourceData) (interface{}, error) {
 		if fieldName == "" {
 			return nil, fmt.Errorf("tenant_id_field_name is required when tenant_resolver_type is dynamic")
 		}
-		return map[string]interface{}{
-			"tenantResolverType": "dynamic",
-			"tenantIdFieldName":  fieldName,
+		return UserSourceDynamicTenantConfig{
+			TenantResolverType: "dynamic",
+			TenantIDFieldName:  fieldName,
 		}, nil
 	case "static":
 		tenantID := d.Get("tenant_id").(string)
 		if tenantID == "" {
 			return nil, fmt.Errorf("tenant_id is required when tenant_resolver_type is static")
 		}
-		return map[string]interface{}{
-			"tenantResolverType": "static",
-			"tenantId":           tenantID,
+		return UserSourceStaticTenantConfig{
+			TenantResolverType: "static",
+			TenantID:           tenantID,
 		}, nil
 	case "new":
-		return map[string]interface{}{
-			"tenantResolverType": "new",
+		return UserSourceNewTenantConfig{
+			TenantResolverType: "new",
+		}, nil
+	case "from-source":
+		return UserSourceFromSourceTenantConfig{
+			TenantResolverType: "from-source",
 		}, nil
 	default:
 		return nil, fmt.Errorf("unsupported tenant_resolver_type: %s", resolverType)

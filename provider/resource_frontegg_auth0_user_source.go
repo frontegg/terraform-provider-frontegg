@@ -15,7 +15,7 @@ type fronteggAuth0UserSourceConfig struct {
 	Domain       string      `json:"domain"`
 	ClientID     string      `json:"clientId"`
 	Secret       string      `json:"secret"`
-	TenantConfig interface{} `json:"tenantConfig"`
+	TenantConfig interface{} `json:"tenantConfig"` // Can be UserSourceDynamicTenantConfig, UserSourceStaticTenantConfig, or UserSourceNewTenantConfig
 }
 
 type fronteggAuth0UserSourceRequest struct {
