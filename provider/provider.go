@@ -70,6 +70,7 @@ func New(version string) func() *schema.Provider {
 				"frontegg_cognito_user_source":           resourceFronteggCognitoUserSource(),
 				"frontegg_firebase_user_source":          resourceFronteggFirebaseUserSource(),
 				"frontegg_custom_code_user_source":       resourceFronteggCustomCodeUserSource(),
+				"frontegg_feature":                       resourceFronteggFeature(),
 			},
 			ConfigureContextFunc: func(ctx context.Context, d *schema.ResourceData) (interface{}, diag.Diagnostics) {
 				environmentId := d.Get("environment_id").(string)

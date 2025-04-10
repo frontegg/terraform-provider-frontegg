@@ -1,0 +1,13 @@
+---
+description: Basic Terraform commands with auto-approve
+globs:
+alwaysApply: true
+---
+
+# Terraform Commands
+
+- `terraform apply` - Run terraform apply with auto-approve
+- `terraform destroy` - Run terraform destroy with auto-approve
+- `tf init` - Initialize Terraform with plugin upgrades
+- `tf plan` - Run terraform plan
+- `tf capply` - Install provider and apply changes (shortcut to make capply) 
