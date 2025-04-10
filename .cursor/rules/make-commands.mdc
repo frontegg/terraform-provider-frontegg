@@ -1,0 +1,13 @@
+---
+description: Make commands for provider development
+globs: 
+alwaysApply: true
+---
+
+# Make Commands
+
+- `make install` - Build and install provider to local Terraform plugins directory
+- `make test` - Run acceptance tests for the provider
+- `make capply` - Install provider and run terraform init + apply (relevant only after provider. code change)
+- `build install` - Build and install the Terraform provider using makefile
+- `build test` - Run provider acceptance tests using makefile 
