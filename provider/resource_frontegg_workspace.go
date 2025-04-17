@@ -202,9 +202,33 @@ type fronteggAdminPortal struct {
 }
 
 type fronteggAdminPortalConfiguration struct {
-	Navigation fronteggAdminPortalNavigation  `json:"navigation"`
-	Theme      fronteggAdminPortalAdminPortal `json:"theme"`
-	ThemeV2    fronteggAdminPortalThemeV2     `json:"themeV2"`
+	Navigation fronteggAdminPortalNavigation `json:"navigation"`
+	Theme      fronteggPaletteV1             `json:"theme"`
+	ThemeV2    fronteggAdminPortalThemeV2    `json:"themeV2"`
+}
+type fronteggAdminPortalThemeV2 struct {
+	LoginBox    fronteggPaletteV2 `json:"loginBox"`
+	AdminPortal fronteggPaletteV2 `json:"adminPortal"`
+}
+
+type fronteggPaletteV1 struct {
+	Success       string `json:"success"`
+	Info          string `json:"info"`
+	Warning       string `json:"warning"`
+	Error         string `json:"error"`
+	Primary       string `json:"primary"`
+	PrimaryText   string `json:"primaryText"`
+	Secondary     string `json:"secondary"`
+	SecondaryText string `json:"secondaryText"`
+}
+
+type fronteggPaletteV2 struct {
+	Success   fronteggPaletteSeverityColor `json:"success"`
+	Info      fronteggPaletteSeverityColor `json:"info"`
+	Warning   fronteggPaletteSeverityColor `json:"warning"`
+	Error     fronteggPaletteSeverityColor `json:"error"`
+	Primary   fronteggPaletteColor         `json:"primary"`
+	Secondary fronteggPaletteColor         `json:"secondary"`
 }
 
 type fronteggAdminPortalNavigation struct {
@@ -227,38 +251,6 @@ type fronteggAdminPortalNavigation struct {
 
 type fronteggAdminPortalVisibility struct {
 	Visibility string `json:"visibility"`
-}
-
-type fronteggAdminPortalThemeV2 struct {
-	LoginBox    fronteggAdminPortalLoginBox `json:"loginBox"`
-	AdminPortal fronteggAdminPortalLoginBox `json:"adminPortal"`
-}
-
-type fronteggAdminPortalAdminPortal struct {
-	Palette fronteggAdminPortalPaletteV1 `json:"palette"`
-}
-type fronteggAdminPortalLoginBox struct {
-	Palette fronteggAdminPortalPaletteV2 `json:"palette"`
-}
-
-type fronteggAdminPortalPaletteV1 struct {
-	Success       string `json:"success"`
-	Info          string `json:"info"`
-	Warning       string `json:"warning"`
-	Error         string `json:"error"`
-	Primary       string `json:"primary"`
-	PrimaryText   string `json:"primaryText"`
-	Secondary     string `json:"secondary"`
-	SecondaryText string `json:"secondaryText"`
-}
-
-type fronteggAdminPortalPaletteV2 struct {
-	Success   fronteggPaletteSeverityColor `json:"success"`
-	Info      fronteggPaletteSeverityColor `json:"info"`
-	Warning   fronteggPaletteSeverityColor `json:"warning"`
-	Error     fronteggPaletteSeverityColor `json:"error"`
-	Primary   fronteggPaletteColor         `json:"primary"`
-	Secondary fronteggPaletteColor         `json:"secondary"`
 }
 
 type fronteggPaletteColor struct {
@@ -1499,37 +1491,77 @@ func resourceFronteggWorkspaceRead(ctx context.Context, d *schema.ResourceData, 
 		}
 	}
 	{
+		var metadataResponse map[string]interface{}
+		if err := clientHolder.ApiClient.Get(ctx, fronteggAdminPortalURL, &metadataResponse); err != nil {
+			return diag.FromErr(err)
+		}
+		log.Printf("[DEBUG] metadataResponse: %v", metadataResponse)
+
+		// Convert the response to our known structure
+		jsonData, err := json.Marshal(metadataResponse)
+		if err != nil {
+			return diag.FromErr(err)
+		}
+
 		var out struct {
 			Rows []fronteggAdminPortal `json:"rows"`
 		}
-		if err := clientHolder.ApiClient.Get(ctx, fronteggAdminPortalURL, &out); err != nil {
+		err = json.Unmarshal(jsonData, &out)
+		if err != nil {
 			return diag.FromErr(err)
 		}
+		log.Printf("[DEBUG] out: %v", out)
+
 		nav := out.Rows[0].Configuration.Navigation
-		// Backward compatibility
-		paletteV1 := out.Rows[0].Configuration.Theme.Palette
-		paletteV2 := out.Rows[0].Configuration.ThemeV2.LoginBox.Palette
 
+		// Handle palette configuration
 		var paletteItems []map[string]interface{}
-		if paletteV1.Error == "" && paletteV1.Success == "" {
-			paletteItems = getPaletteItemsV2(paletteV2)
-		} else {
-			paletteItems = append(paletteItems, map[string]interface{}{
-				"success":       paletteV1.Success,
-				"info":          paletteV1.Info,
-				"warning":       paletteV1.Warning,
-				"error":         paletteV1.Error,
-				"primary":       paletteV1.Primary,
-				"primaryText":   paletteV1.PrimaryText,
-				"secondary":     paletteV1.Secondary,
-				"secondaryText": paletteV1.SecondaryText,
-			})
+
+		// Get palette configurations from the response, with nil checks
+		var paletteV1 fronteggPaletteV1
+		var paletteV2LoginBox fronteggPaletteV2
+		var paletteV2AdminPortal fronteggPaletteV2
+
+		if len(out.Rows) > 0 {
+			paletteV1 = out.Rows[0].Configuration.Theme
+			if out.Rows[0].Configuration.ThemeV2.LoginBox != (fronteggPaletteV2{}) {
+				paletteV2LoginBox = out.Rows[0].Configuration.ThemeV2.LoginBox
+			}
+			if out.Rows[0].Configuration.ThemeV2.AdminPortal != (fronteggPaletteV2{}) {
+				paletteV2AdminPortal = out.Rows[0].Configuration.ThemeV2.AdminPortal
+			}
 		}
-		// End backward compatibility
 
-		paletteV2LoginBox := out.Rows[0].Configuration.ThemeV2.LoginBox.Palette
-		paletteV2AdminPortal := out.Rows[0].Configuration.ThemeV2.AdminPortal.Palette
+		// If V1 palette is empty, use V2 login box palette
+		if paletteV1.Success == "" && paletteV1.Info == "" {
+			paletteItems = getPaletteItemsV2(paletteV2LoginBox)
+		} else {
+			// Check if values are strings before adding to V1 palette format
+			paletteMap := make(map[string]interface{})
 
+			// Helper function to check if value is a string
+			addIfString := func(key string, value interface{}) {
+				if str, ok := value.(string); ok && str != "" {
+					paletteMap[key] = str
+				}
+			}
+
+			addIfString("success", paletteV1.Success)
+			addIfString("info", paletteV1.Info)
+			addIfString("warning", paletteV1.Warning)
+			addIfString("error", paletteV1.Error)
+			addIfString("primary", paletteV1.Primary)
+			addIfString("primaryText", paletteV1.PrimaryText)
+			addIfString("secondary", paletteV1.Secondary)
+			addIfString("secondaryText", paletteV1.SecondaryText)
+
+			// Only add the palette if we have any string values
+			if len(paletteMap) > 0 {
+				paletteItems = append(paletteItems, paletteMap)
+			}
+		}
+
+		// Create admin portal configuration map
 		adminPortal := map[string]interface{}{
 			"enable_account_settings":    nav.Account.Visibility == "byPermissions",
 			"enable_api_tokens":          nav.APITokens.Visibility == "byPermissions",
@@ -1948,7 +1980,7 @@ func resourceFronteggWorkspaceUpdate(ctx context.Context, d *schema.ResourceData
 			}
 		}
 
-		serializeNewPalette := func(key string) fronteggAdminPortalPaletteV2 {
+		serializeNewPalette := func(key string) fronteggPaletteV2 {
 			paletteSuccess := serializeSeverityPaletteColor(fmt.Sprintf("%s.0.success", key))
 			paletteInfo := serializeSeverityPaletteColor(fmt.Sprintf("%s.0.info", key))
 			paletteWarning := serializeSeverityPaletteColor(fmt.Sprintf("%s.0.warning", key))
@@ -1956,7 +1988,7 @@ func resourceFronteggWorkspaceUpdate(ctx context.Context, d *schema.ResourceData
 			palettePrimary := serializePaletteColor(fmt.Sprintf("%s.0.primary", key))
 			paletteSecondary := serializePaletteColor(fmt.Sprintf("%s.0.secondary", key))
 
-			return fronteggAdminPortalPaletteV2{
+			return fronteggPaletteV2{
 				Success:   paletteSuccess,
 				Info:      paletteInfo,
 				Warning:   paletteWarning,
@@ -1966,7 +1998,7 @@ func resourceFronteggWorkspaceUpdate(ctx context.Context, d *schema.ResourceData
 			}
 		}
 
-		serializeOldPalette := func(key string) fronteggAdminPortalPaletteV1 {
+		serializeOldPalette := func(key string) fronteggPaletteV1 {
 			paletteSuccess := d.Get(fmt.Sprintf("%s.0.success", key)).(string)
 			paletteInfo := d.Get(fmt.Sprintf("%s.0.info", key)).(string)
 			paletteWarning := d.Get(fmt.Sprintf("%s.0.warning", key)).(string)
@@ -1976,7 +2008,7 @@ func resourceFronteggWorkspaceUpdate(ctx context.Context, d *schema.ResourceData
 			paletteSecondary := d.Get(fmt.Sprintf("%s.0.secondary", key)).(string)
 			paletteSecondaryText := d.Get(fmt.Sprintf("%s.0.secondary_text", key)).(string)
 
-			return fronteggAdminPortalPaletteV1{
+			return fronteggPaletteV1{
 				Success:       paletteSuccess,
 				Info:          paletteInfo,
 				Warning:       paletteWarning,
@@ -2039,16 +2071,20 @@ func resourceFronteggWorkspaceUpdate(ctx context.Context, d *schema.ResourceData
 		configuration.Navigation.Webhooks = serializeVisibility("admin_portal.0.enable_webhooks")
 
 		paletteSuccess := d.Get("admin_portal.0.palette.0.success")
+		log.Printf("[DEBUG] paletteSuccess: %v", paletteSuccess)
 		if reflect.TypeOf(paletteSuccess).Kind() == reflect.String {
-			configuration.Theme.Palette = serializeOldPalette("admin_portal.0.palette")
+			log.Printf("[DEBUG] paletteSuccess is a string")
+			configuration.Theme = serializeOldPalette("admin_portal.0.palette")
 		} else if isNonEmptySlice(paletteSuccess) {
-			configuration.ThemeV2.LoginBox.Palette = serializeNewPalette("admin_portal.0.palette")
+			log.Printf("[DEBUG] paletteSuccess is a slice")
+			configuration.ThemeV2.LoginBox = serializeNewPalette("admin_portal.0.palette")
 		} else {
+			log.Printf("[DEBUG] paletteSuccess is not a string or slice")
 			if isNonEmptySlice(d.Get("admin_portal.0.palette_admin_portal.0.success")) {
-				configuration.ThemeV2.AdminPortal.Palette = serializeNewPalette("admin_portal.0.palette_admin_portal")
+				configuration.ThemeV2.AdminPortal = serializeNewPalette("admin_portal.0.palette_admin_portal")
 			}
 			if isNonEmptySlice(d.Get("admin_portal.0.palette_login_box.0.success")) {
-				configuration.ThemeV2.LoginBox.Palette = serializeNewPalette("admin_portal.0.palette_login_box")
+				configuration.ThemeV2.LoginBox = serializeNewPalette("admin_portal.0.palette_login_box")
 			}
 		}
 
@@ -2127,7 +2163,7 @@ func isNonEmptySlice(value interface{}) bool {
 	return len(value.([]interface{})) > 0
 }
 
-func getPaletteItemsV2(palette fronteggAdminPortalPaletteV2) []map[string]interface{} {
+func getPaletteItemsV2(palette fronteggPaletteV2) []map[string]interface{} {
 	var paletteItems []map[string]interface{}
 	palleteMap := map[string]interface{}{
 		"success": []interface{}{map[string]interface{}{
