@@ -500,7 +500,7 @@ per Frontegg provider.`,
 				Type:     schema.TypeString,
 				Required: true,
 				ValidateFunc: validation.StringMatch(
-					regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9\-]*(\.us)?\.frontegg\.com$`),
+					regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9\-]*(\.[a-zA-Z]+)?\.frontegg\.com$`),
 					"host must be a valid subdomain of .frontegg.com",
 				),
 			},

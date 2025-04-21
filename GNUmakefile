@@ -11,6 +11,10 @@ install:
 testacc:
 	@TF_ACC=1 go test ./... -v $(TESTARGS) -timeout 120m
 
+.PHONY: lint
+lint:
+	@docker run --rm -v $(CURDIR):/app -w /app golangci/golangci-lint:v1.59.1 golangci-lint run --timeout=5m
+
 capply: install
 	@terraform init
 	@terraform apply

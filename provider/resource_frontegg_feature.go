@@ -179,7 +179,7 @@ func resourceFronteggFeatureDeserializeCommon(d *schema.ResourceData, name, key,
 	return nil
 }
 
-// getPermissionsData fetches all permissions and returns a map of key to permission
+// getPermissionsData fetches all permissions and returns a map of key to permission.
 func getPermissionsData(ctx context.Context, client *restclient.ClientHolder) (map[string]fronteggPermission, error) {
 	var permissions []fronteggPermission
 	if err := client.ApiClient.Get(ctx, fronteggPermissionPath, &permissions); err != nil {
@@ -233,40 +233,7 @@ func resourceFronteggFeatureDeserializeV1(d *schema.ResourceData, f fronteggFeat
 	return nil
 }
 
-func resourceFronteggFeatureDeserializeV2(d *schema.ResourceData, f fronteggFeatureV2) error {
-	if err := resourceFronteggFeatureDeserializeCommon(d, f.Name, f.Key, f.Description, f.CreatedAt, f.UpdatedAt); err != nil {
-		return err
-	}
-
-	// Handle permissions
-	if len(f.Permissions) > 0 {
-		permissions := make([]map[string]interface{}, len(f.Permissions))
-		for i, perm := range f.Permissions {
-			permissions[i] = map[string]interface{}{
-				"permission_key": perm.PermissionKey,
-				"permission_id":  perm.PermissionID,
-			}
-		}
-		//sort the array by key before setting it
-		sort.Slice(permissions, func(i, j int) bool {
-			return permissions[i]["permission_key"].(string) < permissions[j]["permission_key"].(string)
-		})
-		if err := d.Set("permissions", permissions); err != nil {
-			return err
-		}
-	}
-
-	// Handle metadata
-	if f.Metadata != nil {
-		if err := d.Set("metadata", f.Metadata); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-// findFeatureByKey attempts to find a feature by its key
+// findFeatureByKey attempts to find a feature by its key.
 func findFeatureByKey(ctx context.Context, client *restclient.ClientHolder, key string) (*fronteggFeatureV1, error) {
 	type pageResponse struct {
 		Items   []fronteggFeatureV1 `json:"items"`
