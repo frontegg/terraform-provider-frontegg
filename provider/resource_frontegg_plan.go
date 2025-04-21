@@ -222,12 +222,28 @@ func fetchAllFronteggPlans(ctx context.Context, clientHolder *restclient.ClientH
 		HasNext bool           `json:"hasNext"`
 	}
 
-	var response pageResponse
-	if err := clientHolder.ApiClient.Get(ctx, fronteggPlanPath, &response); err != nil {
-		return nil, err
+	var allPlans []fronteggPlan
+	offset := 0
+	limit := 10
+
+	for {
+		var response pageResponse
+		url := fmt.Sprintf("%s?offset=%d&limit=%d", fronteggPlanPath, offset, limit)
+
+		if err := clientHolder.ApiClient.Get(ctx, url, &response); err != nil {
+			return nil, err
+		}
+
+		allPlans = append(allPlans, response.Items...)
+
+		if !response.HasNext {
+			break
+		}
+
+		offset += limit
 	}
 
-	return response.Items, nil
+	return allPlans, nil
 }
 
 func fetchFronteggPlanByName(ctx context.Context, planName string, clientHolder *restclient.ClientHolder) (*fronteggPlan, error) {

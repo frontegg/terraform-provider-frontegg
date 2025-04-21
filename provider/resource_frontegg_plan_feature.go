@@ -145,9 +145,7 @@ func resourceFronteggPlanFeatureDelete(ctx context.Context, d *schema.ResourceDa
 	// Unlink the features from the plan
 	err := clientHolder.ApiClient.Patch(ctx, fmt.Sprintf("/entitlements/resources/plans/v1/%s/features/unlink", planID), in, nil)
 	if err != nil {
-		// Check if the error is a 404 with "Feature Bundle not found" message
 		if err.Error() != "" && strings.Contains(err.Error(), "Feature Bundle not found") {
-			// This is the specific 404 error we want to treat as success
 			return nil
 		}
 		return diag.FromErr(err)
