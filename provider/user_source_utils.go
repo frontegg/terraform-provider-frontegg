@@ -9,10 +9,10 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
-// Common paths for user sources
+// Common paths for user sources.
 const fronteggUserSourceBasePath = "/identity/resources/user-sources/v1"
 
-// Common response type for all user sources
+// Common response type for all user sources.
 type fronteggBaseUserSourceResponse struct {
 	ID          string   `json:"id"`
 	Name        string   `json:"name"`
@@ -22,7 +22,7 @@ type fronteggBaseUserSourceResponse struct {
 	Index       int      `json:"index"`
 }
 
-// TenantConfig interfaces
+// TenantConfig interfaces.
 type UserSourceDynamicTenantConfig struct {
 	TenantIDFieldName  string `json:"tenantIdFieldName"`
 	TenantResolverType string `json:"tenantResolverType"`
@@ -41,7 +41,7 @@ type UserSourceFromSourceTenantConfig struct {
 	TenantResolverType string `json:"tenantResolverType"`
 }
 
-// Builds the tenant configuration based on the terraform resource data
+// Builds the tenant configuration based on the terraform resource data.
 func buildUserSourceTenantConfig(d *schema.ResourceData) (interface{}, error) {
 	resolverType := d.Get("tenant_resolver_type").(string)
 
@@ -77,7 +77,7 @@ func buildUserSourceTenantConfig(d *schema.ResourceData) (interface{}, error) {
 	}
 }
 
-// Common schema fields for all user sources
+// Common schema fields for all user sources.
 func userSourceBaseSchema() map[string]*schema.Schema {
 	return map[string]*schema.Schema{
 		"name": {
@@ -145,7 +145,7 @@ func userSourceBaseSchema() map[string]*schema.Schema {
 	}
 }
 
-// Extract app IDs from schema resource data
+// Extract app IDs from schema resource data.
 func extractAppIDs(d *schema.ResourceData) []string {
 	appIDsSet := d.Get("app_ids").(*schema.Set)
 	var appIDs []string
@@ -157,7 +157,7 @@ func extractAppIDs(d *schema.ResourceData) []string {
 	return appIDs
 }
 
-// Deserialize common user source response fields
+// Deserialize common user source response fields.
 func deserializeUserSourceResponse(d *schema.ResourceData, source fronteggBaseUserSourceResponse) error {
 	d.SetId(source.ID)
 	if err := d.Set("name", source.Name); err != nil {
@@ -175,7 +175,7 @@ func deserializeUserSourceResponse(d *schema.ResourceData, source fronteggBaseUs
 	return nil
 }
 
-// Common Read function for all user sources
+// Common Read function for all user sources.
 func readUserSource(ctx context.Context, d *schema.ResourceData, meta interface{}, deserializeFunc func(*schema.ResourceData, fronteggBaseUserSourceResponse) error) diag.Diagnostics {
 	clientHolder := meta.(*restclient.ClientHolder)
 	client := clientHolder.ApiClient
@@ -198,7 +198,7 @@ func readUserSource(ctx context.Context, d *schema.ResourceData, meta interface{
 	return nil
 }
 
-// Common Delete function for all user sources
+// Common Delete function for all user sources.
 func deleteUserSource(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	clientHolder := meta.(*restclient.ClientHolder)
 	if err := clientHolder.ApiClient.Delete(ctx, fmt.Sprintf("%s/%s", fronteggUserSourceBasePath, d.Id()), nil); err != nil {

@@ -17,7 +17,7 @@ type fronteggApplicationTenantAssignment struct {
 	AppIDs   []string `json:"appIds"`
 }
 
-// For handling the API response format in Read when it returns an object
+// For handling the API response format in Read when it returns an object.
 type fronteggApplicationTenantIds struct {
 	TenantIds []string `json:"tenantIds"`
 }
@@ -59,8 +59,12 @@ func resourceFronteggApplicationTenantAssignmentImport(ctx context.Context, d *s
 	appID := parts[0]
 	tenantID := parts[1]
 
-	d.Set("app_id", appID)
-	d.Set("tenant_id", tenantID)
+	if err := d.Set("app_id", appID); err != nil {
+		return nil, err
+	}
+	if err := d.Set("tenant_id", tenantID); err != nil {
+		return nil, err
+	}
 
 	// Return the resource with the ID set
 	return []*schema.ResourceData{d}, nil
