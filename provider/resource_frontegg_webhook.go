@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	"regexp"
 
 	"github.com/frontegg/terraform-provider-frontegg/internal/restclient"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
