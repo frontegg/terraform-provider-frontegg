@@ -154,6 +154,7 @@ type fronteggSSO struct {
 	Secret      string `json:"secret"`
 	Type        string `json:"type"`
 	Cusomised   bool   `json:"customised"`
+	AdditionalScopes []string `json:"additionalScopes,omitempty"`
 }
 
 type fronteggSSOSAML struct {
@@ -446,6 +447,14 @@ func resourceFronteggWorkspace() *schema.Resource {
 					Type:        schema.TypeBool,
 					Optional:    true,
 					Default:     true,
+				},
+				"additional_scopes": {
+					Description: "Determine whether to ask for additional scopes when authenticating with the SSO provider.",
+					Type:        schema.TypeSet,
+					Optional:    true,
+					Elem: &schema.Schema{
+						Type: schema.TypeString,
+					},
 				},
 			},
 		}
@@ -1337,6 +1346,7 @@ func resourceFronteggWorkspaceRead(ctx context.Context, d *schema.ResourceData, 
 				"redirect_url": out.RedirectURL,
 				"secret":       out.Secret,
 				"customised":   out.Cusomised,
+				"additional_scopes": out.AdditionalScopes,
 			})
 		}
 		if err := d.Set(fmt.Sprintf("%s_social_login", typ), items); err != nil {
@@ -1833,6 +1843,10 @@ func resourceFronteggWorkspaceUpdate(ctx context.Context, d *schema.ResourceData
 				Secret:      d.Get(fmt.Sprintf("%s.0.secret", name)).(string),
 				Cusomised:   d.Get(fmt.Sprintf("%s.0.customised", name)).(bool),
 				Type:        typ,
+			}
+
+			if v, ok := d.GetOk(fmt.Sprintf("%s.0.additional_scopes", name)); ok {
+				in.AdditionalScopes = stringSetToList(v.(*schema.Set))
 			}
 			if err := clientHolder.ApiClient.Post(ctx, fronteggSSOURL, in, nil); err != nil {
 				return diag.FromErr(err)
