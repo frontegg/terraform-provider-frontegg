@@ -73,6 +73,7 @@ func New(version string) func() *schema.Provider {
 				"frontegg_feature":                       resourceFronteggFeature(),
 				"frontegg_plan":                          resourceFronteggPlan(),
 				"frontegg_plan_feature":                  resourceFronteggPlanFeature(),
+				"frontegg_secret":                        resourceFronteggSecret(),
 			},
 			ConfigureContextFunc: func(ctx context.Context, d *schema.ResourceData) (interface{}, diag.Diagnostics) {
 				environmentId := d.Get("environment_id").(string)
