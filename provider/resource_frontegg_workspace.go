@@ -148,12 +148,12 @@ type fronteggOAuthRedirectURI struct {
 }
 
 type fronteggSSO struct {
-	Active           bool     `json:"active"`
-	ClientID         string   `json:"clientId"`
-	RedirectURL      string   `json:"redirectUrl"`
-	Secret           string   `json:"secret"`
-	Type             string   `json:"type"`
-	Cusomised        bool     `json:"customised"`
+	Active      bool   `json:"active"`
+	ClientID    string `json:"clientId"`
+	RedirectURL string `json:"redirectUrl"`
+	Secret      string `json:"secret"`
+	Type        string `json:"type"`
+	Cusomised   bool   `json:"customised"`
 }
 
 type fronteggSSOSAML struct {
@@ -1333,10 +1333,10 @@ func resourceFronteggWorkspaceRead(ctx context.Context, d *schema.ResourceData, 
 		items := []interface{}{}
 		if out.Active {
 			items = append(items, map[string]interface{}{
-				"client_id":         out.ClientID,
-				"redirect_url":      out.RedirectURL,
-				"secret":            out.Secret,
-				"customised":        out.Cusomised,
+				"client_id":    out.ClientID,
+				"redirect_url": out.RedirectURL,
+				"secret":       out.Secret,
+				"customised":   out.Cusomised,
 			})
 		}
 		if err := d.Set(fmt.Sprintf("%s_social_login", typ), items); err != nil {
