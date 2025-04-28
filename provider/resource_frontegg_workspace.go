@@ -148,12 +148,12 @@ type fronteggOAuthRedirectURI struct {
 }
 
 type fronteggSSO struct {
-	Active      bool   `json:"active"`
-	ClientID    string `json:"clientId"`
-	RedirectURL string `json:"redirectUrl"`
-	Secret      string `json:"secret"`
-	Type        string `json:"type"`
-	Cusomised   bool   `json:"customised"`
+	Active           bool     `json:"active"`
+	ClientID         string   `json:"clientId"`
+	RedirectURL      string   `json:"redirectUrl"`
+	Secret           string   `json:"secret"`
+	Type             string   `json:"type"`
+	Cusomised        bool     `json:"customised"`
 	AdditionalScopes []string `json:"additionalScopes,omitempty"`
 }
 
@@ -1342,10 +1342,10 @@ func resourceFronteggWorkspaceRead(ctx context.Context, d *schema.ResourceData, 
 		items := []interface{}{}
 		if out.Active {
 			items = append(items, map[string]interface{}{
-				"client_id":    out.ClientID,
-				"redirect_url": out.RedirectURL,
-				"secret":       out.Secret,
-				"customised":   out.Cusomised,
+				"client_id":         out.ClientID,
+				"redirect_url":      out.RedirectURL,
+				"secret":            out.Secret,
+				"customised":        out.Cusomised,
 				"additional_scopes": out.AdditionalScopes,
 			})
 		}
