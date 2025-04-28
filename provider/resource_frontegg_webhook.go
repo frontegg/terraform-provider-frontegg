@@ -70,8 +70,8 @@ func resourceFronteggWebhook() *schema.Resource {
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 					ValidateFunc: validation.StringMatch(
-                            regexp.MustCompile(`^frontegg\..*`),
-                            "event name must start with 'frontegg.'",
+						regexp.MustCompile(`^frontegg\..*`),
+						"event name must start with 'frontegg.'",
 					),
 				},
 				Required: true,
