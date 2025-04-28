@@ -87,7 +87,6 @@ resource "frontegg_workspace" "example" {
     redirect_url = "fake-redirect-url"
     secret       = "fake-secret"
     customised   = false
-    additional_scopes  = ["email", "public_profile"]
   }
 
   github_social_login {
@@ -146,7 +145,50 @@ resource "frontegg_workspace" "example" {
     enable_groups              = false
     enable_provisioning        = false
 
-    palette {
+    palette_admin_portal {
+      error {
+        contrast_text = "#eeeef0"
+        dark          = "#ae402c"
+        light         = "#FFEEEA"
+        main          = "#E1583E"
+      }
+      info {
+        contrast_text = "#eeeef0"
+        dark          = "#3c6492"
+        light         = "#E2EEF9"
+        main          = "#5587C0"
+      }
+      primary {
+        active        = "#278854"
+        contrast_text = "#eeeef0"
+        dark          = "#36A76A"
+        hover         = "#32A265"
+        light         = "#A2E1BF"
+        main          = "#43BB7A"
+      }
+      secondary {
+        active        = "#E6ECF4"
+        contrast_text = "#eeeef0"
+        dark          = "#E6ECF4"
+        hover         = "#F0F3F8"
+        light         = "#FBFBFC"
+        main          = "#FBFBFC"
+      }
+      success {
+        contrast_text = "#eeeef0"
+        dark          = "#1d7c30"
+        light         = "#E1F5E2"
+        main          = "#2CA744"
+      }
+      warning {
+        contrast_text = "#eeeef0"
+        dark          = "#EAE1C2"
+        light         = "#F9F4E2"
+        main          = "#A79D7B"
+      }
+    }
+
+    palette_login_box {
       error {
         contrast_text = "#eeeef0"
         dark          = "#ae402c"
@@ -683,10 +725,10 @@ Required:
 
 Optional:
 
+- `additional_scopes` (Set of String) Determine whether to ask for additional scopes when authenticating with the SSO provider.
 - `client_id` (String) The client ID of the Facebook application to authenticate with. Required when setting **`customised`** parameter to true.
 - `customised` (Boolean) Determine whether the SSO should use customized secret and client ID. When passing true, clientId and secret are also required.
 - `secret` (String, Sensitive) The secret associated with the Facebook application. Required when setting **`customised`** parameter to true.
-- `additional_scopes` (Set of String) Determine whether to ask for additional scopes when authenticating with the SSO provider.
 
 
 <a id="nestedblock--github_social_login"></a>
@@ -698,10 +740,10 @@ Required:
 
 Optional:
 
+- `additional_scopes` (Set of String) Determine whether to ask for additional scopes when authenticating with the SSO provider.
 - `client_id` (String) The client ID of the GitHub application to authenticate with. Required when setting **`customised`** parameter to true.
 - `customised` (Boolean) Determine whether the SSO should use customized secret and client ID. When passing true, clientId and secret are also required.
 - `secret` (String, Sensitive) The secret associated with the GitHub application. Required when setting **`customised`** parameter to true.
-- `additional_scopes` (Set of String) Determine whether to ask for additional scopes when authenticating with the SSO provider.
 
 
 <a id="nestedblock--google_social_login"></a>
@@ -713,10 +755,10 @@ Required:
 
 Optional:
 
+- `additional_scopes` (Set of String) Determine whether to ask for additional scopes when authenticating with the SSO provider.
 - `client_id` (String) The client ID of the Google application to authenticate with. Required when setting **`customised`** parameter to true.
 - `customised` (Boolean) Determine whether the SSO should use customized secret and client ID. When passing true, clientId and secret are also required.
 - `secret` (String, Sensitive) The secret associated with the Google application. Required when setting **`customised`** parameter to true.
-- `additional_scopes` (Set of String) Determine whether to ask for additional scopes when authenticating with the SSO provider.
 
 
 <a id="nestedblock--hosted_login"></a>
@@ -878,10 +920,10 @@ Required:
 
 Optional:
 
+- `additional_scopes` (Set of String) Determine whether to ask for additional scopes when authenticating with the SSO provider.
 - `client_id` (String) The client ID of the Microsoft application to authenticate with. Required when setting **`customised`** parameter to true.
 - `customised` (Boolean) Determine whether the SSO should use customized secret and client ID. When passing true, clientId and secret are also required.
 - `secret` (String, Sensitive) The secret associated with the Microsoft application. Required when setting **`customised`** parameter to true.
-- `additional_scopes` (Set of String) Determine whether to ask for additional scopes when authenticating with the SSO provider.
 
 
 <a id="nestedblock--new_device_connected_email"></a>
