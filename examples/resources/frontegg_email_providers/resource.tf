@@ -3,7 +3,7 @@ resource "frontegg_email_providers" "ses_example" {
   provider_name = "ses"
   provider_id   = "AKIAIOSFODNN7EXAMPLE"
   region        = "us-west-2"
-  secret        = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
+  secret        = "SECRET_ACCESS_KEY"
 }
 
 # Mailgun example

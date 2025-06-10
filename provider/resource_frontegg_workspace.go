@@ -208,8 +208,13 @@ type fronteggAdminPortalConfiguration struct {
 	ThemeV2    fronteggAdminPortalThemeV2    `json:"themeV2"`
 }
 type fronteggAdminPortalThemeV2 struct {
-	LoginBox    fronteggPaletteV2 `json:"loginBox"`
-	AdminPortal fronteggPaletteV2 `json:"adminPortal"`
+	LoginBox    fronteggThemeOptions `json:"loginBox"`
+	AdminPortal fronteggThemeOptions `json:"adminPortal"`
+}
+
+type fronteggThemeOptions struct {
+	Palette   fronteggPaletteV2 `json:"palette"`
+	ThemeName string            `json:"themeName"`
 }
 
 type fronteggPaletteV1 struct {
@@ -1141,6 +1146,16 @@ per Frontegg provider.`,
 							MaxItems:    1,
 							Elem:        resourceFronteggPalette(),
 						},
+						"admin_portal_theme_name": {
+							Description: "Configures the theme name for the admin portal.",
+							Type:        schema.TypeString,
+							Optional:    true,
+						},
+						"login_box_theme_name": {
+							Description: "Configures the theme name for the login box.",
+							Type:        schema.TypeString,
+							Optional:    true,
+						},
 					},
 				},
 			},
@@ -1541,11 +1556,11 @@ func resourceFronteggWorkspaceRead(ctx context.Context, d *schema.ResourceData, 
 
 		if len(out.Rows) > 0 {
 			paletteV1 = out.Rows[0].Configuration.Theme
-			if out.Rows[0].Configuration.ThemeV2.LoginBox != (fronteggPaletteV2{}) {
-				paletteV2LoginBox = out.Rows[0].Configuration.ThemeV2.LoginBox
+			if out.Rows[0].Configuration.ThemeV2.LoginBox != (fronteggThemeOptions{}) {
+				paletteV2LoginBox = out.Rows[0].Configuration.ThemeV2.LoginBox.Palette
 			}
-			if out.Rows[0].Configuration.ThemeV2.AdminPortal != (fronteggPaletteV2{}) {
-				paletteV2AdminPortal = out.Rows[0].Configuration.ThemeV2.AdminPortal
+			if out.Rows[0].Configuration.ThemeV2.AdminPortal != (fronteggThemeOptions{}) {
+				paletteV2AdminPortal = out.Rows[0].Configuration.ThemeV2.AdminPortal.Palette
 			}
 		}
 
@@ -1598,6 +1613,8 @@ func resourceFronteggWorkspaceRead(ctx context.Context, d *schema.ResourceData, 
 			"palette":                    paletteItems,
 			"palette_login_box":          getPaletteItemsV2(paletteV2LoginBox),
 			"palette_admin_portal":       getPaletteItemsV2(paletteV2AdminPortal),
+			"login_box_theme_name":       out.Rows[0].Configuration.ThemeV2.LoginBox.ThemeName,
+			"admin_portal_theme_name":    out.Rows[0].Configuration.ThemeV2.AdminPortal.ThemeName,
 		}
 		if err := d.Set("admin_portal", []interface{}{adminPortal}); err != nil {
 			return diag.FromErr(err)
@@ -2098,15 +2115,17 @@ func resourceFronteggWorkspaceUpdate(ctx context.Context, d *schema.ResourceData
 			configuration.Theme = serializeOldPalette("admin_portal.0.palette")
 		} else if isNonEmptySlice(paletteSuccess) {
 			log.Printf("[DEBUG] paletteSuccess is a slice")
-			configuration.ThemeV2.LoginBox = serializeNewPalette("admin_portal.0.palette")
+			configuration.ThemeV2.LoginBox.Palette = serializeNewPalette("admin_portal.0.palette")
 		} else {
 			log.Printf("[DEBUG] paletteSuccess is not a string or slice")
 			if isNonEmptySlice(d.Get("admin_portal.0.palette_admin_portal.0.success")) {
-				configuration.ThemeV2.AdminPortal = serializeNewPalette("admin_portal.0.palette_admin_portal")
+				configuration.ThemeV2.AdminPortal.Palette = serializeNewPalette("admin_portal.0.palette_admin_portal")
 			}
 			if isNonEmptySlice(d.Get("admin_portal.0.palette_login_box.0.success")) {
-				configuration.ThemeV2.LoginBox = serializeNewPalette("admin_portal.0.palette_login_box")
+				configuration.ThemeV2.LoginBox.Palette = serializeNewPalette("admin_portal.0.palette_login_box")
 			}
+			configuration.ThemeV2.LoginBox.ThemeName = d.Get("admin_portal.0.login_box_theme_name").(string)
+			configuration.ThemeV2.AdminPortal.ThemeName = d.Get("admin_portal.0.admin_portal_theme_name").(string)
 		}
 
 		type MergedObject struct {

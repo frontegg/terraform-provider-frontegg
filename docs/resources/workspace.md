@@ -321,6 +321,8 @@ Required:
 
 Optional:
 
+- `admin_portal_theme_name` (String) Configures the theme name for the admin portal.
+- `login_box_theme_name` (String) Configures the theme name for the login box.
 - `palette` (Block List, Max: 1, Deprecated) Configures the color palette for the admin portal. (see [below for nested schema](#nestedblock--admin_portal--palette))
 - `palette_admin_portal` (Block List, Max: 1) Configures the color palette for the admin portal. (see [below for nested schema](#nestedblock--admin_portal--palette_admin_portal))
 - `palette_login_box` (Block List, Max: 1) Configures the color palette for the admin portal. (see [below for nested schema](#nestedblock--admin_portal--palette_login_box))
@@ -642,6 +644,7 @@ Required:
 
 Optional:
 
+- `active` (Boolean) Whether the email template is active.
 - `redirect_url` (String) The redirect URL to use, if applicable.
 
     Access this value as "\{\{redirectURL\}\}" in the template.
@@ -660,6 +663,7 @@ Required:
 
 Optional:
 
+- `active` (Boolean) Whether the email template is active.
 - `redirect_url` (String) The redirect URL to use, if applicable.
 
     Access this value as "\{\{redirectURL\}\}" in the template.
@@ -678,6 +682,7 @@ Required:
 
 Optional:
 
+- `active` (Boolean) Whether the email template is active.
 - `redirect_url` (String) The redirect URL to use, if applicable.
 
     Access this value as "\{\{redirectURL\}\}" in the template.
@@ -710,6 +715,7 @@ Required:
 
 Optional:
 
+- `active` (Boolean) Whether the email template is active.
 - `redirect_url` (String) The redirect URL to use, if applicable.
 
     Access this value as "\{\{redirectURL\}\}" in the template.
@@ -781,6 +787,7 @@ Required:
 
 Optional:
 
+- `active` (Boolean) Whether the email template is active.
 - `redirect_url` (String) The redirect URL to use, if applicable.
 
     Access this value as "\{\{redirectURL\}\}" in the template.
@@ -807,6 +814,7 @@ Required:
 
 Optional:
 
+- `active` (Boolean) Whether the email template is active.
 - `redirect_url` (String) The redirect URL to use, if applicable.
 
     Access this value as "\{\{redirectURL\}\}" in the template.
@@ -825,6 +833,7 @@ Required:
 
 Optional:
 
+- `active` (Boolean) Whether the email template is active.
 - `redirect_url` (String) The redirect URL to use, if applicable.
 
     Access this value as "\{\{redirectURL\}\}" in the template.
@@ -851,6 +860,7 @@ Required:
 
 Optional:
 
+- `active` (Boolean) Whether the email template is active.
 - `redirect_url` (String) The redirect URL to use, if applicable.
 
     Access this value as "\{\{redirectURL\}\}" in the template.
@@ -869,6 +879,7 @@ Required:
 
 Optional:
 
+- `active` (Boolean) Whether the email template is active.
 - `redirect_url` (String) The redirect URL to use, if applicable.
 
     Access this value as "\{\{redirectURL\}\}" in the template.
@@ -887,6 +898,7 @@ Required:
 
 Optional:
 
+- `active` (Boolean) Whether the email template is active.
 - `redirect_url` (String) The redirect URL to use, if applicable.
 
     Access this value as "\{\{redirectURL\}\}" in the template.
@@ -905,6 +917,7 @@ Required:
 
 Optional:
 
+- `active` (Boolean) Whether the email template is active.
 - `redirect_url` (String) The redirect URL to use, if applicable.
 
     Access this value as "\{\{redirectURL\}\}" in the template.
@@ -938,6 +951,7 @@ Required:
 
 Optional:
 
+- `active` (Boolean) Whether the email template is active.
 - `redirect_url` (String) The redirect URL to use, if applicable.
 
     Access this value as "\{\{redirectURL\}\}" in the template.
@@ -956,6 +970,7 @@ Required:
 
 Optional:
 
+- `active` (Boolean) Whether the email template is active.
 - `redirect_url` (String) The redirect URL to use, if applicable.
 
     Access this value as "\{\{redirectURL\}\}" in the template.
@@ -982,6 +997,7 @@ Required:
 
 Optional:
 
+- `active` (Boolean) Whether the email template is active.
 - `redirect_url` (String) The redirect URL to use, if applicable.
 
     Access this value as "\{\{redirectURL\}\}" in the template.
@@ -1000,6 +1016,7 @@ Required:
 
 Optional:
 
+- `active` (Boolean) Whether the email template is active.
 - `redirect_url` (String) The redirect URL to use, if applicable.
 
     Access this value as "\{\{redirectURL\}\}" in the template.
@@ -1018,6 +1035,7 @@ Required:
 
 Optional:
 
+- `active` (Boolean) Whether the email template is active.
 - `redirect_url` (String) The redirect URL to use, if applicable.
 
     Access this value as "\{\{redirectURL\}\}" in the template.
@@ -1036,6 +1054,7 @@ Required:
 
 Optional:
 
+- `active` (Boolean) Whether the email template is active.
 - `redirect_url` (String) The redirect URL to use, if applicable.
 
     Access this value as "\{\{redirectURL\}\}" in the template.
@@ -1067,6 +1086,7 @@ Required:
 
 Optional:
 
+- `active` (Boolean) Whether the email template is active.
 - `redirect_url` (String) The redirect URL to use, if applicable.
 
     Access this value as "\{\{redirectURL\}\}" in the template.
@@ -1104,6 +1124,7 @@ Required:
 
 Optional:
 
+- `active` (Boolean) Whether the email template is active.
 - `redirect_url` (String) The redirect URL to use, if applicable.
 
     Access this value as "\{\{redirectURL\}\}" in the template.
@@ -1122,6 +1143,7 @@ Required:
 
 Optional:
 
+- `active` (Boolean) Whether the email template is active.
 - `redirect_url` (String) The redirect URL to use, if applicable.
 
     Access this value as "\{\{redirectURL\}\}" in the template.
@@ -1140,6 +1162,7 @@ Required:
 
 Optional:
 
+- `active` (Boolean) Whether the email template is active.
 - `redirect_url` (String) The redirect URL to use, if applicable.
 
     Access this value as "\{\{redirectURL\}\}" in the template.
@@ -1158,6 +1181,7 @@ Required:
 
 Optional:
 
+- `active` (Boolean) Whether the email template is active.
 - `redirect_url` (String) The redirect URL to use, if applicable.
 
     Access this value as "\{\{redirectURL\}\}" in the template.
