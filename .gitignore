@@ -40,3 +40,4 @@ website/vendor
 
 #local
 local
+terraform.tfstate*

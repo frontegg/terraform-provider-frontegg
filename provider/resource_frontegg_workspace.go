@@ -387,6 +387,12 @@ func resourceFronteggWorkspace() *schema.Resource {
 	resourceFronteggEmail := func() *schema.Resource {
 		return &schema.Resource{
 			Schema: map[string]*schema.Schema{
+				"active": {
+					Description: "Whether the email template is active.",
+					Type:        schema.TypeBool,
+					Optional:    true,
+					Default:     true,
+				},
 				"from_address": {
 					Description: `The address to use in the "From" header of the email.`,
 					Type:        schema.TypeString,
@@ -1455,6 +1461,7 @@ func resourceFronteggWorkspaceRead(ctx context.Context, d *schema.ResourceData, 
 					var items []interface{}
 					if t.Active {
 						items = append(items, map[string]interface{}{
+							"active":               t.Active,
 							"from_address":         t.SenderEmail,
 							"from_name":            t.FromName,
 							"subject":              t.Subject,
@@ -1938,7 +1945,7 @@ func resourceFronteggWorkspaceUpdate(ctx context.Context, d *schema.ResourceData
 			Type:        typ,
 		}
 		if len(email) > 0 {
-			in.Active = true
+			in.Active = d.Get(fmt.Sprintf("%s.0.active", field)).(bool)
 			in.FromName = d.Get(fmt.Sprintf("%s.0.from_name", field)).(string)
 			in.SenderEmail = d.Get(fmt.Sprintf("%s.0.from_address", field)).(string)
 			in.Subject = d.Get(fmt.Sprintf("%s.0.subject", field)).(string)
