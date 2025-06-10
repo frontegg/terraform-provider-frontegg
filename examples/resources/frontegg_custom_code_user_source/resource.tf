@@ -1,12 +1,12 @@
 resource "frontegg_custom_code_user_source" "example" {
-  name                = "Example Custom Code User Source"
-  description         = "An example custom code user source"
-  index               = 1
-  sync_on_login       = true
-  is_migrated         = false
+  name                 = "Example Custom Code User Source"
+  description          = "An example custom code user source"
+  index                = 1
+  sync_on_login        = true
+  is_migrated          = false
   tenant_resolver_type = "static"
-  tenant_id           = "tenant-1234567890"
-  
+  tenant_id            = "tenant-1234567890"
+
   code_payload = <<-EOT
     function authenticate(email, password) {
       // Custom authentication logic
@@ -20,7 +20,7 @@ resource "frontegg_custom_code_user_source" "example" {
       return null;
     }
   EOT
-  
+
   get_user_code_payload = <<-EOT
     function getUser(userId) {
       // Custom user retrieval logic
@@ -37,7 +37,7 @@ resource "frontegg_custom_code_user_source" "example" {
       return null;
     }
   EOT
-  
+
   app_ids = [
     "app-1234567890"
   ]
