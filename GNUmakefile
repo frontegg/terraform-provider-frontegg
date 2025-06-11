@@ -1,5 +1,5 @@
 PLATFORM ?= $(shell go env GOOS)_$(shell go env GOARCH)
-VERSION = 1.0.27
+VERSION = 1.0.28
 
 default: testacc
 
