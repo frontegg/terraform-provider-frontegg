@@ -19,7 +19,7 @@ func stringSetToListWithRightTrim(set *schema.Set, trimRight string) []string {
 	return out
 }
 
-// trimRightFromStringSlice trims the specified suffix from each string in the slice
+// trimRightFromStringSlice trims the specified suffix from each string in the slice.
 func trimRightFromStringSlice(slice []string, trimRight string) []string {
 	out := make([]string, 0, len(slice))
 	for _, s := range slice {

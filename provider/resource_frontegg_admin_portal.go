@@ -650,7 +650,7 @@ func resourceFronteggAdminPortalDelete(ctx context.Context, d *schema.ResourceDa
 	return nil
 }
 
-// Helper functions
+// Helper functions.
 func isNonEmptySlice(value interface{}) bool {
 	return len(value.([]interface{})) > 0
 }
