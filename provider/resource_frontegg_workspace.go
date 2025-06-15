@@ -594,7 +594,9 @@ func resourceFronteggWorkspaceRead(ctx context.Context, d *schema.ResourceData, 
 		if err := d.Set("frontegg_domain", out.Host); err != nil {
 			return diag.FromErr(err)
 		}
-		if err := d.Set("allowed_origins", out.AllowedOrigins); err != nil {
+		// Normalize allowed_origins by trimming trailing slashes to prevent unnecessary plan changes
+		normalizedAllowedOrigins := trimRightFromStringSlice(out.AllowedOrigins, "/")
+		if err := d.Set("allowed_origins", normalizedAllowedOrigins); err != nil {
 			return diag.FromErr(err)
 		}
 	}
@@ -810,8 +812,10 @@ func resourceFronteggWorkspaceRead(ctx context.Context, d *schema.ResourceData, 
 			for _, r := range outRedirects.RedirectURIs {
 				allowedRedirectURLs = append(allowedRedirectURLs, r.RedirectURI)
 			}
+			// Normalize allowed_redirect_urls by trimming trailing slashes to prevent unnecessary plan changes
+			normalizedRedirectURLs := trimRightFromStringSlice(allowedRedirectURLs, "/")
 			items = append(items, map[string]interface{}{
-				"allowed_redirect_urls": allowedRedirectURLs,
+				"allowed_redirect_urls": normalizedRedirectURLs,
 			})
 		}
 		if err := d.Set("hosted_login", items); err != nil {

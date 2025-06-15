@@ -19,6 +19,16 @@ func stringSetToListWithRightTrim(set *schema.Set, trimRight string) []string {
 	return out
 }
 
+// trimRightFromStringSlice trims the specified suffix from each string in the slice
+func trimRightFromStringSlice(slice []string, trimRight string) []string {
+	out := make([]string, 0, len(slice))
+	for _, s := range slice {
+		trimmed := strings.TrimRight(s, trimRight)
+		out = append(out, trimmed)
+	}
+	return out
+}
+
 func castResourceStringMap(resourceMapValue interface{}) map[string]string {
 	newStringMap := make(map[string]string)
 	for key, val := range resourceMapValue.(map[string]interface{}) {
