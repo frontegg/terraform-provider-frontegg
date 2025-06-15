@@ -258,13 +258,9 @@ resource "frontegg_workspace" "example" {
 - `captcha_policy` (Block List, Max: 1) Configures the CAPTCHA policy in the signup form. (see [below for nested schema](#nestedblock--captcha_policy))
 - `custom_domains` (Set of String) List of custom domains at which Frontegg services will be reachable.
 				You must configure CNAME for each domain, you can get record values from the portal.
-- `facebook_social_login` (Block List, Max: 1) Configures social login with Facebook. (see [below for nested schema](#nestedblock--facebook_social_login))
-- `github_social_login` (Block List, Max: 1) Configures social login with GitHub. (see [below for nested schema](#nestedblock--github_social_login))
-- `google_social_login` (Block List, Max: 1) Configures social login with Google. (see [below for nested schema](#nestedblock--google_social_login))
 - `hosted_login` (Block List, Max: 1) Configures Frontegg-hosted OAuth login. (see [below for nested schema](#nestedblock--hosted_login))
 - `lockout_policy` (Block List, Max: 1) Configures the user lockout policy. (see [below for nested schema](#nestedblock--lockout_policy))
 - `mfa_authentication_app` (Block List, Max: 1) Configures the multi-factor authentication (MFA) via an authentication app. (see [below for nested schema](#nestedblock--mfa_authentication_app))
-- `microsoft_social_login` (Block List, Max: 1) Configures social login with Google. (see [below for nested schema](#nestedblock--microsoft_social_login))
 - `oidc` (Block List, Max: 1) Configures SSO via OIDC. (see [below for nested schema](#nestedblock--oidc))
 - `saml` (Block List, Max: 1) Configures SSO via SAML. (see [below for nested schema](#nestedblock--saml))
 - `sso_multi_tenant_policy` (Block List, Max: 1) Configures how multiple tenants can claim the same SSO domain. (see [below for nested schema](#nestedblock--sso_multi_tenant_policy))
@@ -312,51 +308,6 @@ Optional:
 - `ignored_emails` (Set of String) Email addresses that should be exempt from CAPTCHA checks.
 
 
-<a id="nestedblock--facebook_social_login"></a>
-### Nested Schema for `facebook_social_login`
-
-Required:
-
-- `redirect_url` (String) The URL to redirect to after a successful authentication.
-
-Optional:
-
-- `additional_scopes` (Set of String) Determine whether to ask for additional scopes when authenticating with the SSO provider.
-- `client_id` (String) The client ID of the Facebook application to authenticate with. Required when setting **`customised`** parameter to true.
-- `customised` (Boolean) Determine whether the SSO should use customized secret and client ID. When passing true, clientId and secret are also required.
-- `secret` (String, Sensitive) The secret associated with the Facebook application. Required when setting **`customised`** parameter to true.
-
-
-<a id="nestedblock--github_social_login"></a>
-### Nested Schema for `github_social_login`
-
-Required:
-
-- `redirect_url` (String) The URL to redirect to after a successful authentication.
-
-Optional:
-
-- `additional_scopes` (Set of String) Determine whether to ask for additional scopes when authenticating with the SSO provider.
-- `client_id` (String) The client ID of the GitHub application to authenticate with. Required when setting **`customised`** parameter to true.
-- `customised` (Boolean) Determine whether the SSO should use customized secret and client ID. When passing true, clientId and secret are also required.
-- `secret` (String, Sensitive) The secret associated with the GitHub application. Required when setting **`customised`** parameter to true.
-
-
-<a id="nestedblock--google_social_login"></a>
-### Nested Schema for `google_social_login`
-
-Required:
-
-- `redirect_url` (String) The URL to redirect to after a successful authentication.
-
-Optional:
-
-- `additional_scopes` (Set of String) Determine whether to ask for additional scopes when authenticating with the SSO provider.
-- `client_id` (String) The client ID of the Google application to authenticate with. Required when setting **`customised`** parameter to true.
-- `customised` (Boolean) Determine whether the SSO should use customized secret and client ID. When passing true, clientId and secret are also required.
-- `secret` (String, Sensitive) The secret associated with the Google application. Required when setting **`customised`** parameter to true.
-
-
 <a id="nestedblock--hosted_login"></a>
 ### Nested Schema for `hosted_login`
 
@@ -379,21 +330,6 @@ Required:
 Required:
 
 - `service_name` (String) The service name to display in the authentication app.
-
-
-<a id="nestedblock--microsoft_social_login"></a>
-### Nested Schema for `microsoft_social_login`
-
-Required:
-
-- `redirect_url` (String) The URL to redirect to after a successful authentication.
-
-Optional:
-
-- `additional_scopes` (Set of String) Determine whether to ask for additional scopes when authenticating with the SSO provider.
-- `client_id` (String) The client ID of the Microsoft application to authenticate with. Required when setting **`customised`** parameter to true.
-- `customised` (Boolean) Determine whether the SSO should use customized secret and client ID. When passing true, clientId and secret are also required.
-- `secret` (String, Sensitive) The secret associated with the Microsoft application. Required when setting **`customised`** parameter to true.
 
 
 <a id="nestedblock--oidc"></a>

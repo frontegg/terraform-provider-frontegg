@@ -167,43 +167,6 @@ type fronteggOIDC struct {
 
 func resourceFronteggWorkspace() *schema.Resource {
 
-	resourceFronteggSocialLogin := func(name string) *schema.Resource {
-		return &schema.Resource{
-			Schema: map[string]*schema.Schema{
-				"client_id": {
-					Description: fmt.Sprintf("The client ID of the %s application to authenticate with. Required when setting **`customised`** parameter to true.", name),
-					Type:        schema.TypeString,
-					Optional:    true,
-				},
-				"redirect_url": {
-					Description: "The URL to redirect to after a successful authentication.",
-					Type:        schema.TypeString,
-					Required:    true,
-				},
-				"secret": {
-					Description: fmt.Sprintf("The secret associated with the %s application. Required when setting **`customised`** parameter to true.", name),
-					Type:        schema.TypeString,
-					Optional:    true,
-					Sensitive:   true,
-				},
-				"customised": {
-					Description: "Determine whether the SSO should use customized secret and client ID. When passing true, clientId and secret are also required.",
-					Type:        schema.TypeBool,
-					Optional:    true,
-					Default:     true,
-				},
-				"additional_scopes": {
-					Description: "Determine whether to ask for additional scopes when authenticating with the SSO provider.",
-					Type:        schema.TypeSet,
-					Optional:    true,
-					Elem: &schema.Schema{
-						Type: schema.TypeString,
-					},
-				},
-			},
-		}
-	}
-
 	return &schema.Resource{
 		Description: `Workspace configuration.
 
@@ -421,34 +384,7 @@ per Frontegg provider.`,
 					},
 				},
 			},
-			"facebook_social_login": {
-				Description: "Configures social login with Facebook.",
-				Type:        schema.TypeList,
-				Optional:    true,
-				MaxItems:    1,
-				Elem:        resourceFronteggSocialLogin("Facebook"),
-			},
-			"github_social_login": {
-				Description: "Configures social login with GitHub.",
-				Type:        schema.TypeList,
-				Optional:    true,
-				MaxItems:    1,
-				Elem:        resourceFronteggSocialLogin("GitHub"),
-			},
-			"google_social_login": {
-				Description: "Configures social login with Google.",
-				Type:        schema.TypeList,
-				Optional:    true,
-				MaxItems:    1,
-				Elem:        resourceFronteggSocialLogin("Google"),
-			},
-			"microsoft_social_login": {
-				Description: "Configures social login with Google.",
-				Type:        schema.TypeList,
-				Optional:    true,
-				MaxItems:    1,
-				Elem:        resourceFronteggSocialLogin("Microsoft"),
-			},
+
 			"saml": {
 				Description: "Configures SSO via SAML.",
 				Type:        schema.TypeList,
@@ -684,26 +620,7 @@ func resourceFronteggWorkspaceRead(ctx context.Context, d *schema.ResourceData, 
 			return diag.FromErr(err)
 		}
 	}
-	for _, typ := range []string{"facebook", "github", "google", "microsoft"} {
-		var out fronteggSSO
-		clientHolder.ApiClient.Ignore404()
-		if err := clientHolder.ApiClient.Get(ctx, fmt.Sprintf("%s/%s", fronteggSSOURL, typ), &out); err != nil {
-			return diag.FromErr(err)
-		}
-		items := []interface{}{}
-		if out.Active {
-			items = append(items, map[string]interface{}{
-				"client_id":         out.ClientID,
-				"redirect_url":      out.RedirectURL,
-				"secret":            out.Secret,
-				"customised":        out.Cusomised,
-				"additional_scopes": out.AdditionalScopes,
-			})
-		}
-		if err := d.Set(fmt.Sprintf("%s_social_login", typ), items); err != nil {
-			return diag.FromErr(err)
-		}
-	}
+
 	{
 		var out struct {
 			Rows []fronteggSSOSAML `json:"rows"`
@@ -996,35 +913,6 @@ func resourceFronteggWorkspaceUpdate(ctx context.Context, d *schema.ResourceData
 		}
 	}
 
-	for _, typ := range []string{"facebook", "github", "google", "microsoft"} {
-		name := fmt.Sprintf("%s_social_login", typ)
-		if len(d.Get(name).([]interface{})) == 0 {
-			clientHolder.ApiClient.Ignore404()
-			err := clientHolder.ApiClient.Post(ctx, fmt.Sprintf("%s/%s/deactivate", fronteggSSOURL, typ), nil, nil)
-			if err != nil {
-				return diag.FromErr(err)
-			}
-		} else {
-			in := fronteggSSO{
-				ClientID:    d.Get(fmt.Sprintf("%s.0.client_id", name)).(string),
-				RedirectURL: d.Get(fmt.Sprintf("%s.0.redirect_url", name)).(string),
-				Secret:      d.Get(fmt.Sprintf("%s.0.secret", name)).(string),
-				Cusomised:   d.Get(fmt.Sprintf("%s.0.customised", name)).(bool),
-				Type:        typ,
-			}
-
-			if v, ok := d.GetOk(fmt.Sprintf("%s.0.additional_scopes", name)); ok {
-				in.AdditionalScopes = stringSetToList(v.(*schema.Set))
-			}
-			if err := clientHolder.ApiClient.Post(ctx, fronteggSSOURL, in, nil); err != nil {
-				return diag.FromErr(err)
-			}
-			err := clientHolder.ApiClient.Post(ctx, fmt.Sprintf("%s/%s/activate", fronteggSSOURL, typ), nil, nil)
-			if err != nil {
-				return diag.FromErr(err)
-			}
-		}
-	}
 	{
 		saml := d.Get("saml").([]interface{})
 		in := fronteggSSOSAML{
