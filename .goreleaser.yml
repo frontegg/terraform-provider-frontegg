@@ -56,4 +56,4 @@ release:
   # Automatically detect prerelease versions (beta, alpha, rc) and mark them as prerelease
   prerelease: auto
 changelog:
-  disabled: false
+  skip: false
