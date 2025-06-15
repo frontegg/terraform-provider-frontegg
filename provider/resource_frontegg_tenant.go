@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/frontegg/terraform-provider-frontegg/internal/restclient"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -126,6 +127,19 @@ func resourceFronteggTenantCreate(ctx context.Context, d *schema.ResourceData, m
 	in := resourceFronteggTenantSerialize(d)
 	var out fronteggTenant
 	if err := clientHolder.ApiClient.Post(ctx, fronteggTenantPath, in, &out); err != nil {
+		// Check if the error is because tenant already exists
+		if strings.Contains(err.Error(), "Tenant already exists") {
+			// Find the existing tenant using the specific API endpoint
+			tenantKey := d.Get("key").(string)
+			var existingTenant fronteggTenant
+			if err := clientHolder.ApiClient.Get(ctx, fmt.Sprintf("/tenants/resources/tenants/v2/%s", tenantKey), &existingTenant); err != nil {
+				return diag.FromErr(err)
+			}
+
+			// Set the ID and update the existing tenant
+			d.SetId(existingTenant.Key)
+			return resourceFronteggTenantUpdate(ctx, d, meta)
+		}
 		return diag.FromErr(err)
 	}
 	if err := resourceFronteggTenantDeserialize(d, out); err != nil {
