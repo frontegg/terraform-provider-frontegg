@@ -53,5 +53,7 @@ signs:
 release:
   # If you want to manually examine the release before its live, uncomment this line:
   # draft: true
+  # Automatically detect prerelease versions (beta, alpha, rc) and mark them as prerelease
+  prerelease: auto
 changelog:
   skip: false
