@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/frontegg/terraform-provider-frontegg/internal/restclient"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -96,6 +97,32 @@ func resourceFronteggPermissionCreate(ctx context.Context, d *schema.ResourceDat
 	in := []fronteggPermission{resourceFronteggPermissionSerialize(d)}
 	var out []fronteggPermission
 	if err := clientHolder.ApiClient.Post(ctx, fronteggPermissionPath, in, &out); err != nil {
+		// Check if the error is because permission already exists
+		if strings.Contains(err.Error(), "already exist") {
+			// Find the existing permission and update it instead
+			permissionKey := d.Get("key").(string)
+			var existingPermissions []fronteggPermission
+			if err := clientHolder.ApiClient.Get(ctx, fronteggPermissionPath, &existingPermissions); err != nil {
+				return diag.FromErr(err)
+			}
+
+			// Find the permission by key
+			var existingPermission *fronteggPermission
+			for _, permission := range existingPermissions {
+				if permission.Key == permissionKey {
+					existingPermission = &permission
+					break
+				}
+			}
+
+			if existingPermission == nil {
+				return diag.Errorf("permission with key '%s' not found after 'already exists' error", permissionKey)
+			}
+
+			// Set the ID and update the existing permission
+			d.SetId(existingPermission.ID)
+			return resourceFronteggPermissionUpdate(ctx, d, meta)
+		}
 		return diag.FromErr(err)
 	}
 	if len(out) != 1 {

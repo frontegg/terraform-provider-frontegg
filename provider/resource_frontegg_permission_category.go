@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/frontegg/terraform-provider-frontegg/internal/restclient"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -76,6 +77,32 @@ func resourceFronteggPermissionCategoryCreate(ctx context.Context, d *schema.Res
 	in := resourceFronteggPermissionCategorySerialize(d)
 	var out fronteggPermissionCategory
 	if err := clientHolder.ApiClient.Post(ctx, fronteggPermissionCategoryPath, in, &out); err != nil {
+		// Check if the error is because category already exists
+		if strings.Contains(err.Error(), "already exist") {
+			// Find the existing category and update it instead
+			categoryName := d.Get("name").(string)
+			var existingCategories []fronteggPermissionCategory
+			if err := clientHolder.ApiClient.Get(ctx, fronteggPermissionCategoryPath, &existingCategories); err != nil {
+				return diag.FromErr(err)
+			}
+
+			// Find the category by name
+			var existingCategory *fronteggPermissionCategory
+			for _, category := range existingCategories {
+				if category.Name == categoryName {
+					existingCategory = &category
+					break
+				}
+			}
+
+			if existingCategory == nil {
+				return diag.Errorf("permission category with name '%s' not found after 'already exists' error", categoryName)
+			}
+
+			// Set the ID and update the existing category
+			d.SetId(existingCategory.ID)
+			return resourceFronteggPermissionCategoryUpdate(ctx, d, meta)
+		}
 		return diag.FromErr(err)
 	}
 	if err := resourceFronteggPermissionCategoryDeserialize(d, out); err != nil {
