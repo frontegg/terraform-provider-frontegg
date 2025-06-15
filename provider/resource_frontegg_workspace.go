@@ -31,7 +31,6 @@ const fronteggSSOSAMLURL = "/metadata?entityName=saml"
 const fronteggSSOMultiTenantURL = "/team/resources/sso/v1/configurations/multiple-sso-per-domain"
 const fronteggSSODomainURL = "/team/resources/sso/v1/configurations/domains"
 const fronteggOIDCURL = "/team/resources/sso/v1/oidc/configurations"
-const fronteggEmailTemplatesURL = "/identity/resources/mail/v1/configs/templates"
 
 type fronteggVendor struct {
 	ID                string   `json:"id"`
@@ -166,63 +165,7 @@ type fronteggOIDC struct {
 	RedirectUri string `json:"redirectUri,omitempty"`
 }
 
-type fronteggEmailTemplate struct {
-	Active             bool   `json:"active"`
-	FromName           string `json:"fromName"`
-	HTMLTemplate       string `json:"htmlTemplate"`
-	RedirectURL        string `json:"redirectURL"`
-	SuccessRedirectURL string `json:"successRedirectUrl,omitempty"`
-	SenderEmail        string `json:"senderEmail"`
-	Subject            string `json:"subject"`
-	Type               string `json:"type"`
-}
-
 func resourceFronteggWorkspace() *schema.Resource {
-
-	resourceFronteggEmail := func() *schema.Resource {
-		return &schema.Resource{
-			Schema: map[string]*schema.Schema{
-				"active": {
-					Description: "Whether the email template is active.",
-					Type:        schema.TypeBool,
-					Optional:    true,
-					Default:     true,
-				},
-				"from_address": {
-					Description: `The address to use in the "From" header of the email.`,
-					Type:        schema.TypeString,
-					Required:    true,
-				},
-				"from_name": {
-					Description: `The name to use in the "From" header of the email.`,
-					Type:        schema.TypeString,
-					Required:    true,
-				},
-				"subject": {
-					Description: "The subject of the email.",
-					Type:        schema.TypeString,
-					Required:    true,
-				},
-				"html_template": {
-					Description: "The HTML template to use in the email.",
-					Type:        schema.TypeString,
-					Required:    true,
-				},
-				"redirect_url": {
-					Description: `The redirect URL to use, if applicable.
-
-    Access this value as "\{\{redirectURL\}\}" in the template.`,
-					Type:     schema.TypeString,
-					Optional: true,
-				},
-				"success_redirect_url": {
-					Description: `The success redirect URL to use, if applicable.`,
-					Type:        schema.TypeString,
-					Optional:    true,
-				},
-			},
-		}
-	}
 
 	resourceFronteggSocialLogin := func(name string) *schema.Resource {
 		return &schema.Resource{
@@ -592,160 +535,6 @@ per Frontegg provider.`,
 					},
 				},
 			},
-			"reset_password_email": {
-				Description: "Configures the password reset email.",
-				Type:        schema.TypeList,
-				Optional:    true,
-				MaxItems:    1,
-				Elem:        resourceFronteggEmail(),
-			},
-			"user_activation_email": {
-				Description: "Configures the user activation email.",
-				Type:        schema.TypeList,
-				Optional:    true,
-				MaxItems:    1,
-				Elem:        resourceFronteggEmail(),
-			},
-			"user_invitation_email": {
-				Description: "Configures the user invitation email.",
-				Type:        schema.TypeList,
-				Optional:    true,
-				MaxItems:    1,
-				Elem:        resourceFronteggEmail(),
-			},
-			"pwned_password_email": {
-				Description: "Configures the pwned password email.",
-				Type:        schema.TypeList,
-				Optional:    true,
-				MaxItems:    1,
-				Elem:        resourceFronteggEmail(),
-			},
-			"magic_link_email": {
-				Description: "Configures the magic link email.",
-				Type:        schema.TypeList,
-				Optional:    true,
-				MaxItems:    1,
-				Elem:        resourceFronteggEmail(),
-			},
-			"magic_code_email": {
-				Description: "Configures the one time code email.",
-				Type:        schema.TypeList,
-				Optional:    true,
-				MaxItems:    1,
-				Elem:        resourceFronteggEmail(),
-			},
-			"new_device_connected_email": {
-				Description: "Configures the new device connected email.",
-				Type:        schema.TypeList,
-				Optional:    true,
-				MaxItems:    1,
-				Elem:        resourceFronteggEmail(),
-			},
-			"user_used_invitation_email": {
-				Description: "Configures the user used invitation email.",
-				Type:        schema.TypeList,
-				Optional:    true,
-				MaxItems:    1,
-				Elem:        resourceFronteggEmail(),
-			},
-			"reset_phone_number_email": {
-				Description: "Configures the reset phone number email.",
-				Type:        schema.TypeList,
-				Optional:    true,
-				MaxItems:    1,
-				Elem:        resourceFronteggEmail(),
-			},
-			"bulk_tenants_invites_email": {
-				Description: "Configures the bulk tenants invite email.",
-				Type:        schema.TypeList,
-				Optional:    true,
-				MaxItems:    1,
-				Elem:        resourceFronteggEmail(),
-			},
-			"mfa_enroll_email": {
-				Description: "Configures the MFA enroll email.",
-				Type:        schema.TypeList,
-				Optional:    true,
-				MaxItems:    1,
-				Elem:        resourceFronteggEmail(),
-			},
-			"mfa_unenroll_email": {
-				Description: "Configures the MFA unenroll email.",
-				Type:        schema.TypeList,
-				Optional:    true,
-				MaxItems:    1,
-				Elem:        resourceFronteggEmail(),
-			},
-			"new_mfa_method_email": {
-				Description: "Configures the new MFA method email.",
-				Type:        schema.TypeList,
-				Optional:    true,
-				MaxItems:    1,
-				Elem:        resourceFronteggEmail(),
-			},
-			"mfa_recovery_code_email": {
-				Description: "Configures the MFA recovery code email.",
-				Type:        schema.TypeList,
-				Optional:    true,
-				MaxItems:    1,
-				Elem:        resourceFronteggEmail(),
-			},
-			"remove_mfa_method_email": {
-				Description: "Configures the remove MFA method email.",
-				Type:        schema.TypeList,
-				Optional:    true,
-				MaxItems:    1,
-				Elem:        resourceFronteggEmail(),
-			},
-			"email_verification_email": {
-				Description: "Configures the verification email.",
-				Type:        schema.TypeList,
-				Optional:    true,
-				MaxItems:    1,
-				Elem:        resourceFronteggEmail(),
-			},
-			"brute_force_protection_email": {
-				Description: "Configures the brute force protection email.",
-				Type:        schema.TypeList,
-				Optional:    true,
-				MaxItems:    1,
-				Elem:        resourceFronteggEmail(),
-			},
-			"suspicious_ip_email": {
-				Description: "Configures the suspicious IP email.",
-				Type:        schema.TypeList,
-				Optional:    true,
-				MaxItems:    1,
-				Elem:        resourceFronteggEmail(),
-			},
-			"mfa_otc_email": {
-				Description: "Configures the account challenge with code email.",
-				Type:        schema.TypeList,
-				Optional:    true,
-				MaxItems:    1,
-				Elem:        resourceFronteggEmail(),
-			},
-			"impossible_travel_email": {
-				Description: "Configures the impossible travel email.",
-				Type:        schema.TypeList,
-				Optional:    true,
-				MaxItems:    1,
-				Elem:        resourceFronteggEmail(),
-			},
-			"bot_detection_email": {
-				Description: "Configures the bot detection email.",
-				Type:        schema.TypeList,
-				Optional:    true,
-				MaxItems:    1,
-				Elem:        resourceFronteggEmail(),
-			},
-			"sms_authentication_enabled_email": {
-				Description: "Configures the SMS authentication enabled email.",
-				Type:        schema.TypeList,
-				Optional:    true,
-				MaxItems:    1,
-				Elem:        resourceFronteggEmail(),
-			},
 		},
 	}
 }
@@ -1027,63 +816,6 @@ func resourceFronteggWorkspaceRead(ctx context.Context, d *schema.ResourceData, 
 		}
 		if err := d.Set("hosted_login", items); err != nil {
 			return diag.FromErr(err)
-		}
-	}
-	{
-		var out []fronteggEmailTemplate
-		if err := clientHolder.ApiClient.Get(ctx, fronteggEmailTemplatesURL, &out); err != nil {
-			return diag.FromErr(err)
-		}
-		deserialize := func(field string, typ string) error {
-			for _, t := range out {
-				if t.Type == typ {
-					var items []interface{}
-					if t.Active {
-						items = append(items, map[string]interface{}{
-							"active":               t.Active,
-							"from_address":         t.SenderEmail,
-							"from_name":            t.FromName,
-							"subject":              t.Subject,
-							"html_template":        t.HTMLTemplate,
-							"redirect_url":         t.RedirectURL,
-							"success_redirect_url": t.SuccessRedirectURL,
-						})
-					}
-					if err := d.Set(field, items); err != nil {
-						return err
-					}
-					return nil
-				}
-			}
-			return fmt.Errorf("frontegg missing required email template %s", typ)
-		}
-		for field, typ := range map[string]string{
-			"reset_password_email":             "ResetPassword",
-			"user_activation_email":            "ActivateUser",
-			"user_invitation_email":            "InviteToTenant",
-			"pwned_password_email":             "PwnedPassword",
-			"magic_link_email":                 "MagicLink",
-			"magic_code_email":                 "OTC",
-			"new_device_connected_email":       "ConnectNewDevice",
-			"user_used_invitation_email":       "UserUsedInvitation",
-			"reset_phone_number_email":         "ResetPhoneNumber",
-			"bulk_tenants_invites_email":       "BulkInvitesToTenant",
-			"mfa_enroll_email":                 "MFAEnroll",
-			"mfa_unenroll_email":               "MFAUnenroll",
-			"new_mfa_method_email":             "NewMFAMethod",
-			"mfa_recovery_code_email":          "MFARecoveryCode",
-			"remove_mfa_method_email":          "RemoveMFAMethod",
-			"email_verification_email":         "EmailVerification",
-			"brute_force_protection_email":     "BruteForceProtection",
-			"suspicious_ip_email":              "SuspiciousIP",
-			"mfa_otc_email":                    "MFAOTC",
-			"impossible_travel_email":          "ImpossibleTravel",
-			"bot_detection_email":              "BotDetection",
-			"sms_authentication_enabled_email": "SmsAuthenticationEnabled",
-		} {
-			if err := deserialize(field, typ); err != nil {
-				return diag.FromErr(err)
-			}
 		}
 	}
 	return diag.Diagnostics{}
@@ -1377,50 +1109,6 @@ func resourceFronteggWorkspaceUpdate(ctx context.Context, d *schema.ResourceData
 		if err := clientHolder.ApiClient.Post(ctx, fronteggOIDCURL, in, nil); err != nil {
 			return diag.FromErr(err)
 		}
-	}
-	for field, typ := range map[string]string{
-		"reset_password_email":             "ResetPassword",
-		"user_activation_email":            "ActivateUser",
-		"user_invitation_email":            "InviteToTenant",
-		"pwned_password_email":             "PwnedPassword",
-		"magic_link_email":                 "MagicLink",
-		"magic_code_email":                 "OTC",
-		"new_device_connected_email":       "ConnectNewDevice",
-		"user_used_invitation_email":       "UserUsedInvitation",
-		"reset_phone_number_email":         "ResetPhoneNumber",
-		"bulk_tenants_invites_email":       "BulkInvitesToTenant",
-		"mfa_enroll_email":                 "MFAEnroll",
-		"mfa_unenroll_email":               "MFAUnenroll",
-		"new_mfa_method_email":             "NewMFAMethod",
-		"mfa_recovery_code_email":          "MFARecoveryCode",
-		"remove_mfa_method_email":          "RemoveMFAMethod",
-		"email_verification_email":         "EmailVerification",
-		"brute_force_protection_email":     "BruteForceProtection",
-		"suspicious_ip_email":              "SuspiciousIP",
-		"mfa_otc_email":                    "MFAOTC",
-		"impossible_travel_email":          "ImpossibleTravel",
-		"bot_detection_email":              "BotDetection",
-		"sms_authentication_enabled_email": "SmsAuthenticationEnabled",
-	} {
-		email := d.Get(field).([]interface{})
-		in := fronteggEmailTemplate{
-			SenderEmail: "hello@frontegg.com",
-			RedirectURL: "http://disabled",
-			Type:        typ,
-		}
-		if len(email) > 0 {
-			in.Active = d.Get(fmt.Sprintf("%s.0.active", field)).(bool)
-			in.FromName = d.Get(fmt.Sprintf("%s.0.from_name", field)).(string)
-			in.SenderEmail = d.Get(fmt.Sprintf("%s.0.from_address", field)).(string)
-			in.Subject = d.Get(fmt.Sprintf("%s.0.subject", field)).(string)
-			in.HTMLTemplate = d.Get(fmt.Sprintf("%s.0.html_template", field)).(string)
-			in.RedirectURL = d.Get(fmt.Sprintf("%s.0.redirect_url", field)).(string)
-			in.SuccessRedirectURL = d.Get(fmt.Sprintf("%s.0.success_redirect_url", field)).(string)
-			if err := clientHolder.ApiClient.Post(ctx, fronteggEmailTemplatesURL, in, nil); err != nil {
-				return diag.FromErr(err)
-			}
-		}
-
 	}
 	return resourceFronteggWorkspaceRead(ctx, d, meta)
 }

@@ -60,6 +60,7 @@ func New(version string) func() *schema.Provider {
 				"frontegg_webhook":                       resourceFronteggWebhook(),
 				"frontegg_workspace":                     resourceFronteggWorkspace(),
 				"frontegg_auth_policy":                   resourceFronteggAuthPolicy(),
+				"frontegg_email_template":                resourceFronteggEmailTemplate(),
 				"frontegg_admin_portal":                  resourceFronteggAdminPortal(),
 				"frontegg_tenant":                        resourceFronteggTenant(),
 				"frontegg_user":                          resourceFronteggUser(),
