@@ -510,31 +510,6 @@ per Frontegg provider.`,
 					},
 				},
 			},
-			"sso_domain_policy": {
-				Description: "Configures how SSO domains are validated.",
-				Type:        schema.TypeList,
-				Optional:    true,
-				MaxItems:    1,
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"allow_verified_users_to_add_domains": {
-							Description: "Whether to allow users to add their own email domain without validating the domain through DNS.",
-							Type:        schema.TypeBool,
-							Optional:    true,
-						},
-						"skip_domain_verification": {
-							Description: "Whether to automatically mark new SSO domains as validated, without validating the domain through DNS.",
-							Type:        schema.TypeBool,
-							Optional:    true,
-						},
-						"bypass_domain_cross_validation": {
-							Description: "Whether to allow users to sign in even via SSO even if the associated domain has not been validated through DNS.",
-							Type:        schema.TypeBool,
-							Optional:    true,
-						},
-					},
-				},
-			},
 		},
 	}
 }
@@ -765,21 +740,7 @@ func resourceFronteggWorkspaceRead(ctx context.Context, d *schema.ResourceData, 
 			return diag.FromErr(err)
 		}
 	}
-	{
-		var out fronteggSSODomain
-		clientHolder.ApiClient.Ignore404()
-		if err := clientHolder.ApiClient.Get(ctx, fronteggSSODomainURL, &out); err != nil {
-			return diag.FromErr(err)
-		}
-		domain_policy := map[string]interface{}{
-			"allow_verified_users_to_add_domains": out.AllowVerifiedUsersToAddDomains,
-			"skip_domain_verification":            out.SkipDomainVerification,
-			"bypass_domain_cross_validation":      out.BypassDomainCrossValidation,
-		}
-		if err := d.Set("sso_domain_policy", []interface{}{domain_policy}); err != nil {
-			return diag.FromErr(err)
-		}
-	}
+
 	{
 		var out fronteggOIDC
 		if err := clientHolder.ApiClient.Get(ctx, fronteggOIDCURL, &out); err != nil {
@@ -1091,18 +1052,7 @@ func resourceFronteggWorkspaceUpdate(ctx context.Context, d *schema.ResourceData
 			return diag.FromErr(err)
 		}
 	}
-	{
-		sso_domain := d.Get("sso_domain_policy").([]interface{})
-		in := fronteggSSODomain{}
-		if len(sso_domain) > 0 {
-			in.AllowVerifiedUsersToAddDomains = d.Get("sso_domain_policy.0.allow_verified_users_to_add_domains").(bool)
-			in.SkipDomainVerification = d.Get("sso_domain_policy.0.skip_domain_verification").(bool)
-			in.BypassDomainCrossValidation = d.Get("sso_domain_policy.0.bypass_domain_cross_validation").(bool)
-		}
-		if err := clientHolder.ApiClient.Put(ctx, fronteggSSODomainURL, in, nil); err != nil {
-			return diag.FromErr(err)
-		}
-	}
+
 	{
 		oidc := d.Get("oidc").([]interface{})
 		in := fronteggOIDC{}
