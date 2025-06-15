@@ -426,51 +426,29 @@ func resourceFronteggAdminPortalRead(ctx context.Context, d *schema.ResourceData
 	}
 	// If no deprecated palette is configured in the config, leave paletteItems empty
 
-	// Set all the configuration values
-	if err := d.Set("enable_account_settings", nav.Account.Visibility == "byPermissions"); err != nil {
-		return diag.FromErr(err)
+	// Set all the navigation configuration values using iteration
+	navigationSettings := map[string]string{
+		"enable_account_settings":    nav.Account.Visibility,
+		"enable_api_tokens":          nav.APITokens.Visibility,
+		"enable_audit_logs":          nav.Audits.Visibility,
+		"enable_groups":              nav.Groups.Visibility,
+		"enable_personal_api_tokens": nav.PersonalAPITokens.Visibility,
+		"enable_privacy":             nav.Privacy.Visibility,
+		"enable_profile":             nav.Profile.Visibility,
+		"enable_provisioning":        nav.Provisioning.Visibility,
+		"enable_roles":               nav.Roles.Visibility,
+		"enable_security":            nav.Security.Visibility,
+		"enable_sso":                 nav.SSO.Visibility,
+		"enable_subscriptions":       nav.Subscriptions.Visibility,
+		"enable_usage":               nav.Usage.Visibility,
+		"enable_users":               nav.Users.Visibility,
+		"enable_webhooks":            nav.Webhooks.Visibility,
 	}
-	if err := d.Set("enable_api_tokens", nav.APITokens.Visibility == "byPermissions"); err != nil {
-		return diag.FromErr(err)
-	}
-	if err := d.Set("enable_audit_logs", nav.Audits.Visibility == "byPermissions"); err != nil {
-		return diag.FromErr(err)
-	}
-	if err := d.Set("enable_groups", nav.Groups.Visibility == "byPermissions"); err != nil {
-		return diag.FromErr(err)
-	}
-	if err := d.Set("enable_personal_api_tokens", nav.PersonalAPITokens.Visibility == "byPermissions"); err != nil {
-		return diag.FromErr(err)
-	}
-	if err := d.Set("enable_privacy", nav.Privacy.Visibility == "byPermissions"); err != nil {
-		return diag.FromErr(err)
-	}
-	if err := d.Set("enable_profile", nav.Profile.Visibility == "byPermissions"); err != nil {
-		return diag.FromErr(err)
-	}
-	if err := d.Set("enable_provisioning", nav.Provisioning.Visibility == "byPermissions"); err != nil {
-		return diag.FromErr(err)
-	}
-	if err := d.Set("enable_roles", nav.Roles.Visibility == "byPermissions"); err != nil {
-		return diag.FromErr(err)
-	}
-	if err := d.Set("enable_security", nav.Security.Visibility == "byPermissions"); err != nil {
-		return diag.FromErr(err)
-	}
-	if err := d.Set("enable_sso", nav.SSO.Visibility == "byPermissions"); err != nil {
-		return diag.FromErr(err)
-	}
-	if err := d.Set("enable_subscriptions", nav.Subscriptions.Visibility == "byPermissions"); err != nil {
-		return diag.FromErr(err)
-	}
-	if err := d.Set("enable_usage", nav.Usage.Visibility == "byPermissions"); err != nil {
-		return diag.FromErr(err)
-	}
-	if err := d.Set("enable_users", nav.Users.Visibility == "byPermissions"); err != nil {
-		return diag.FromErr(err)
-	}
-	if err := d.Set("enable_webhooks", nav.Webhooks.Visibility == "byPermissions"); err != nil {
-		return diag.FromErr(err)
+
+	for schemaKey, visibility := range navigationSettings {
+		if err := d.Set(schemaKey, visibility == "byPermissions"); err != nil {
+			return diag.FromErr(err)
+		}
 	}
 	if err := d.Set("palette", paletteItems); err != nil {
 		return diag.FromErr(err)
