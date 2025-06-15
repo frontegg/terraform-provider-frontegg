@@ -1,5 +1,6 @@
 # This GitHub action can publish assets for release when a tag is created.
 # Currently its setup to run on any tag that matches the pattern "v*" (ie. v0.1.0).
+# It also supports beta releases with tags like "v1.0.0-beta.1".
 #
 # This uses an action (hashicorp/ghaction-import-gpg) that assumes you set your
 # private key in the `GPG_PRIVATE_KEY` secret and passphrase in the `PASSPHRASE`
@@ -14,6 +15,9 @@ on:
   push:
     tags:
       - "v*"
+      - "v*-beta*"
+      - "v*-alpha*"
+      - "v*-rc*"
 
 permissions:
   contents: write
@@ -43,7 +47,7 @@ jobs:
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v6.3.0
         with:
-          version: '~> v1'
+          version: "~> v1"
           args: release --clean
         env:
           GPG_FINGERPRINT: ${{ steps.import_gpg.outputs.fingerprint }}

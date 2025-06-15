@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/frontegg/terraform-provider-frontegg/internal/restclient"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -169,6 +170,28 @@ func resourceFronteggRoleCreate(ctx context.Context, d *schema.ResourceData, met
 		in := []fronteggRole{resourceFronteggRoleSerialize(d)}
 		var out []fronteggRole
 		if err := clientHolder.ApiClient.PostWithHeaders(ctx, fronteggRolePath, headers, in, &out); err != nil {
+			if strings.Contains(err.Error(), "Roles already exists") {
+				roleKey := d.Get("key").(string)
+				var existingRoles []fronteggRole
+				if err := clientHolder.ApiClient.GetWithHeaders(ctx, fronteggRolePath, headers, &existingRoles); err != nil {
+					return diag.FromErr(err)
+				}
+
+				var existingRole *fronteggRole
+				for _, role := range existingRoles {
+					if role.Key == roleKey {
+						existingRole = &role
+						break
+					}
+				}
+
+				if existingRole == nil {
+					return diag.Errorf("role with key '%s' not found after 'already exists' error", roleKey)
+				}
+
+				d.SetId(existingRole.ID)
+				return resourceFronteggRoleUpdate(ctx, d, meta)
+			}
 			return diag.FromErr(err)
 		}
 		if len(out) != 1 {
