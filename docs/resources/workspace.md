@@ -255,42 +255,19 @@ resource "frontegg_workspace" "example" {
 
 ### Optional
 
-- `bot_detection_email` (Block List, Max: 1) Configures the bot detection email. (see [below for nested schema](#nestedblock--bot_detection_email))
-- `brute_force_protection_email` (Block List, Max: 1) Configures the brute force protection email. (see [below for nested schema](#nestedblock--brute_force_protection_email))
-- `bulk_tenants_invites_email` (Block List, Max: 1) Configures the bulk tenants invite email. (see [below for nested schema](#nestedblock--bulk_tenants_invites_email))
 - `captcha_policy` (Block List, Max: 1) Configures the CAPTCHA policy in the signup form. (see [below for nested schema](#nestedblock--captcha_policy))
 - `custom_domains` (Set of String) List of custom domains at which Frontegg services will be reachable.
 				You must configure CNAME for each domain, you can get record values from the portal.
-- `email_verification_email` (Block List, Max: 1) Configures the verification email. (see [below for nested schema](#nestedblock--email_verification_email))
 - `facebook_social_login` (Block List, Max: 1) Configures social login with Facebook. (see [below for nested schema](#nestedblock--facebook_social_login))
 - `github_social_login` (Block List, Max: 1) Configures social login with GitHub. (see [below for nested schema](#nestedblock--github_social_login))
 - `google_social_login` (Block List, Max: 1) Configures social login with Google. (see [below for nested schema](#nestedblock--google_social_login))
 - `hosted_login` (Block List, Max: 1) Configures Frontegg-hosted OAuth login. (see [below for nested schema](#nestedblock--hosted_login))
-- `impossible_travel_email` (Block List, Max: 1) Configures the impossible travel email. (see [below for nested schema](#nestedblock--impossible_travel_email))
 - `lockout_policy` (Block List, Max: 1) Configures the user lockout policy. (see [below for nested schema](#nestedblock--lockout_policy))
-- `magic_code_email` (Block List, Max: 1) Configures the one time code email. (see [below for nested schema](#nestedblock--magic_code_email))
-- `magic_link_email` (Block List, Max: 1) Configures the magic link email. (see [below for nested schema](#nestedblock--magic_link_email))
 - `mfa_authentication_app` (Block List, Max: 1) Configures the multi-factor authentication (MFA) via an authentication app. (see [below for nested schema](#nestedblock--mfa_authentication_app))
-- `mfa_enroll_email` (Block List, Max: 1) Configures the MFA enroll email. (see [below for nested schema](#nestedblock--mfa_enroll_email))
-- `mfa_otc_email` (Block List, Max: 1) Configures the account challenge with code email. (see [below for nested schema](#nestedblock--mfa_otc_email))
-- `mfa_recovery_code_email` (Block List, Max: 1) Configures the MFA recovery code email. (see [below for nested schema](#nestedblock--mfa_recovery_code_email))
-- `mfa_unenroll_email` (Block List, Max: 1) Configures the MFA unenroll email. (see [below for nested schema](#nestedblock--mfa_unenroll_email))
 - `microsoft_social_login` (Block List, Max: 1) Configures social login with Google. (see [below for nested schema](#nestedblock--microsoft_social_login))
-- `new_device_connected_email` (Block List, Max: 1) Configures the new device connected email. (see [below for nested schema](#nestedblock--new_device_connected_email))
-- `new_mfa_method_email` (Block List, Max: 1) Configures the new MFA method email. (see [below for nested schema](#nestedblock--new_mfa_method_email))
 - `oidc` (Block List, Max: 1) Configures SSO via OIDC. (see [below for nested schema](#nestedblock--oidc))
-- `pwned_password_email` (Block List, Max: 1) Configures the pwned password email. (see [below for nested schema](#nestedblock--pwned_password_email))
-- `remove_mfa_method_email` (Block List, Max: 1) Configures the remove MFA method email. (see [below for nested schema](#nestedblock--remove_mfa_method_email))
-- `reset_password_email` (Block List, Max: 1) Configures the password reset email. (see [below for nested schema](#nestedblock--reset_password_email))
-- `reset_phone_number_email` (Block List, Max: 1) Configures the reset phone number email. (see [below for nested schema](#nestedblock--reset_phone_number_email))
 - `saml` (Block List, Max: 1) Configures SSO via SAML. (see [below for nested schema](#nestedblock--saml))
-- `sms_authentication_enabled_email` (Block List, Max: 1) Configures the SMS authentication enabled email. (see [below for nested schema](#nestedblock--sms_authentication_enabled_email))
-- `sso_domain_policy` (Block List, Max: 1) Configures how SSO domains are validated. (see [below for nested schema](#nestedblock--sso_domain_policy))
 - `sso_multi_tenant_policy` (Block List, Max: 1) Configures how multiple tenants can claim the same SSO domain. (see [below for nested schema](#nestedblock--sso_multi_tenant_policy))
-- `suspicious_ip_email` (Block List, Max: 1) Configures the suspicious IP email. (see [below for nested schema](#nestedblock--suspicious_ip_email))
-- `user_activation_email` (Block List, Max: 1) Configures the user activation email. (see [below for nested schema](#nestedblock--user_activation_email))
-- `user_invitation_email` (Block List, Max: 1) Configures the user invitation email. (see [below for nested schema](#nestedblock--user_invitation_email))
-- `user_used_invitation_email` (Block List, Max: 1) Configures the user used invitation email. (see [below for nested schema](#nestedblock--user_used_invitation_email))
 
 ### Read-Only
 
@@ -321,63 +298,6 @@ Required:
 - `min_tests` (Number) The minimum number of strength tests the password must meet.
 
 
-<a id="nestedblock--bot_detection_email"></a>
-### Nested Schema for `bot_detection_email`
-
-Required:
-
-- `from_address` (String) The address to use in the "From" header of the email.
-- `from_name` (String) The name to use in the "From" header of the email.
-- `html_template` (String) The HTML template to use in the email.
-- `subject` (String) The subject of the email.
-
-Optional:
-
-- `active` (Boolean) Whether the email template is active.
-- `redirect_url` (String) The redirect URL to use, if applicable.
-
-    Access this value as "\{\{redirectURL\}\}" in the template.
-- `success_redirect_url` (String) The success redirect URL to use, if applicable.
-
-
-<a id="nestedblock--brute_force_protection_email"></a>
-### Nested Schema for `brute_force_protection_email`
-
-Required:
-
-- `from_address` (String) The address to use in the "From" header of the email.
-- `from_name` (String) The name to use in the "From" header of the email.
-- `html_template` (String) The HTML template to use in the email.
-- `subject` (String) The subject of the email.
-
-Optional:
-
-- `active` (Boolean) Whether the email template is active.
-- `redirect_url` (String) The redirect URL to use, if applicable.
-
-    Access this value as "\{\{redirectURL\}\}" in the template.
-- `success_redirect_url` (String) The success redirect URL to use, if applicable.
-
-
-<a id="nestedblock--bulk_tenants_invites_email"></a>
-### Nested Schema for `bulk_tenants_invites_email`
-
-Required:
-
-- `from_address` (String) The address to use in the "From" header of the email.
-- `from_name` (String) The name to use in the "From" header of the email.
-- `html_template` (String) The HTML template to use in the email.
-- `subject` (String) The subject of the email.
-
-Optional:
-
-- `active` (Boolean) Whether the email template is active.
-- `redirect_url` (String) The redirect URL to use, if applicable.
-
-    Access this value as "\{\{redirectURL\}\}" in the template.
-- `success_redirect_url` (String) The success redirect URL to use, if applicable.
-
-
 <a id="nestedblock--captcha_policy"></a>
 ### Nested Schema for `captcha_policy`
 
@@ -390,25 +310,6 @@ Required:
 Optional:
 
 - `ignored_emails` (Set of String) Email addresses that should be exempt from CAPTCHA checks.
-
-
-<a id="nestedblock--email_verification_email"></a>
-### Nested Schema for `email_verification_email`
-
-Required:
-
-- `from_address` (String) The address to use in the "From" header of the email.
-- `from_name` (String) The name to use in the "From" header of the email.
-- `html_template` (String) The HTML template to use in the email.
-- `subject` (String) The subject of the email.
-
-Optional:
-
-- `active` (Boolean) Whether the email template is active.
-- `redirect_url` (String) The redirect URL to use, if applicable.
-
-    Access this value as "\{\{redirectURL\}\}" in the template.
-- `success_redirect_url` (String) The success redirect URL to use, if applicable.
 
 
 <a id="nestedblock--facebook_social_login"></a>
@@ -464,25 +365,6 @@ Optional:
 - `allowed_redirect_urls` (Set of String) Allowed redirect URLs.
 
 
-<a id="nestedblock--impossible_travel_email"></a>
-### Nested Schema for `impossible_travel_email`
-
-Required:
-
-- `from_address` (String) The address to use in the "From" header of the email.
-- `from_name` (String) The name to use in the "From" header of the email.
-- `html_template` (String) The HTML template to use in the email.
-- `subject` (String) The subject of the email.
-
-Optional:
-
-- `active` (Boolean) Whether the email template is active.
-- `redirect_url` (String) The redirect URL to use, if applicable.
-
-    Access this value as "\{\{redirectURL\}\}" in the template.
-- `success_redirect_url` (String) The success redirect URL to use, if applicable.
-
-
 <a id="nestedblock--lockout_policy"></a>
 ### Nested Schema for `lockout_policy`
 
@@ -491,126 +373,12 @@ Required:
 - `max_attempts` (Number) The number of failed attempts after which a user will be locked out.
 
 
-<a id="nestedblock--magic_code_email"></a>
-### Nested Schema for `magic_code_email`
-
-Required:
-
-- `from_address` (String) The address to use in the "From" header of the email.
-- `from_name` (String) The name to use in the "From" header of the email.
-- `html_template` (String) The HTML template to use in the email.
-- `subject` (String) The subject of the email.
-
-Optional:
-
-- `active` (Boolean) Whether the email template is active.
-- `redirect_url` (String) The redirect URL to use, if applicable.
-
-    Access this value as "\{\{redirectURL\}\}" in the template.
-- `success_redirect_url` (String) The success redirect URL to use, if applicable.
-
-
-<a id="nestedblock--magic_link_email"></a>
-### Nested Schema for `magic_link_email`
-
-Required:
-
-- `from_address` (String) The address to use in the "From" header of the email.
-- `from_name` (String) The name to use in the "From" header of the email.
-- `html_template` (String) The HTML template to use in the email.
-- `subject` (String) The subject of the email.
-
-Optional:
-
-- `active` (Boolean) Whether the email template is active.
-- `redirect_url` (String) The redirect URL to use, if applicable.
-
-    Access this value as "\{\{redirectURL\}\}" in the template.
-- `success_redirect_url` (String) The success redirect URL to use, if applicable.
-
-
 <a id="nestedblock--mfa_authentication_app"></a>
 ### Nested Schema for `mfa_authentication_app`
 
 Required:
 
 - `service_name` (String) The service name to display in the authentication app.
-
-
-<a id="nestedblock--mfa_enroll_email"></a>
-### Nested Schema for `mfa_enroll_email`
-
-Required:
-
-- `from_address` (String) The address to use in the "From" header of the email.
-- `from_name` (String) The name to use in the "From" header of the email.
-- `html_template` (String) The HTML template to use in the email.
-- `subject` (String) The subject of the email.
-
-Optional:
-
-- `active` (Boolean) Whether the email template is active.
-- `redirect_url` (String) The redirect URL to use, if applicable.
-
-    Access this value as "\{\{redirectURL\}\}" in the template.
-- `success_redirect_url` (String) The success redirect URL to use, if applicable.
-
-
-<a id="nestedblock--mfa_otc_email"></a>
-### Nested Schema for `mfa_otc_email`
-
-Required:
-
-- `from_address` (String) The address to use in the "From" header of the email.
-- `from_name` (String) The name to use in the "From" header of the email.
-- `html_template` (String) The HTML template to use in the email.
-- `subject` (String) The subject of the email.
-
-Optional:
-
-- `active` (Boolean) Whether the email template is active.
-- `redirect_url` (String) The redirect URL to use, if applicable.
-
-    Access this value as "\{\{redirectURL\}\}" in the template.
-- `success_redirect_url` (String) The success redirect URL to use, if applicable.
-
-
-<a id="nestedblock--mfa_recovery_code_email"></a>
-### Nested Schema for `mfa_recovery_code_email`
-
-Required:
-
-- `from_address` (String) The address to use in the "From" header of the email.
-- `from_name` (String) The name to use in the "From" header of the email.
-- `html_template` (String) The HTML template to use in the email.
-- `subject` (String) The subject of the email.
-
-Optional:
-
-- `active` (Boolean) Whether the email template is active.
-- `redirect_url` (String) The redirect URL to use, if applicable.
-
-    Access this value as "\{\{redirectURL\}\}" in the template.
-- `success_redirect_url` (String) The success redirect URL to use, if applicable.
-
-
-<a id="nestedblock--mfa_unenroll_email"></a>
-### Nested Schema for `mfa_unenroll_email`
-
-Required:
-
-- `from_address` (String) The address to use in the "From" header of the email.
-- `from_name` (String) The name to use in the "From" header of the email.
-- `html_template` (String) The HTML template to use in the email.
-- `subject` (String) The subject of the email.
-
-Optional:
-
-- `active` (Boolean) Whether the email template is active.
-- `redirect_url` (String) The redirect URL to use, if applicable.
-
-    Access this value as "\{\{redirectURL\}\}" in the template.
-- `success_redirect_url` (String) The success redirect URL to use, if applicable.
 
 
 <a id="nestedblock--microsoft_social_login"></a>
@@ -628,126 +396,12 @@ Optional:
 - `secret` (String, Sensitive) The secret associated with the Microsoft application. Required when setting **`customised`** parameter to true.
 
 
-<a id="nestedblock--new_device_connected_email"></a>
-### Nested Schema for `new_device_connected_email`
-
-Required:
-
-- `from_address` (String) The address to use in the "From" header of the email.
-- `from_name` (String) The name to use in the "From" header of the email.
-- `html_template` (String) The HTML template to use in the email.
-- `subject` (String) The subject of the email.
-
-Optional:
-
-- `active` (Boolean) Whether the email template is active.
-- `redirect_url` (String) The redirect URL to use, if applicable.
-
-    Access this value as "\{\{redirectURL\}\}" in the template.
-- `success_redirect_url` (String) The success redirect URL to use, if applicable.
-
-
-<a id="nestedblock--new_mfa_method_email"></a>
-### Nested Schema for `new_mfa_method_email`
-
-Required:
-
-- `from_address` (String) The address to use in the "From" header of the email.
-- `from_name` (String) The name to use in the "From" header of the email.
-- `html_template` (String) The HTML template to use in the email.
-- `subject` (String) The subject of the email.
-
-Optional:
-
-- `active` (Boolean) Whether the email template is active.
-- `redirect_url` (String) The redirect URL to use, if applicable.
-
-    Access this value as "\{\{redirectURL\}\}" in the template.
-- `success_redirect_url` (String) The success redirect URL to use, if applicable.
-
-
 <a id="nestedblock--oidc"></a>
 ### Nested Schema for `oidc`
 
 Required:
 
 - `redirect_url` (String) The URL to redirect to after the OIDC exchange.
-
-
-<a id="nestedblock--pwned_password_email"></a>
-### Nested Schema for `pwned_password_email`
-
-Required:
-
-- `from_address` (String) The address to use in the "From" header of the email.
-- `from_name` (String) The name to use in the "From" header of the email.
-- `html_template` (String) The HTML template to use in the email.
-- `subject` (String) The subject of the email.
-
-Optional:
-
-- `active` (Boolean) Whether the email template is active.
-- `redirect_url` (String) The redirect URL to use, if applicable.
-
-    Access this value as "\{\{redirectURL\}\}" in the template.
-- `success_redirect_url` (String) The success redirect URL to use, if applicable.
-
-
-<a id="nestedblock--remove_mfa_method_email"></a>
-### Nested Schema for `remove_mfa_method_email`
-
-Required:
-
-- `from_address` (String) The address to use in the "From" header of the email.
-- `from_name` (String) The name to use in the "From" header of the email.
-- `html_template` (String) The HTML template to use in the email.
-- `subject` (String) The subject of the email.
-
-Optional:
-
-- `active` (Boolean) Whether the email template is active.
-- `redirect_url` (String) The redirect URL to use, if applicable.
-
-    Access this value as "\{\{redirectURL\}\}" in the template.
-- `success_redirect_url` (String) The success redirect URL to use, if applicable.
-
-
-<a id="nestedblock--reset_password_email"></a>
-### Nested Schema for `reset_password_email`
-
-Required:
-
-- `from_address` (String) The address to use in the "From" header of the email.
-- `from_name` (String) The name to use in the "From" header of the email.
-- `html_template` (String) The HTML template to use in the email.
-- `subject` (String) The subject of the email.
-
-Optional:
-
-- `active` (Boolean) Whether the email template is active.
-- `redirect_url` (String) The redirect URL to use, if applicable.
-
-    Access this value as "\{\{redirectURL\}\}" in the template.
-- `success_redirect_url` (String) The success redirect URL to use, if applicable.
-
-
-<a id="nestedblock--reset_phone_number_email"></a>
-### Nested Schema for `reset_phone_number_email`
-
-Required:
-
-- `from_address` (String) The address to use in the "From" header of the email.
-- `from_name` (String) The name to use in the "From" header of the email.
-- `html_template` (String) The HTML template to use in the email.
-- `subject` (String) The subject of the email.
-
-Optional:
-
-- `active` (Boolean) Whether the email template is active.
-- `redirect_url` (String) The redirect URL to use, if applicable.
-
-    Access this value as "\{\{redirectURL\}\}" in the template.
-- `success_redirect_url` (String) The success redirect URL to use, if applicable.
 
 
 <a id="nestedblock--saml"></a>
@@ -763,35 +417,6 @@ Optional:
 - `redirect_url` (String) The URL to redirect to after the SAML exchange.
 
 
-<a id="nestedblock--sms_authentication_enabled_email"></a>
-### Nested Schema for `sms_authentication_enabled_email`
-
-Required:
-
-- `from_address` (String) The address to use in the "From" header of the email.
-- `from_name` (String) The name to use in the "From" header of the email.
-- `html_template` (String) The HTML template to use in the email.
-- `subject` (String) The subject of the email.
-
-Optional:
-
-- `active` (Boolean) Whether the email template is active.
-- `redirect_url` (String) The redirect URL to use, if applicable.
-
-    Access this value as "\{\{redirectURL\}\}" in the template.
-- `success_redirect_url` (String) The success redirect URL to use, if applicable.
-
-
-<a id="nestedblock--sso_domain_policy"></a>
-### Nested Schema for `sso_domain_policy`
-
-Optional:
-
-- `allow_verified_users_to_add_domains` (Boolean) Whether to allow users to add their own email domain without validating the domain through DNS.
-- `bypass_domain_cross_validation` (Boolean) Whether to allow users to sign in even via SSO even if the associated domain has not been validated through DNS.
-- `skip_domain_verification` (Boolean) Whether to automatically mark new SSO domains as validated, without validating the domain through DNS.
-
-
 <a id="nestedblock--sso_multi_tenant_policy"></a>
 ### Nested Schema for `sso_multi_tenant_policy`
 
@@ -799,79 +424,3 @@ Optional:
 
 - `unspecified_tenant_strategy` (String) Strategy for logging in nonexisting users that match SSO configurations for multiple tenants when no tenant has been specified. Either BLOCK or FIRST_CREATED.
 - `use_active_tenant` (Boolean) Whether users with existing accounts that match SSO configurations for multiple tenants should be logged in using the SSO for their active (last logged into) account, or whether the unspecified tenant strategy should apply.
-
-
-<a id="nestedblock--suspicious_ip_email"></a>
-### Nested Schema for `suspicious_ip_email`
-
-Required:
-
-- `from_address` (String) The address to use in the "From" header of the email.
-- `from_name` (String) The name to use in the "From" header of the email.
-- `html_template` (String) The HTML template to use in the email.
-- `subject` (String) The subject of the email.
-
-Optional:
-
-- `active` (Boolean) Whether the email template is active.
-- `redirect_url` (String) The redirect URL to use, if applicable.
-
-    Access this value as "\{\{redirectURL\}\}" in the template.
-- `success_redirect_url` (String) The success redirect URL to use, if applicable.
-
-
-<a id="nestedblock--user_activation_email"></a>
-### Nested Schema for `user_activation_email`
-
-Required:
-
-- `from_address` (String) The address to use in the "From" header of the email.
-- `from_name` (String) The name to use in the "From" header of the email.
-- `html_template` (String) The HTML template to use in the email.
-- `subject` (String) The subject of the email.
-
-Optional:
-
-- `active` (Boolean) Whether the email template is active.
-- `redirect_url` (String) The redirect URL to use, if applicable.
-
-    Access this value as "\{\{redirectURL\}\}" in the template.
-- `success_redirect_url` (String) The success redirect URL to use, if applicable.
-
-
-<a id="nestedblock--user_invitation_email"></a>
-### Nested Schema for `user_invitation_email`
-
-Required:
-
-- `from_address` (String) The address to use in the "From" header of the email.
-- `from_name` (String) The name to use in the "From" header of the email.
-- `html_template` (String) The HTML template to use in the email.
-- `subject` (String) The subject of the email.
-
-Optional:
-
-- `active` (Boolean) Whether the email template is active.
-- `redirect_url` (String) The redirect URL to use, if applicable.
-
-    Access this value as "\{\{redirectURL\}\}" in the template.
-- `success_redirect_url` (String) The success redirect URL to use, if applicable.
-
-
-<a id="nestedblock--user_used_invitation_email"></a>
-### Nested Schema for `user_used_invitation_email`
-
-Required:
-
-- `from_address` (String) The address to use in the "From" header of the email.
-- `from_name` (String) The name to use in the "From" header of the email.
-- `html_template` (String) The HTML template to use in the email.
-- `subject` (String) The subject of the email.
-
-Optional:
-
-- `active` (Boolean) Whether the email template is active.
-- `redirect_url` (String) The redirect URL to use, if applicable.
-
-    Access this value as "\{\{redirectURL\}\}" in the template.
-- `success_redirect_url` (String) The success redirect URL to use, if applicable.
