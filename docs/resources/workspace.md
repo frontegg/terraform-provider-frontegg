@@ -242,7 +242,6 @@ resource "frontegg_workspace" "example" {
 - `allowed_origins` (Set of String) The origins that are allowed to access the workspace.
 
     This parameter controls the value of the "Origin" header for API responses.
-- `auth_policy` (Block List, Min: 1, Max: 1) Configures the general authentication policy. (see [below for nested schema](#nestedblock--auth_policy))
 - `backend_stack` (String) The backend stack of the application associated with the workspace.
 - `country` (String) The country associated with the workspace.
 - `frontegg_domain` (String) The domain at which the Frontegg API is served for this workspace.
@@ -296,36 +295,6 @@ resource "frontegg_workspace" "example" {
 ### Read-Only
 
 - `id` (String) The ID of this resource.
-
-<a id="nestedblock--auth_policy"></a>
-### Nested Schema for `auth_policy`
-
-Required:
-
-- `allow_signups` (Boolean) Whether users are allowed to sign up.
-- `allow_tenant_invitations` (Boolean) Allow tenants to invite new users via an invitation link.
-- `allow_unverified_users` (Boolean) Whether unverified users are allowed to log in.
-- `auth_strategy` (String) The authentication strategy to use for people logging in.
-
-	Must be one of "EmailAndPassword", "Code", "MagicLink", "NoLocalAuthentication", "SmsCode"
-- `enable_api_tokens` (Boolean) Whether users can create API tokens.
-- `enable_roles` (Boolean) Whether granular roles and permissions are enabled.
-- `jwt_access_token_expiration` (Number) The expiration time for the JWT access tokens issued by Frontegg.
-- `jwt_refresh_token_expiration` (Number) The expiration time for the JWT refresh tokens issued by Frontegg.
-- `same_site_cookie_policy` (String) The SameSite policy to use for Frontegg cookies.
-
-	Must be one of "none", "lax", or "strict".
-
-Optional:
-
-- `jwt_algorithm` (String) The algorithm Frontegg uses to sign JWT tokens.
-- `machine_to_machine_auth_strategy` (String) Type of tokens users will be able to generate.
-							Must be one of "ClientCredentials" or "AccessToken".
-
-Read-Only:
-
-- `jwt_public_key` (String) The public key that Frontegg uses to sign JWT tokens.
-
 
 <a id="nestedblock--mfa_policy"></a>
 ### Nested Schema for `mfa_policy`

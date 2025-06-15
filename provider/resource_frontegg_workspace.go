@@ -18,7 +18,6 @@ import (
 const fronteggVendorURL = "/vendors"
 const fronteggCustomDomainURL = "/vendors/custom-domains/v2"
 const fronteggCustomDomainCreateEndpoint = "verify"
-const fronteggAuthURL = "/identity/resources/configurations/v1"
 const fronteggMFAURL = "/identity/resources/configurations/v1/mfa"
 const fronteggMFAPolicyURL = "/identity/resources/configurations/v1/mfa-policy"
 const fronteggLockoutPolicyURL = "/identity/resources/configurations/v1/lockout-policy"
@@ -72,22 +71,6 @@ type fronteggCustomDomainCreate struct {
 
 type fronteggCustomDomains struct {
 	CustomDomains []fronteggCustomDomain `json:"customDomains,omitempty"`
-}
-
-type fronteggAuth struct {
-	ID                            string `json:"id"`
-	AllowNotVerifiedUsersLogin    bool   `json:"allowNotVerifiedUsersLogin"`
-	AllowSignups                  bool   `json:"allowSignups"`
-	AllowTenantInvitations        bool   `json:"allowTenantInvitations"`
-	APITokensEnabled              bool   `json:"apiTokensEnabled"`
-	CookieSameSite                string `json:"cookieSameSite"`
-	DefaultRefreshTokenExpiration int    `json:"defaultRefreshTokenExpiration"`
-	DefaultTokenExpiration        int    `json:"defaultTokenExpiration"`
-	ForcePermissions              bool   `json:"forcePermissions"`
-	JWTAlgorithm                  string `json:"jwtAlgorithm"`
-	PublicKey                     string `json:"publicKey"`
-	AuthStrategy                  string `json:"authStrategy"`
-	MachineToMachineAuthStrategy  string `json:"machineToMachineAuthStrategy"`
 }
 
 type fronteggMFA struct {
@@ -349,88 +332,6 @@ per Frontegg provider.`,
 					Type: schema.TypeString,
 				},
 				Required: true,
-			},
-			"auth_policy": {
-				Description: "Configures the general authentication policy.",
-				Type:        schema.TypeList,
-				Required:    true,
-				MinItems:    1,
-				MaxItems:    1,
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"allow_unverified_users": {
-							Description: "Whether unverified users are allowed to log in.",
-							Type:        schema.TypeBool,
-							Required:    true,
-						},
-						"allow_signups": {
-							Description: "Whether users are allowed to sign up.",
-							Type:        schema.TypeBool,
-							Required:    true,
-						},
-						"allow_tenant_invitations": {
-							Description: "Allow tenants to invite new users via an invitation link.",
-							Type:        schema.TypeBool,
-							Required:    true,
-						},
-						"enable_api_tokens": {
-							Description: "Whether users can create API tokens.",
-							Type:        schema.TypeBool,
-							Required:    true,
-						},
-						"machine_to_machine_auth_strategy": {
-							Description: `Type of tokens users will be able to generate.
-							Must be one of "ClientCredentials" or "AccessToken".`,
-							Type:         schema.TypeString,
-							Optional:     true,
-							Default:      "ClientCredentials",
-							ValidateFunc: validation.StringInSlice([]string{"ClientCredentials", "AccessToken"}, false),
-						},
-						"enable_roles": {
-							Description: "Whether granular roles and permissions are enabled.",
-							Type:        schema.TypeBool,
-							Required:    true,
-						},
-						"jwt_algorithm": {
-							Description:  "The algorithm Frontegg uses to sign JWT tokens.",
-							Type:         schema.TypeString,
-							Optional:     true,
-							Default:      "RS256",
-							ValidateFunc: validation.StringInSlice([]string{"RS256"}, false),
-						},
-						"jwt_access_token_expiration": {
-							Description: "The expiration time for the JWT access tokens issued by Frontegg.",
-							Type:        schema.TypeInt,
-							Required:    true,
-						},
-						"jwt_refresh_token_expiration": {
-							Description: "The expiration time for the JWT refresh tokens issued by Frontegg.",
-							Type:        schema.TypeInt,
-							Required:    true,
-						},
-						"jwt_public_key": {
-							Description: "The public key that Frontegg uses to sign JWT tokens.",
-							Type:        schema.TypeString,
-							Computed:    true,
-						},
-						"same_site_cookie_policy": {
-							Description: `The SameSite policy to use for Frontegg cookies.
-
-	Must be one of "none", "lax", or "strict".`,
-							Type:         schema.TypeString,
-							Required:     true,
-							ValidateFunc: validation.StringInSlice([]string{"none", "lax", "strict"}, false),
-						},
-						"auth_strategy": {
-							Description: `The authentication strategy to use for people logging in.
-
-	Must be one of "EmailAndPassword", "Code", "MagicLink", "NoLocalAuthentication", "SmsCode"`,
-							Type:         schema.TypeString,
-							Required:     true,
-							ValidateFunc: validation.StringInSlice([]string{"EmailAndPassword", "Code", "MagicLink", "NoLocalAuthentication", "SmsCode"}, false),
-						},
-					},
-				},
 			},
 			"mfa_policy": {
 				Description: "Configures the multi-factor authentication (MFA) policy.",
@@ -925,29 +826,6 @@ func resourceFronteggWorkspaceRead(ctx context.Context, d *schema.ResourceData, 
 		}
 	}
 	{
-		var out fronteggAuth
-		if err := clientHolder.ApiClient.Get(ctx, fronteggAuthURL, &out); err != nil {
-			return diag.FromErr(err)
-		}
-		auth_policy := map[string]interface{}{
-			"allow_unverified_users":           out.AllowNotVerifiedUsersLogin,
-			"allow_signups":                    out.AllowSignups,
-			"allow_tenant_invitations":         out.AllowTenantInvitations,
-			"enable_api_tokens":                out.APITokensEnabled,
-			"machine_to_machine_auth_strategy": out.MachineToMachineAuthStrategy,
-			"enable_roles":                     out.ForcePermissions,
-			"jwt_algorithm":                    out.JWTAlgorithm,
-			"jwt_access_token_expiration":      out.DefaultTokenExpiration,
-			"jwt_refresh_token_expiration":     out.DefaultRefreshTokenExpiration,
-			"jwt_public_key":                   out.PublicKey,
-			"same_site_cookie_policy":          strings.ToLower(out.CookieSameSite),
-			"auth_strategy":                    out.AuthStrategy,
-		}
-		if err := d.Set("auth_policy", []interface{}{auth_policy}); err != nil {
-			return diag.FromErr(err)
-		}
-	}
-	{
 		var out fronteggMFAPolicy
 		clientHolder.ApiClient.Ignore404()
 		if err := clientHolder.ApiClient.Get(ctx, fronteggMFAPolicyURL, &out); err != nil {
@@ -1270,25 +1148,6 @@ func resourceFronteggWorkspaceUpdate(ctx context.Context, d *schema.ResourceData
 					return diag.FromErr(err)
 				}
 			}
-		}
-	}
-	{
-		in := fronteggAuth{
-			AllowNotVerifiedUsersLogin:    d.Get("auth_policy.0.allow_unverified_users").(bool),
-			AllowSignups:                  d.Get("auth_policy.0.allow_signups").(bool),
-			AllowTenantInvitations:        d.Get("auth_policy.0.allow_tenant_invitations").(bool),
-			APITokensEnabled:              d.Get("auth_policy.0.enable_api_tokens").(bool),
-			MachineToMachineAuthStrategy:  d.Get("auth_policy.0.machine_to_machine_auth_strategy").(string),
-			ForcePermissions:              d.Get("auth_policy.0.enable_roles").(bool),
-			JWTAlgorithm:                  d.Get("auth_policy.0.jwt_algorithm").(string),
-			DefaultTokenExpiration:        d.Get("auth_policy.0.jwt_access_token_expiration").(int),
-			DefaultRefreshTokenExpiration: d.Get("auth_policy.0.jwt_refresh_token_expiration").(int),
-			PublicKey:                     d.Get("auth_policy.0.jwt_public_key").(string),
-			CookieSameSite:                strings.ToUpper(d.Get("auth_policy.0.same_site_cookie_policy").(string)),
-			AuthStrategy:                  d.Get("auth_policy.0.auth_strategy").(string),
-		}
-		if err := clientHolder.ApiClient.Post(ctx, fronteggAuthURL, in, nil); err != nil {
-			return diag.FromErr(err)
 		}
 	}
 	{
