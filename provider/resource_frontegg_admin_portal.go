@@ -390,34 +390,41 @@ func resourceFronteggAdminPortalRead(ctx context.Context, d *schema.ResourceData
 		}
 	}
 
-	// If V1 palette is empty, use V2 login box palette
-	if paletteV1.Success == "" && paletteV1.Info == "" {
-		paletteItems = getPaletteItemsV2(paletteV2LoginBox)
-	} else {
-		// Check if values are strings before adding to V1 palette format
-		paletteMap := make(map[string]interface{})
+	// Handle deprecated palette field - only set if there's actual palette data from the current config
+	// This prevents setting empty/null values that cause drift
+	if configPalette := d.Get("palette").([]interface{}); len(configPalette) > 0 {
+		// Check if the current config uses the deprecated palette field
+		// If V1 palette has values, use V1 format; otherwise use V2 format
+		if paletteV1.Success != "" || paletteV1.Info != "" || paletteV1.Warning != "" || paletteV1.Error != "" {
+			// Use V1 palette format for backward compatibility
+			paletteMap := make(map[string]interface{})
 
-		// Helper function to check if value is a string
-		addIfString := func(key string, value interface{}) {
-			if str, ok := value.(string); ok && str != "" {
-				paletteMap[key] = str
+			// Helper function to check if value is a string
+			addIfString := func(key string, value interface{}) {
+				if str, ok := value.(string); ok && str != "" {
+					paletteMap[key] = str
+				}
 			}
-		}
 
-		addIfString("success", paletteV1.Success)
-		addIfString("info", paletteV1.Info)
-		addIfString("warning", paletteV1.Warning)
-		addIfString("error", paletteV1.Error)
-		addIfString("primary", paletteV1.Primary)
-		addIfString("primaryText", paletteV1.PrimaryText)
-		addIfString("secondary", paletteV1.Secondary)
-		addIfString("secondaryText", paletteV1.SecondaryText)
+			addIfString("success", paletteV1.Success)
+			addIfString("info", paletteV1.Info)
+			addIfString("warning", paletteV1.Warning)
+			addIfString("error", paletteV1.Error)
+			addIfString("primary", paletteV1.Primary)
+			addIfString("primaryText", paletteV1.PrimaryText)
+			addIfString("secondary", paletteV1.Secondary)
+			addIfString("secondaryText", paletteV1.SecondaryText)
 
-		// Only add the palette if we have any string values
-		if len(paletteMap) > 0 {
-			paletteItems = append(paletteItems, paletteMap)
+			// Only add the palette if we have any string values
+			if len(paletteMap) > 0 {
+				paletteItems = append(paletteItems, paletteMap)
+			}
+		} else {
+			// Use V2 format if V1 is empty but deprecated palette is configured
+			paletteItems = getPaletteItemsV2(paletteV2LoginBox)
 		}
 	}
+	// If no deprecated palette is configured in the config, leave paletteItems empty
 
 	// Set all the configuration values
 	if err := d.Set("enable_account_settings", nav.Account.Visibility == "byPermissions"); err != nil {
@@ -670,6 +677,19 @@ func isNonEmptySlice(value interface{}) bool {
 
 func getPaletteItemsV2(palette fronteggPaletteV2) []map[string]interface{} {
 	var paletteItems []map[string]interface{}
+
+	// Check if the palette has any actual values before creating the map
+	hasValues := palette.Success.Light != "" || palette.Success.Main != "" || palette.Success.Dark != "" ||
+		palette.Info.Light != "" || palette.Info.Main != "" || palette.Info.Dark != "" ||
+		palette.Warning.Light != "" || palette.Warning.Main != "" || palette.Warning.Dark != "" ||
+		palette.Error.Light != "" || palette.Error.Main != "" || palette.Error.Dark != "" ||
+		palette.Primary.Light != "" || palette.Primary.Main != "" || palette.Primary.Dark != "" ||
+		palette.Secondary.Light != "" || palette.Secondary.Main != "" || palette.Secondary.Dark != ""
+
+	if !hasValues {
+		return paletteItems // Return empty slice if no values
+	}
+
 	palleteMap := map[string]interface{}{
 		"success": []interface{}{map[string]interface{}{
 			"light":         palette.Success.Light,
