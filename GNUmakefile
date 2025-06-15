@@ -1,5 +1,5 @@
 PLATFORM ?= $(shell go env GOOS)_$(shell go env GOARCH)
-VERSION ?= 2.0.0-beta.2
+VERSION ?= $(shell git describe --tags --match 'v*' --abbrev=0 2>/dev/null | sed 's/^v//' || echo "0.0.0")
 
 default: testacc
 
