@@ -5,6 +5,7 @@ subcategory: ""
 description: |-
   Admin Portal configuration.
   This resource configures the Frontegg Admin Portal settings, including navigation visibility and theme customization.
+  Note: This resource cannot be deleted. When destroyed, Terraform will remove it from the state file, but the admin portal configuration will remain in its last-applied state.
 ---
 
 # frontegg_admin_portal (Resource)
@@ -12,6 +13,8 @@ description: |-
 Admin Portal configuration.
 
 This resource configures the Frontegg Admin Portal settings, including navigation visibility and theme customization.
+
+**Note:** This resource cannot be deleted. When destroyed, Terraform will remove it from the state file, but the admin portal configuration will remain in its last-applied state.
 
 ## Example Usage
 

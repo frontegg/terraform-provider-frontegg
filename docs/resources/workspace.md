@@ -6,6 +6,7 @@ description: |-
   Workspace configuration.
   This is a singleton resource. You must only create one frontegg_workspace resource
   per Frontegg provider.
+  Note: This resource cannot be deleted. When destroyed, Terraform will remove it from the state file, but the workspace will remain in its last-applied state.
 ---
 
 # frontegg_workspace (Resource)
@@ -14,6 +15,8 @@ Workspace configuration.
 
 This is a singleton resource. You must only create one frontegg_workspace resource
 per Frontegg provider.
+
+**Note:** This resource cannot be deleted. When destroyed, Terraform will remove it from the state file, but the workspace will remain in its last-applied state.
 
 ## Example Usage
 

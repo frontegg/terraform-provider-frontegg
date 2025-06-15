@@ -210,7 +210,9 @@ func resourceFronteggAdminPortal() *schema.Resource {
 	return &schema.Resource{
 		Description: `Admin Portal configuration.
 
-This resource configures the Frontegg Admin Portal settings, including navigation visibility and theme customization.`,
+This resource configures the Frontegg Admin Portal settings, including navigation visibility and theme customization.
+
+**Note:** This resource cannot be deleted. When destroyed, Terraform will remove it from the state file, but the admin portal configuration will remain in its last-applied state.`,
 
 		CreateContext: resourceFronteggAdminPortalCreate,
 		ReadContext:   resourceFronteggAdminPortalRead,

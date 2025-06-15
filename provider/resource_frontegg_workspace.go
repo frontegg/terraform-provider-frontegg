@@ -171,7 +171,9 @@ func resourceFronteggWorkspace() *schema.Resource {
 		Description: `Workspace configuration.
 
 This is a singleton resource. You must only create one frontegg_workspace resource
-per Frontegg provider.`,
+per Frontegg provider.
+
+**Note:** This resource cannot be deleted. When destroyed, Terraform will remove it from the state file, but the workspace will remain in its last-applied state.`,
 
 		CreateContext: resourceFronteggWorkspaceCreate,
 		ReadContext:   resourceFronteggWorkspaceRead,

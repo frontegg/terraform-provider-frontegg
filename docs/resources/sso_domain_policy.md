@@ -6,6 +6,7 @@ description: |-
   Configures how SSO domains are validated.
   This is a singleton resource. You must only create one fronteggssodomain_policy resource
   per Frontegg provider.
+  Note: This resource cannot be deleted. When destroyed, Terraform will remove it from the state file, but the SSO domain policy will remain in its last-applied state.
 ---
 
 # frontegg_sso_domain_policy (Resource)
@@ -14,6 +15,8 @@ Configures how SSO domains are validated.
 
 This is a singleton resource. You must only create one frontegg_sso_domain_policy resource
 per Frontegg provider.
+
+**Note:** This resource cannot be deleted. When destroyed, Terraform will remove it from the state file, but the SSO domain policy will remain in its last-applied state.
 
 ## Example Usage
 

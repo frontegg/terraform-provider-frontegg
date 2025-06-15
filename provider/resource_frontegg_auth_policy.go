@@ -33,7 +33,9 @@ func resourceFronteggAuthPolicy() *schema.Resource {
 		Description: `Configures the general authentication policy for the workspace.
 
 This is a singleton resource. You must only create one frontegg_auth_policy resource
-per Frontegg provider.`,
+per Frontegg provider.
+
+**Note:** This resource cannot be deleted. When destroyed, Terraform will remove it from the state file, but the authentication policy will remain in its last-applied state.`,
 
 		CreateContext: resourceFronteggAuthPolicyCreate,
 		ReadContext:   resourceFronteggAuthPolicyRead,

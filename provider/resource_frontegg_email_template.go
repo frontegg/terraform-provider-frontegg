@@ -26,7 +26,9 @@ func resourceFronteggEmailTemplate() *schema.Resource {
 	return &schema.Resource{
 		Description: `Configures Frontegg email templates.
 
-Each email template resource manages one specific email template type for the workspace.`,
+Each email template resource manages one specific email template type for the workspace.
+
+**Note:** This resource cannot be deleted. When destroyed, Terraform will remove it from the state file, but the email template will remain in its last-applied state.`,
 
 		CreateContext: resourceFronteggEmailTemplateCreate,
 		ReadContext:   resourceFronteggEmailTemplateRead,
