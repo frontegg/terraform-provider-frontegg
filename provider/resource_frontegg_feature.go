@@ -207,14 +207,14 @@ func resourceFronteggFeatureDeserializeV1(d *schema.ResourceData, f fronteggFeat
 			return err
 		}
 
-		// Get existing permissions from resource to maintain order
-		existingPerms := d.Get("permissions").([]interface{})
-		permissions := make([]map[string]interface{}, len(f.Permissions))
-		for i, perm := range existingPerms {
-			permMap := perm.(map[string]interface{})
-			//add only if exists in f.Permissions
-			if _, ok := permissionsMap[permMap["permission_key"].(string)]; ok {
-				permissions[i] = permMap
+		// Build permissions array based on the feature's permissions
+		permissions := make([]map[string]interface{}, 0, len(f.Permissions))
+		for _, permKey := range f.Permissions {
+			if perm, ok := permissionsMap[permKey]; ok {
+				permissions = append(permissions, map[string]interface{}{
+					"permission_key": perm.Key,
+					"permission_id":  perm.ID,
+				})
 			}
 		}
 
@@ -240,7 +240,7 @@ func findFeatureByKey(ctx context.Context, client *restclient.ClientHolder, key 
 		HasNext bool                `json:"hasNext"`
 	}
 
-	url := fmt.Sprintf("%s?key=%s&limit=1", fronteggFeaturePathV1, key)
+	url := fmt.Sprintf("%s?featureKeys=%s&limit=1", fronteggFeaturePathV1, key)
 
 	var searchResult pageResponse
 	if err := client.ApiClient.Get(ctx, url, &searchResult); err != nil {
@@ -258,32 +258,29 @@ func resourceFronteggFeatureCreate(ctx context.Context, d *schema.ResourceData, 
 	clientHolder := meta.(*restclient.ClientHolder)
 	key := d.Get("key").(string)
 
-	// Check if feature exists
+	// Check if feature already exists
 	existingFeature, err := findFeatureByKey(ctx, clientHolder, key)
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	// If feature exists, update it
+	// If feature exists, return an error asking user to import it
 	if existingFeature != nil {
-		d.SetId(existingFeature.ID)
-
-		// Update the existing feature
-		in := resourceFronteggFeatureSerialize(d)
-		if err := clientHolder.ApiClient.Patch(ctx, fmt.Sprintf("%s/%s", fronteggFeaturePathV2, existingFeature.ID), in, nil); err != nil {
-			return diag.FromErr(err)
-		}
-
-		return nil
+		return diag.Errorf("Feature with key '%s' already exists (ID: %s). Please import it using: terraform import <resource_address> %s",
+			key, existingFeature.ID, existingFeature.ID)
 	}
 
-	// Feature doesn't exist, create new one
+	// Create the feature
 	in := resourceFronteggFeatureSerialize(d)
 	var out fronteggFeatureV1
 	if err := clientHolder.ApiClient.Post(ctx, fronteggFeaturePathV2, in, &out); err != nil {
 		return diag.FromErr(err)
 	}
 
+	// Set the ID from the response
+	d.SetId(out.ID)
+
+	// Deserialize the v1 response format
 	if err := resourceFronteggFeatureDeserializeV1(d, out, clientHolder, ctx); err != nil {
 		return diag.FromErr(err)
 	}
@@ -293,6 +290,8 @@ func resourceFronteggFeatureCreate(ctx context.Context, d *schema.ResourceData, 
 
 func resourceFronteggFeatureRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	clientHolder := meta.(*restclient.ClientHolder)
+	client := clientHolder.ApiClient
+	client.Ignore404()
 
 	// Create a struct to hold the paginated response
 	type pageResponse struct {
@@ -304,13 +303,15 @@ func resourceFronteggFeatureRead(ctx context.Context, d *schema.ResourceData, me
 	url := fmt.Sprintf("%s?featureIds=%s&limit=1", fronteggFeaturePathV1, d.Id())
 
 	var out pageResponse
-	if err := clientHolder.ApiClient.Get(ctx, url, &out); err != nil {
+	if err := client.Get(ctx, url, &out); err != nil {
 		return diag.FromErr(err)
 	}
 
 	// Check if we found the feature
 	if len(out.Items) == 0 {
-		return diag.Errorf("Feature with ID %s not found", d.Id())
+		// Feature not found, remove from state by setting ID to empty string
+		d.SetId("")
+		return nil
 	}
 
 	// Deserialize the first (and should be only) item
@@ -336,6 +337,8 @@ func resourceFronteggFeatureUpdate(ctx context.Context, d *schema.ResourceData, 
 func resourceFronteggFeatureDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	clientHolder := meta.(*restclient.ClientHolder)
 
+	// Ignore 404 errors when deleting - if the feature doesn't exist, deletion was successful
+	clientHolder.ApiClient.Ignore404()
 	if err := clientHolder.ApiClient.Delete(ctx, fmt.Sprintf("%s/%s", fronteggFeaturePathV1, d.Id()), nil); err != nil {
 		return diag.FromErr(err)
 	}
