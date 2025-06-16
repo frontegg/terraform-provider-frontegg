@@ -42,3 +42,4 @@ website/vendor
 local
 terraform.tfstate*
 .terraform.tfstate*
+.golangci.bck.yml
