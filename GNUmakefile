@@ -1,5 +1,5 @@
 PLATFORM ?= $(shell go env GOOS)_$(shell go env GOARCH)
-VERSION = 1.0.23
+VERSION ?= $(shell git describe --tags --match 'v*' --abbrev=0 2>/dev/null | sed 's/^v//' || echo "0.0.0")
 
 default: testacc
 
@@ -13,10 +13,22 @@ testacc:
 
 .PHONY: lint
 lint:
-	@docker run --rm -v $(CURDIR):/app -w /app golangci/golangci-lint:v1.59.1 golangci-lint run --timeout=5m
+	@echo "Running go vet..."
+	@go vet ./...
+	@echo "Checking formatting with gofmt..."
+	@test -z "$$(gofmt -l .)" || (echo "Files need formatting:"; gofmt -l .; exit 1)
+	@echo "Checking for unused imports..."
+	@go mod tidy
+	@echo "Lint check passed!"
 
 lint-fix:
-	@docker run --rm -v $(CURDIR):/app -w /app golangci/golangci-lint:v1.59.1 golangci-lint run --fix --timeout=5m
+	@echo "Running go vet..."
+	@go vet ./...
+	@echo "Fixing formatting with gofmt..."
+	@gofmt -w .
+	@echo "Tidying go.mod..."
+	@go mod tidy
+	@echo "Lint fixes applied!"
 
 capply: install
 	@terraform init

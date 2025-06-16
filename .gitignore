@@ -4,7 +4,7 @@
 example.tf
 terraform.tfplan
 terraform.tfstate
-main.tf
+main.tf*
 bin/
 dist/
 modules-dev/
@@ -40,3 +40,6 @@ website/vendor
 
 #local
 local
+terraform.tfstate*
+.terraform.tfstate*
+.golangci.bck.yml
