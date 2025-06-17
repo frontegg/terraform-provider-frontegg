@@ -1,3 +1,10 @@
+---
+layout: ""
+page_title: "Frontegg Provider v2.0.0 Migration Guide"
+description: |-
+  Migration guide for upgrading from Frontegg Provider v1.0.x to v2.0.0, covering breaking changes and step-by-step migration instructions.
+---
+
 # Frontegg Terraform Provider v2.0.0 Migration Guide
 
 ## Overview
