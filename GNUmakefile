@@ -5,7 +5,7 @@ default: testacc
 
 install:
 	@go build -o ~/.terraform.d/plugins/registry.terraform.io/frontegg/frontegg/$(VERSION)/$(PLATFORM)/terraform-provider-frontegg
-	@rm .terraform.lock.hcl
+	@rm ./*/.terraform.lock.hcl || true
 
 .PHONY: testacc
 testacc:
