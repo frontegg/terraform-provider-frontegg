@@ -486,6 +486,11 @@ func resourceFronteggAdminPortalUpdate(ctx context.Context, d *schema.ResourceDa
 	}
 
 	serializeSeverityPaletteColor := func(key string) fronteggPaletteSeverityColor {
+		// Check if the key exists before processing
+		if _, exists := d.GetOk(key); !exists {
+			return fronteggPaletteSeverityColor{}
+		}
+
 		light := d.Get(fmt.Sprintf("%s.0.light", key)).(string)
 		main := d.Get(fmt.Sprintf("%s.0.main", key)).(string)
 		dark := d.Get(fmt.Sprintf("%s.0.dark", key)).(string)
@@ -500,6 +505,11 @@ func resourceFronteggAdminPortalUpdate(ctx context.Context, d *schema.ResourceDa
 	}
 
 	serializePaletteColor := func(key string) fronteggPaletteColor {
+		// Check if the key exists before processing
+		if _, exists := d.GetOk(key); !exists {
+			return fronteggPaletteColor{}
+		}
+
 		light := d.Get(fmt.Sprintf("%s.0.light", key)).(string)
 		main := d.Get(fmt.Sprintf("%s.0.main", key)).(string)
 		dark := d.Get(fmt.Sprintf("%s.0.dark", key)).(string)
@@ -518,14 +528,6 @@ func resourceFronteggAdminPortalUpdate(ctx context.Context, d *schema.ResourceDa
 	}
 
 	serializeNewPalette := func(key string) fronteggPaletteV2 {
-		// Helper function to check if a color category is configured
-		isColorConfigured := func(colorKey string) bool {
-			light := d.Get(fmt.Sprintf("%s.0.light", colorKey)).(string)
-			main := d.Get(fmt.Sprintf("%s.0.main", colorKey)).(string)
-			dark := d.Get(fmt.Sprintf("%s.0.dark", colorKey)).(string)
-			return light != "" || main != "" || dark != ""
-		}
-
 		var paletteSuccess fronteggPaletteSeverityColor
 		var paletteInfo fronteggPaletteSeverityColor
 		var paletteWarning fronteggPaletteSeverityColor
@@ -533,25 +535,13 @@ func resourceFronteggAdminPortalUpdate(ctx context.Context, d *schema.ResourceDa
 		var palettePrimary fronteggPaletteColor
 		var paletteSecondary fronteggPaletteColor
 
-		// Only serialize color categories that are actually configured
-		if isColorConfigured(fmt.Sprintf("%s.0.success", key)) {
-			paletteSuccess = serializeSeverityPaletteColor(fmt.Sprintf("%s.0.success", key))
-		}
-		if isColorConfigured(fmt.Sprintf("%s.0.info", key)) {
-			paletteInfo = serializeSeverityPaletteColor(fmt.Sprintf("%s.0.info", key))
-		}
-		if isColorConfigured(fmt.Sprintf("%s.0.warning", key)) {
-			paletteWarning = serializeSeverityPaletteColor(fmt.Sprintf("%s.0.warning", key))
-		}
-		if isColorConfigured(fmt.Sprintf("%s.0.error", key)) {
-			paletteError = serializeSeverityPaletteColor(fmt.Sprintf("%s.0.error", key))
-		}
-		if isColorConfigured(fmt.Sprintf("%s.0.primary", key)) {
-			palettePrimary = serializePaletteColor(fmt.Sprintf("%s.0.primary", key))
-		}
-		if isColorConfigured(fmt.Sprintf("%s.0.secondary", key)) {
-			paletteSecondary = serializePaletteColor(fmt.Sprintf("%s.0.secondary", key))
-		}
+		// Serialize color categories based on key existence
+		paletteSuccess = serializeSeverityPaletteColor(fmt.Sprintf("%s.0.success", key))
+		paletteInfo = serializeSeverityPaletteColor(fmt.Sprintf("%s.0.info", key))
+		paletteWarning = serializeSeverityPaletteColor(fmt.Sprintf("%s.0.warning", key))
+		paletteError = serializeSeverityPaletteColor(fmt.Sprintf("%s.0.error", key))
+		palettePrimary = serializePaletteColor(fmt.Sprintf("%s.0.primary", key))
+		paletteSecondary = serializePaletteColor(fmt.Sprintf("%s.0.secondary", key))
 
 		return fronteggPaletteV2{
 			Success:   paletteSuccess,
@@ -687,10 +677,6 @@ func isNonEmptySlice(value interface{}) bool {
 func getPaletteItemsV2(palette fronteggPaletteV2) []map[string]interface{} {
 	var paletteItems []map[string]interface{}
 
-	// Always return palette structure to prevent drift
-	// This ensures state consistency regardless of API response content
-
-	// Return palette structure using only API values (no hardcoded defaults)
 	palleteMap := map[string]interface{}{
 		"success": []interface{}{map[string]interface{}{
 			"light":         palette.Success.Light,
