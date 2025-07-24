@@ -126,9 +126,7 @@ func resourceFronteggEmailTemplateDeserialize(d *schema.ResourceData, f frontegg
 	if err := d.Set("subject", f.Subject); err != nil {
 		return err
 	}
-	if err := d.Set("html_template", f.HTMLTemplate); err != nil {
-		return err
-	}
+
 	if err := d.Set("redirect_url", f.RedirectURL); err != nil {
 		return err
 	}
@@ -167,14 +165,6 @@ func resourceFronteggEmailTemplateRead(ctx context.Context, d *schema.ResourceDa
 func resourceFronteggEmailTemplateUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	clientHolder := meta.(*restclient.ClientHolder)
 	in := resourceFronteggEmailTemplateSerialize(d)
-
-	// Set defaults for fields that may be required by the API
-	if in.RedirectURL == "" {
-		in.RedirectURL = "http://disabled"
-	}
-	if in.SenderEmail == "" {
-		in.SenderEmail = "hello@frontegg.com"
-	}
 
 	if err := clientHolder.ApiClient.Post(ctx, fronteggEmailTemplateURL, in, nil); err != nil {
 		return diag.FromErr(err)
