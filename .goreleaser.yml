@@ -61,5 +61,7 @@ release:
   # draft: true
   # Automatically detect prerelease versions (beta, alpha, rc) and mark them as prerelease
   prerelease: auto
+  extra_files:
+    - glob: terraform-registry-manifest.json
 changelog:
   disable: false
