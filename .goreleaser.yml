@@ -1,5 +1,7 @@
 # Visit https://goreleaser.com for documentation on how to customize this
 # behavior.
+version: 2
+
 before:
   hooks:
     # this is just an example and not a requirement for provider building/publishing
@@ -56,4 +58,4 @@ release:
   # Automatically detect prerelease versions (beta, alpha, rc) and mark them as prerelease
   prerelease: auto
 changelog:
-  skip: false
+  disable: false
