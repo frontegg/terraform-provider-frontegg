@@ -37,9 +37,13 @@ builds:
 archives:
   - format: zip
     name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    files:
+      - terraform-registry-manifest.json
 checksum:
   name_template: "{{ .ProjectName }}_{{ .Version }}_SHA256SUMS"
   algorithm: sha256
+  extra_files:
+    - glob: terraform-registry-manifest.json
 signs:
   - artifacts: checksum
     args:
