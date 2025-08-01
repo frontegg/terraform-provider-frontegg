@@ -42,8 +42,6 @@ archives:
 checksum:
   name_template: "{{ .ProjectName }}_{{ .Version }}_SHA256SUMS"
   algorithm: sha256
-  extra_files:
-    - glob: terraform-registry-manifest.json
 signs:
   - artifacts: checksum
     args:
@@ -61,7 +59,5 @@ release:
   # draft: true
   # Automatically detect prerelease versions (beta, alpha, rc) and mark them as prerelease
   prerelease: auto
-  extra_files:
-    - glob: terraform-registry-manifest.json
 changelog:
   disable: false
