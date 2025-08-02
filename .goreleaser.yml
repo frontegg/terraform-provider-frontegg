@@ -5,7 +5,6 @@ before:
 builds:
   - env:
       - CGO_ENABLED=0
-    mod_timestamp: "{{ .CommitTimestamp }}"
     flags:
       - -trimpath
     goos:
@@ -15,7 +14,7 @@ builds:
       - darwin
     goarch:
       - amd64
-      - '386'
+      - "386"
       - arm
       - arm64
     ignore:
@@ -25,14 +24,14 @@ builds:
         goarch: "arm64"
     ldflags:
       - -s -w -X version.ProviderVersion={{.Version}}
-    mod_timestamp: '{{ .CommitTimestamp }}'
+    mod_timestamp: "{{ .CommitTimestamp }}"
 archives:
   - files:
       - none*
-    formats: ['zip']
-    name_template: '{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}'
+    formats: ["zip"]
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
 checksum:
-  name_template: '{{ .ProjectName }}_{{ .Version }}_SHA256SUMS'
+  name_template: "{{ .ProjectName }}_{{ .Version }}_SHA256SUMS"
   algorithm: sha256
 release:
   prerelease: auto
