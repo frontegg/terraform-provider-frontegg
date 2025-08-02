@@ -379,17 +379,9 @@ func resourceFronteggAdminPortalRead(ctx context.Context, d *schema.ResourceData
 
 	// Get palette configurations from the response, with nil checks
 	var paletteV1 fronteggPaletteV1
-	var paletteV2LoginBox fronteggPaletteV2
-	var paletteV2AdminPortal fronteggPaletteV2
 
 	if len(out.Rows) > 0 {
 		paletteV1 = out.Rows[0].Configuration.Theme
-		if out.Rows[0].Configuration.ThemeV2.LoginBox != (fronteggThemeOptions{}) {
-			paletteV2LoginBox = out.Rows[0].Configuration.ThemeV2.LoginBox.Palette
-		}
-		if out.Rows[0].Configuration.ThemeV2.AdminPortal != (fronteggThemeOptions{}) {
-			paletteV2AdminPortal = out.Rows[0].Configuration.ThemeV2.AdminPortal.Palette
-		}
 	}
 
 	// Handle deprecated palette field - only set if there's actual palette data from the current config
@@ -423,7 +415,8 @@ func resourceFronteggAdminPortalRead(ctx context.Context, d *schema.ResourceData
 			}
 		} else {
 			// Use V2 format if V1 is empty but deprecated palette is configured
-			paletteItems = getPaletteItemsV2(paletteV2LoginBox)
+			// Since we no longer populate V2 palettes from API, use empty structure
+			paletteItems = getPaletteItemsV2(fronteggPaletteV2{})
 		}
 	}
 	// If no deprecated palette is configured in the config, leave paletteItems empty
@@ -455,12 +448,20 @@ func resourceFronteggAdminPortalRead(ctx context.Context, d *schema.ResourceData
 	if err := d.Set("palette", paletteItems); err != nil {
 		return diag.FromErr(err)
 	}
-	if err := d.Set("palette_login_box", getPaletteItemsV2(paletteV2LoginBox)); err != nil {
-		return diag.FromErr(err)
+
+	// Only set palette fields if they are configured in Terraform to prevent drift
+	// Set state to match exactly what's configured without adding defaults
+	if _, exists := d.GetOk("palette_admin_portal"); exists {
+		if err := d.Set("palette_admin_portal", getConfiguredPaletteItems("palette_admin_portal", d)); err != nil {
+			return diag.FromErr(err)
+		}
 	}
-	if err := d.Set("palette_admin_portal", getPaletteItemsV2(paletteV2AdminPortal)); err != nil {
-		return diag.FromErr(err)
+	if _, exists := d.GetOk("palette_login_box"); exists {
+		if err := d.Set("palette_login_box", getConfiguredPaletteItems("palette_login_box", d)); err != nil {
+			return diag.FromErr(err)
+		}
 	}
+	// Always set theme names to match API response to prevent drift
 	if err := d.Set("login_box_theme_name", out.Rows[0].Configuration.ThemeV2.LoginBox.ThemeName); err != nil {
 		return diag.FromErr(err)
 	}
@@ -485,6 +486,11 @@ func resourceFronteggAdminPortalUpdate(ctx context.Context, d *schema.ResourceDa
 	}
 
 	serializeSeverityPaletteColor := func(key string) fronteggPaletteSeverityColor {
+		// Check if the key exists before processing
+		if _, exists := d.GetOk(key); !exists {
+			return fronteggPaletteSeverityColor{}
+		}
+
 		light := d.Get(fmt.Sprintf("%s.0.light", key)).(string)
 		main := d.Get(fmt.Sprintf("%s.0.main", key)).(string)
 		dark := d.Get(fmt.Sprintf("%s.0.dark", key)).(string)
@@ -499,6 +505,11 @@ func resourceFronteggAdminPortalUpdate(ctx context.Context, d *schema.ResourceDa
 	}
 
 	serializePaletteColor := func(key string) fronteggPaletteColor {
+		// Check if the key exists before processing
+		if _, exists := d.GetOk(key); !exists {
+			return fronteggPaletteColor{}
+		}
+
 		light := d.Get(fmt.Sprintf("%s.0.light", key)).(string)
 		main := d.Get(fmt.Sprintf("%s.0.main", key)).(string)
 		dark := d.Get(fmt.Sprintf("%s.0.dark", key)).(string)
@@ -517,12 +528,20 @@ func resourceFronteggAdminPortalUpdate(ctx context.Context, d *schema.ResourceDa
 	}
 
 	serializeNewPalette := func(key string) fronteggPaletteV2 {
-		paletteSuccess := serializeSeverityPaletteColor(fmt.Sprintf("%s.0.success", key))
-		paletteInfo := serializeSeverityPaletteColor(fmt.Sprintf("%s.0.info", key))
-		paletteWarning := serializeSeverityPaletteColor(fmt.Sprintf("%s.0.warning", key))
-		paletteError := serializeSeverityPaletteColor(fmt.Sprintf("%s.0.error", key))
-		palettePrimary := serializePaletteColor(fmt.Sprintf("%s.0.primary", key))
-		paletteSecondary := serializePaletteColor(fmt.Sprintf("%s.0.secondary", key))
+		var paletteSuccess fronteggPaletteSeverityColor
+		var paletteInfo fronteggPaletteSeverityColor
+		var paletteWarning fronteggPaletteSeverityColor
+		var paletteError fronteggPaletteSeverityColor
+		var palettePrimary fronteggPaletteColor
+		var paletteSecondary fronteggPaletteColor
+
+		// Serialize color categories based on key existence
+		paletteSuccess = serializeSeverityPaletteColor(fmt.Sprintf("%s.0.success", key))
+		paletteInfo = serializeSeverityPaletteColor(fmt.Sprintf("%s.0.info", key))
+		paletteWarning = serializeSeverityPaletteColor(fmt.Sprintf("%s.0.warning", key))
+		paletteError = serializeSeverityPaletteColor(fmt.Sprintf("%s.0.error", key))
+		palettePrimary = serializePaletteColor(fmt.Sprintf("%s.0.primary", key))
+		paletteSecondary = serializePaletteColor(fmt.Sprintf("%s.0.secondary", key))
 
 		return fronteggPaletteV2{
 			Success:   paletteSuccess,
@@ -658,18 +677,6 @@ func isNonEmptySlice(value interface{}) bool {
 func getPaletteItemsV2(palette fronteggPaletteV2) []map[string]interface{} {
 	var paletteItems []map[string]interface{}
 
-	// Check if the palette has any actual values before creating the map
-	hasValues := palette.Success.Light != "" || palette.Success.Main != "" || palette.Success.Dark != "" ||
-		palette.Info.Light != "" || palette.Info.Main != "" || palette.Info.Dark != "" ||
-		palette.Warning.Light != "" || palette.Warning.Main != "" || palette.Warning.Dark != "" ||
-		palette.Error.Light != "" || palette.Error.Main != "" || palette.Error.Dark != "" ||
-		palette.Primary.Light != "" || palette.Primary.Main != "" || palette.Primary.Dark != "" ||
-		palette.Secondary.Light != "" || palette.Secondary.Main != "" || palette.Secondary.Dark != ""
-
-	if !hasValues {
-		return paletteItems // Return empty slice if no values
-	}
-
 	palleteMap := map[string]interface{}{
 		"success": []interface{}{map[string]interface{}{
 			"light":         palette.Success.Light,
@@ -713,6 +720,55 @@ func getPaletteItemsV2(palette fronteggPaletteV2) []map[string]interface{} {
 		}},
 	}
 	paletteItems = append(paletteItems, palleteMap)
+	return paletteItems
+}
+
+func getConfiguredPaletteItems(key string, d *schema.ResourceData) []map[string]interface{} {
+	var paletteItems []map[string]interface{}
+
+	// Build palette structure based only on what's configured
+	paletteMap := make(map[string]interface{})
+
+	// Helper function to add a color category only if it's configured
+	addColorCategory := func(colorName string, isSeverityColor bool) {
+		colorKey := fmt.Sprintf("%s.0.%s", key, colorName)
+
+		// Check if this color category is configured
+		light := d.Get(fmt.Sprintf("%s.0.light", colorKey)).(string)
+		main := d.Get(fmt.Sprintf("%s.0.main", colorKey)).(string)
+		dark := d.Get(fmt.Sprintf("%s.0.dark", colorKey)).(string)
+
+		if light != "" || main != "" || dark != "" {
+			colorData := map[string]interface{}{
+				"light":         light,
+				"main":          main,
+				"dark":          dark,
+				"contrast_text": d.Get(fmt.Sprintf("%s.0.contrast_text", colorKey)).(string),
+			}
+
+			// Add hover and active for primary/secondary colors
+			if !isSeverityColor {
+				colorData["hover"] = d.Get(fmt.Sprintf("%s.0.hover", colorKey)).(string)
+				colorData["active"] = d.Get(fmt.Sprintf("%s.0.active", colorKey)).(string)
+			}
+
+			paletteMap[colorName] = []interface{}{colorData}
+		}
+	}
+
+	// Check each color category
+	addColorCategory("success", true)
+	addColorCategory("info", true)
+	addColorCategory("warning", true)
+	addColorCategory("error", true)
+	addColorCategory("primary", false)
+	addColorCategory("secondary", false)
+
+	// Only add palette if at least one color category is configured
+	if len(paletteMap) > 0 {
+		paletteItems = append(paletteItems, paletteMap)
+	}
+
 	return paletteItems
 }
 

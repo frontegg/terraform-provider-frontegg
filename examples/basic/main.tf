@@ -191,6 +191,18 @@ resource "frontegg_webhook" "example" {
   ]
 }
 
+resource "frontegg_prehook" "example" {
+  enabled = true
+  name = "test prehook"
+  description = "a prehook"
+  url = "https://example.com/prehook"
+  secret = "example-sekret"
+  events = [
+    "SIGN_UP"
+  ]
+  fail_method = "CLOSE"
+}
+
 resource "frontegg_permission_category" "example" {
   name        = "Example"
   description = "An example of a permission category"
