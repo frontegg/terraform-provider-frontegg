@@ -3,9 +3,12 @@ VERSION ?= $(shell git describe --tags --match 'v*' --abbrev=0 2>/dev/null | sed
 
 default: testacc
 
+generate.docs:
+	@go generate
+
 install:
 	@go build -o ~/.terraform.d/plugins/registry.terraform.io/frontegg/frontegg/$(VERSION)/$(PLATFORM)/terraform-provider-frontegg
-	@rm ./*/.terraform.lock.hcl || true
+	@find . -name ".terraform.lock.hcl" -type f -delete || true
 
 .PHONY: testacc
 testacc:

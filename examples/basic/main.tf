@@ -192,11 +192,11 @@ resource "frontegg_webhook" "example" {
 }
 
 resource "frontegg_prehook" "example" {
-  enabled = true
-  name = "test prehook"
+  enabled     = true
+  name        = "test prehook"
   description = "a prehook"
-  url = "https://example.com/prehook"
-  secret = "example-sekret"
+  url         = "https://example.com/prehook"
+  secret      = "example-sekret"
   events = [
     "SIGN_UP"
   ]

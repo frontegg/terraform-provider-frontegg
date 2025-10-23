@@ -43,3 +43,4 @@ local
 terraform.tfstate*
 .terraform.tfstate*
 .golangci.bck.yml
+terraform-provider-frontegg
