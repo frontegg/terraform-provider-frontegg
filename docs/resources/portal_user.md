@@ -31,7 +31,6 @@ resource "frontegg_portal_user" "example" {
 
 - `email` (String) The user's email address.
 - `role_ids` (Set of String) List of the role IDs that the user has in the tenant
-- `tenant_id` (String) The tenant ID for this user.
 
 ### Optional
 

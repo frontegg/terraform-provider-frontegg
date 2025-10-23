@@ -44,11 +44,6 @@ func resourceFronteggPortalUser() *schema.Resource {
 				MinItems: 1,
 				Required: true,
 			},
-			"tenant_id": {
-				Description: "The tenant ID for this user.",
-				Type:        schema.TypeString,
-				Required:    true,
-			},
 		},
 	}
 }
@@ -82,7 +77,6 @@ func resourceFronteggPortalUserCreate(ctx context.Context, d *schema.ResourceDat
 	in := resourceFronteggPortalUserSerialize(d)
 	var out fronteggUser
 	headers := http.Header{}
-	headers.Add("frontegg-tenant-id", d.Get("tenant_id").(string))
 	if err := clientHolder.PortalClient.RequestWithHeaders(ctx, "POST", fronteggUserPath, headers, in, &out); err != nil {
 		return diag.FromErr(err)
 	}
@@ -100,7 +94,6 @@ func resourceFronteggPortalUserRead(ctx context.Context, d *schema.ResourceData,
 	client.Ignore404()
 	var out fronteggUser
 	headers := http.Header{}
-	headers.Add("frontegg-tenant-id", d.Get("tenant_id").(string))
 	if err := client.RequestWithHeaders(ctx, "GET", fmt.Sprintf("%s/%s", fronteggUserPathV1, d.Id()), headers, nil, &out); err != nil {
 		return diag.FromErr(err)
 	}
@@ -165,7 +158,6 @@ func resourceFronteggPortalUserUpdate(ctx context.Context, d *schema.ResourceDat
 	// Roles:
 	if d.HasChange("role_ids") {
 		headers := http.Header{}
-		headers.Add("frontegg-tenant-id", d.Get("tenant_id").(string))
 
 		oldsI, newsI := d.GetChange("role_ids")
 		olds := oldsI.(*schema.Set)
