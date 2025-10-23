@@ -8,7 +8,7 @@ generate.docs:
 
 install:
 	@go build -o ~/.terraform.d/plugins/registry.terraform.io/frontegg/frontegg/$(VERSION)/$(PLATFORM)/terraform-provider-frontegg
-	@rm ./*/.terraform.lock.hcl || true
+	@find . -name ".terraform.lock.hcl" -type f -delete || true
 
 .PHONY: testacc
 testacc:

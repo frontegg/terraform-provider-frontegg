@@ -34,7 +34,7 @@ resource "frontegg_portal_user" "example" {
 
 ### Optional
 
-- `password` (String, Sensitive) The user's login password.
+- `password` (String, Sensitive) The user's login password. This field is write-only and will not be stored in state. Changes to this field are ignored after creation.
 
 ### Read-Only
 

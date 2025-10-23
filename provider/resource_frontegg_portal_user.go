@@ -30,10 +30,14 @@ func resourceFronteggPortalUser() *schema.Resource {
 				Required:    true,
 			},
 			"password": {
-				Description: "The user's login password.",
+				Description: "The user's login password. This field is write-only and will not be stored in state. Changes to this field are ignored after creation.",
 				Type:        schema.TypeString,
 				Sensitive:   true,
 				Optional:    true,
+				DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
+					// Always suppress diff for password after resource creation
+					return d.Id() != ""
+				},
 			},
 			"role_ids": {
 				Description: "List of the role IDs that the user has in the tenant",
@@ -118,8 +122,6 @@ func resourceFronteggPortalUserDelete(ctx context.Context, d *schema.ResourceDat
 
 func resourceFronteggPortalUserUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	clientHolder := meta.(*restclient.ClientHolder)
-	// TODO: fields like phone number and avatar URL need https://docs.frontegg.com/reference/userscontrollerv1_updateuser
-
 	// Email address:
 	if d.HasChange("email") {
 		email := d.Get("email").(string)
@@ -130,27 +132,6 @@ func resourceFronteggPortalUserUpdate(ctx context.Context, d *schema.ResourceDat
 		}
 
 		if err := d.Set("email", email); err != nil {
-			return diag.FromErr(err)
-		}
-	}
-
-	// Password:
-	if d.HasChange("password") {
-		headers := http.Header{}
-		headers.Add("frontegg-user-id", d.Id())
-
-		oldI, newI := d.GetChange("password")
-		oldPw := oldI.(string)
-		newPw := newI.(string)
-
-		if err := clientHolder.PortalClient.RequestWithHeaders(ctx, "POST", fmt.Sprintf("%s/passwords/change", fronteggUserPathV1), headers, struct {
-			OldPW string `json:"password"`
-			NewPW string `json:"newPassword"`
-		}{oldPw, newPw}, nil); err != nil {
-			return diag.FromErr(err)
-		}
-
-		if err := d.Set("password", newPw); err != nil {
 			return diag.FromErr(err)
 		}
 	}
