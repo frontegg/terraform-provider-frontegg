@@ -34,7 +34,7 @@ func resourceFronteggPortalUser() *schema.Resource {
 				Type:        schema.TypeString,
 				Sensitive:   true,
 				Optional:    true,
-				DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
+				DiffSuppressFunc: func(k, old, newVal string, d *schema.ResourceData) bool {
 					// Always suppress diff for password after resource creation
 					return d.Id() != ""
 				},

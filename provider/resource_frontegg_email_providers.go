@@ -142,9 +142,17 @@ func resourceFronteggEmailProviderRead(ctx context.Context, d *schema.ResourceDa
 	clientHolder := meta.(*restclient.ClientHolder)
 
 	var out fronteggEmailProviderResponse
+	clientHolder.ApiClient.Ignore404()
 	if err := clientHolder.ApiClient.Get(ctx, fronteggEmailPorivderPathV1, &out); err != nil {
 		return diag.FromErr(err)
 	}
+
+	// If no email provider configuration exists, the response will be empty
+	if out.Secret == "" && out.CreatedAt == "" {
+		d.SetId("")
+		return nil
+	}
+
 	if err := resourceFronteggEmailProviderDeserialize(d, &out); err != nil {
 		return diag.FromErr(err)
 	}
