@@ -148,6 +148,7 @@ resource "frontegg_admin_portal" "example" {
 ### Optional
 
 - `admin_portal_theme_name` (String) Configures the theme name for the admin portal.
+- `enable_confirmation_step` (Boolean) Enable confirmation step (link access verification) for authentication flows. When enabled, users must complete an additional verification step when accessing authentication links to prevent automated email scanners from invalidating magic links.
 - `login_box_theme_name` (String) Configures the theme name for the login box.
 - `palette` (Block List, Max: 1, Deprecated) Configures the color palette for the admin portal. (see [below for nested schema](#nestedblock--palette))
 - `palette_admin_portal` (Block List, Max: 1) Configures the color palette for the admin portal. (see [below for nested schema](#nestedblock--palette_admin_portal))
