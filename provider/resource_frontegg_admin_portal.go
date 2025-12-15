@@ -31,8 +31,13 @@ type fronteggAdminPortalThemeV2 struct {
 }
 
 type fronteggThemeOptions struct {
-	Palette   fronteggPaletteV2 `json:"palette"`
-	ThemeName string            `json:"themeName"`
+	Palette   fronteggPaletteV2       `json:"palette"`
+	ThemeName string                  `json:"themeName"`
+	Prestep   *fronteggPrestepOptions `json:"prestep,omitempty"`
+}
+
+type fronteggPrestepOptions struct {
+	Enabled *bool `json:"enabled,omitempty"`
 }
 
 type fronteggPaletteV1 struct {
@@ -333,6 +338,14 @@ This resource configures the Frontegg Admin Portal settings, including navigatio
 				Type:        schema.TypeString,
 				Optional:    true,
 			},
+			"enable_confirmation_step": {
+				Description: "Enable confirmation step (link access verification) for authentication flows. " +
+					"When enabled, users must complete an additional verification step when accessing " +
+					"authentication links to prevent automated email scanners from invalidating magic links.",
+				Type:     schema.TypeBool,
+				Optional: true,
+				Default:  false,
+			},
 		},
 	}
 }
@@ -467,6 +480,19 @@ func resourceFronteggAdminPortalRead(ctx context.Context, d *schema.ResourceData
 	}
 	if err := d.Set("admin_portal_theme_name", out.Rows[0].Configuration.ThemeV2.AdminPortal.ThemeName); err != nil {
 		return diag.FromErr(err)
+	}
+
+	// Read confirmation step configuration (prestep)
+	if out.Rows[0].Configuration.ThemeV2.LoginBox.Prestep != nil &&
+		out.Rows[0].Configuration.ThemeV2.LoginBox.Prestep.Enabled != nil {
+		if err := d.Set("enable_confirmation_step", *out.Rows[0].Configuration.ThemeV2.LoginBox.Prestep.Enabled); err != nil {
+			return diag.FromErr(err)
+		}
+	} else {
+		// If API doesn't return the field, set to default (false)
+		if err := d.Set("enable_confirmation_step", false); err != nil {
+			return diag.FromErr(err)
+		}
 	}
 
 	return nil
@@ -644,6 +670,13 @@ func resourceFronteggAdminPortalUpdate(ctx context.Context, d *schema.ResourceDa
 		configuration.ThemeV2.LoginBox.ThemeName = d.Get("login_box_theme_name").(string)
 		configuration.ThemeV2.AdminPortal.ThemeName = d.Get("admin_portal_theme_name").(string)
 	}
+
+	// Serialize confirmation step configuration (prestep)
+	enabled := d.Get("enable_confirmation_step").(bool)
+	if configuration.ThemeV2.LoginBox.Prestep == nil {
+		configuration.ThemeV2.LoginBox.Prestep = &fronteggPrestepOptions{}
+	}
+	configuration.ThemeV2.LoginBox.Prestep.Enabled = &enabled
 
 	type MergedObject struct {
 		EntityName    string                 `json:"entityName"`
