@@ -17,13 +17,15 @@ type Client struct {
 	conflictRetryMethod string
 	ignore404           bool
 	environmentId       string
+	applicationId       string
 }
 
-func MakeRestClient(baseURL string, environmentId string) Client {
+func MakeRestClient(baseURL string, environmentId string, applicationId string) Client {
 	return Client{
 		client:        http.Client{},
 		baseURL:       baseURL,
 		environmentId: environmentId,
+		applicationId: applicationId,
 	}
 }
 
@@ -107,6 +109,9 @@ func (c *Client) RequestWithHeaders(ctx context.Context, method string, url stri
 	}
 	if c.environmentId != "" {
 		req.Header.Set("frontegg-environment-id", c.environmentId)
+	}
+	if c.applicationId != "" {
+		req.Header.Set("frontegg-application-id", c.applicationId)
 	}
 	log.Printf("[TRACE] Sending request %+v", req)
 	res, err := c.client.Do(req)

@@ -34,6 +34,7 @@ provider "frontegg" {
   client_id      = "[your-personal-token-client-id]"
   secret_key     = "[your-personal-token-api-key]"
   environment_id = "[your-environment-id]"
+  application_id = "[your-application-id]"
 
   api_base_url    = "https://api.frontegg.com"
   portal_base_url = "https://frontegg-portal.frontegg.com"
@@ -55,6 +56,7 @@ If you're upgrading from v1.0.x to v2.0.0, please see the [Migration Guide](guid
 ### Optional
 
 - `api_base_url` (String) The Frontegg api url. Override to change region. Defaults to EU url.
+- `application_id` (String) The application ID for multi-application support.
 - `environment_id` (String, Sensitive) The client ID from environment settings.
 - `portal_base_url` (String) The Frontegg portal url. Override to change region. Defaults to EU url.
 
