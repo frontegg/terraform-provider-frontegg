@@ -5,7 +5,8 @@
       "Bash(terraform plan:*)",
       "WebSearch",
       "Bash(cat:*)",
-      "Bash(terraform state show:*)"
+      "Bash(terraform state show:*)",
+      "Bash(make lint:*)"
     ],
     "deny": []
   }

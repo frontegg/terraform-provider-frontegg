@@ -49,6 +49,12 @@ func New(version string) func() *schema.Provider {
 					Optional:    true,
 					Sensitive:   true,
 				},
+				"application_id": {
+					Description: "The application ID for multi-application support. When set, adds frontegg-application-id header to all requests.",
+					Type:        schema.TypeString,
+					Optional:    true,
+					DefaultFunc: schema.EnvDefaultFunc("FRONTEGG_APPLICATION_ID", nil),
+				},
 			},
 			DataSourcesMap: map[string]*schema.Resource{
 				"frontegg_permission": dataSourceFronteggPermission(),
@@ -84,8 +90,9 @@ func New(version string) func() *schema.Provider {
 			},
 			ConfigureContextFunc: func(ctx context.Context, d *schema.ResourceData) (interface{}, diag.Diagnostics) {
 				environmentId := d.Get("environment_id").(string)
-				apiClient := restclient.MakeRestClient(d.Get("api_base_url").(string), environmentId)
-				portalClient := restclient.MakeRestClient(d.Get("portal_base_url").(string), environmentId)
+				applicationId := d.Get("application_id").(string)
+				apiClient := restclient.MakeRestClient(d.Get("api_base_url").(string), environmentId, applicationId)
+				portalClient := restclient.MakeRestClient(d.Get("portal_base_url").(string), environmentId, applicationId)
 				{
 					in := struct {
 						ClientId  string `json:"clientId"`
