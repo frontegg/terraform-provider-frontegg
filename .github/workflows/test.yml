@@ -21,7 +21,7 @@ jobs:
           - "1.0.3"
     steps:
       - uses: actions/checkout@v6
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v6
         with:
           go-version: "1.21.11"
       - run: go mod download
