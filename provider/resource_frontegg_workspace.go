@@ -355,6 +355,7 @@ per Frontegg provider.
 							Description: "The reCAPTCHA secret key to use.",
 							Type:        schema.TypeString,
 							Required:    true,
+							Sensitive:   true,
 						},
 						"min_score": {
 							Description: "The minimum CAPTCHA score to accept. Set to 0.0 to accept all scores.",
