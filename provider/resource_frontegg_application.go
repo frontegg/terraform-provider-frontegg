@@ -164,10 +164,7 @@ func resourceFronteggApplication() *schema.Resource {
 func resourceFronteggApplicationSerialize(d *schema.ResourceData) fronteggApplication {
 	var metadata map[string]string
 	if v, ok := d.GetOk("metadata"); ok {
-		metadata = make(map[string]string)
-		for key, value := range v.(map[string]interface{}) {
-			metadata[key] = value.(string)
-		}
+		metadata = castResourceStringMap(v)
 	}
 
 	return fronteggApplication{
