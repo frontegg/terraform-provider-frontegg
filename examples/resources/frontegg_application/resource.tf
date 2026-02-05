@@ -9,4 +9,9 @@ resource "frontegg_application" "example" {
   type           = "web"
   frontend_stack = "react"
   description    = "An example application"
+
+  metadata = {
+    environment = "production"
+    team        = "platform"
+  }
 }

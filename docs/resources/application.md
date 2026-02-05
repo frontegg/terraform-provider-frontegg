@@ -24,6 +24,11 @@ resource "frontegg_application" "example" {
   type           = "web"
   frontend_stack = "react"
   description    = "An example application"
+
+  metadata = {
+    environment = "production"
+    team        = "platform"
+  }
 }
 ```
 
@@ -44,6 +49,7 @@ resource "frontegg_application" "example" {
 - `is_active` (Boolean) Whether the application is active.
 - `is_default` (Boolean) Whether this is the default application.
 - `logo_url` (String) The URL of the application's logo.
+- `metadata` (Map of String) Custom metadata key-value pairs for the application.
 - `type` (String) The type of the application.
 
 ### Read-Only

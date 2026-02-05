@@ -13,20 +13,21 @@ import (
 const fronteggApplicationPath = "/applications/resources/applications/v1"
 
 type fronteggApplication struct {
-	ID                    string `json:"id,omitempty"`
-	Name                  string `json:"name"`
-	AppURL                string `json:"appURL"`
-	LoginURL              string `json:"loginURL"`
-	LogoURL               string `json:"logoURL,omitempty"`
-	AccessType            string `json:"accessType,omitempty"`
-	IsDefault             bool   `json:"isDefault"`
-	IsActive              bool   `json:"isActive"`
-	Type                  string `json:"type,omitempty"`
-	FrontendStack         string `json:"frontendStack,omitempty"`
-	Description           string `json:"description,omitempty"`
-	IntegrationFinishedAt string `json:"integrationFinishedAt,omitempty"`
-	CreatedAt             string `json:"createdAt,omitempty"`
-	UpdatedAt             string `json:"updatedAt,omitempty"`
+	ID                    string            `json:"id,omitempty"`
+	Name                  string            `json:"name"`
+	AppURL                string            `json:"appURL"`
+	LoginURL              string            `json:"loginURL"`
+	LogoURL               string            `json:"logoURL,omitempty"`
+	AccessType            string            `json:"accessType,omitempty"`
+	IsDefault             bool              `json:"isDefault"`
+	IsActive              bool              `json:"isActive"`
+	Type                  string            `json:"type,omitempty"`
+	FrontendStack         string            `json:"frontendStack,omitempty"`
+	Description           string            `json:"description,omitempty"`
+	IntegrationFinishedAt string            `json:"integrationFinishedAt,omitempty"`
+	CreatedAt             string            `json:"createdAt,omitempty"`
+	UpdatedAt             string            `json:"updatedAt,omitempty"`
+	Metadata              map[string]string `json:"metadata,omitempty"`
 }
 
 type fronteggApplicationCredentials struct {
@@ -123,6 +124,12 @@ func resourceFronteggApplication() *schema.Resource {
 				Type:        schema.TypeString,
 				Optional:    true,
 			},
+			"metadata": {
+				Description: "Custom metadata key-value pairs for the application.",
+				Type:        schema.TypeMap,
+				Elem:        &schema.Schema{Type: schema.TypeString},
+				Optional:    true,
+			},
 			"integration_finished_at": {
 				Description: "When the integration was finished.",
 				Type:        schema.TypeString,
@@ -155,6 +162,14 @@ func resourceFronteggApplication() *schema.Resource {
 }
 
 func resourceFronteggApplicationSerialize(d *schema.ResourceData) fronteggApplication {
+	var metadata map[string]string
+	if v, ok := d.GetOk("metadata"); ok {
+		metadata = make(map[string]string)
+		for key, value := range v.(map[string]interface{}) {
+			metadata[key] = value.(string)
+		}
+	}
+
 	return fronteggApplication{
 		Name:          d.Get("name").(string),
 		AppURL:        d.Get("app_url").(string),
@@ -166,6 +181,7 @@ func resourceFronteggApplicationSerialize(d *schema.ResourceData) fronteggApplic
 		Type:          d.Get("type").(string),
 		FrontendStack: d.Get("frontend_stack").(string),
 		Description:   d.Get("description").(string),
+		Metadata:      metadata,
 	}
 }
 
@@ -208,6 +224,9 @@ func resourceFronteggApplicationDeserialize(d *schema.ResourceData, f fronteggAp
 		return err
 	}
 	if err := d.Set("updated_at", f.UpdatedAt); err != nil {
+		return err
+	}
+	if err := d.Set("metadata", f.Metadata); err != nil {
 		return err
 	}
 	return nil
