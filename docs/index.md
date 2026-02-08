@@ -56,7 +56,7 @@ If you're upgrading from v1.0.x to v2.0.0, please see the [Migration Guide](guid
 ### Optional
 
 - `api_base_url` (String) The Frontegg api url. Override to change region. Defaults to EU url.
-- `application_id` (String) The application ID for multi-application support.
+- `application_id` (String) The application ID for multi-application support. When set, adds frontegg-application-id header to all requests.
 - `environment_id` (String, Sensitive) The client ID from environment settings.
 - `portal_base_url` (String) The Frontegg portal url. Override to change region. Defaults to EU url.
 
