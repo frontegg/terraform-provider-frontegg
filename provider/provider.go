@@ -87,6 +87,11 @@ func New(version string) func() *schema.Provider {
 				"frontegg_plan_feature":                  resourceFronteggPlanFeature(),
 				"frontegg_prehook":                       resourceFronteggPrehook(),
 				"frontegg_secret":                        resourceFronteggSecret(),
+				"frontegg_tenant_saml_config":            resourceFronteggTenantSAMLConfig(),
+				"frontegg_tenant_oidc_config":            resourceFronteggTenantOIDCConfig(),
+				"frontegg_tenant_sso_domain":             resourceFronteggTenantSSODomain(),
+				"frontegg_tenant_sso_group_mapping":      resourceFronteggTenantSSOGroupMapping(),
+				"frontegg_tenant_mfa_policy":             resourceFronteggTenantMFAPolicy(),
 			},
 			ConfigureContextFunc: func(ctx context.Context, d *schema.ResourceData) (interface{}, diag.Diagnostics) {
 				environmentId := d.Get("environment_id").(string)
