@@ -11,7 +11,8 @@
       "mcp__claude_ai_Marketplace__call-tool",
       "WebFetch(domain:docs.frontegg.com)",
       "WebFetch(domain:developers.frontegg.com)",
-      "WebFetch(domain:github.com)"
+      "WebFetch(domain:github.com)",
+      "Bash(wc -l /Users/razshlomo/src/fe/terraform-provider-frontegg/provider/resource_*.go | sort -rn | head -15)"
     ],
     "deny": []
   }

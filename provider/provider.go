@@ -92,6 +92,7 @@ func New(version string) func() *schema.Provider {
 				"frontegg_tenant_sso_domain":             resourceFronteggTenantSSODomain(),
 				"frontegg_tenant_sso_group_mapping":      resourceFronteggTenantSSOGroupMapping(),
 				"frontegg_tenant_mfa_policy":             resourceFronteggTenantMFAPolicy(),
+				"frontegg_tenant_sso_domain_validation":  resourceFronteggTenantSSODomainValidation(),
 			},
 			ConfigureContextFunc: func(ctx context.Context, d *schema.ResourceData) (interface{}, diag.Diagnostics) {
 				environmentId := d.Get("environment_id").(string)
