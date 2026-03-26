@@ -36,7 +36,12 @@ per tenant.
 		UpdateContext: resourceFronteggTenantMFAPolicyUpdate,
 		DeleteContext: resourceFronteggTenantMFAPolicyDelete,
 		Importer: &schema.ResourceImporter{
-			StateContext: schema.ImportStatePassthroughContext,
+			StateContext: func(_ context.Context, d *schema.ResourceData, _ interface{}) ([]*schema.ResourceData, error) {
+				if err := d.Set("tenant_id", d.Id()); err != nil {
+					return nil, err
+				}
+				return []*schema.ResourceData{d}, nil
+			},
 		},
 
 		Schema: map[string]*schema.Schema{
@@ -78,7 +83,7 @@ func serializeMFAEnforce(s string) string {
 	case "unless-saml":
 		return "ForceExceptSAML"
 	}
-	panic("unreachable")
+	return ""
 }
 
 func deserializeMFAEnforce(s string) string {

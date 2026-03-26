@@ -14,10 +14,13 @@ func resourceFronteggTenantSAMLConfig() *schema.Resource {
 	s := commonSSOSchema()
 
 	s["public_certificate"] = &schema.Schema{
-		Description: "The IdP's X.509 public certificate (Base64-encoded). Used by Frontegg to verify the signature on incoming SAML assertions.",
+		Description: "The IdP's X.509 public certificate (PEM or Base64-encoded). Used by Frontegg to verify the signature on incoming SAML assertions.",
 		Type:        schema.TypeString,
 		Optional:    true,
 		Sensitive:   true,
+		DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
+			return samlCertToAPI(old) == samlCertToAPI(new)
+		},
 	}
 	s["sign_request"] = &schema.Schema{
 		Description: "Whether Frontegg should cryptographically sign outgoing SAML authentication requests sent to the IdP.",
@@ -61,29 +64,30 @@ func resourceFronteggTenantSAMLConfig() *schema.Resource {
 	}
 }
 
-// samlCertToAPI base64-encodes the certificate if it isn't already, matching
-// the Frontegg API's expectation (it stores and returns the cert as base64).
+// samlCertToAPI normalizes the certificate to base64, which is what the
+// Frontegg API expects. If the input is already valid base64 it is returned
+// as-is; otherwise it is base64-encoded (handles PEM input).
 func samlCertToAPI(cert string) string {
 	if cert == "" {
 		return ""
 	}
 	if _, err := base64.StdEncoding.DecodeString(strings.TrimSpace(cert)); err == nil {
-		return cert // already base64
+		return strings.TrimSpace(cert)
 	}
 	return base64.StdEncoding.EncodeToString([]byte(cert))
 }
 
-// samlCertFromAPI base64-decodes the certificate returned by the API back to
-// PEM format so that state stores what the user originally provided.
+// samlCertFromAPI returns the certificate from the API in its normalized base64
+// form. State always stores base64; DiffSuppressFunc on the schema field handles
+// equivalence when the user provides PEM.
 func samlCertFromAPI(cert string) (string, error) {
 	if cert == "" {
 		return "", nil
 	}
-	b, err := base64.StdEncoding.DecodeString(strings.TrimSpace(cert))
-	if err != nil {
+	if _, err := base64.StdEncoding.DecodeString(strings.TrimSpace(cert)); err != nil {
 		return "", fmt.Errorf("API returned a public_certificate that is not valid base64: %w", err)
 	}
-	return string(b), nil
+	return strings.TrimSpace(cert), nil
 }
 
 func samlConfigSerialize(d *schema.ResourceData) fronteggTenantSSOConfig {

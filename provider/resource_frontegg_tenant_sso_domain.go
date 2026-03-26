@@ -69,7 +69,7 @@ func resourceFronteggTenantSSODomain() *schema.Resource {
 
 func resourceFronteggTenantSSODomainImport(ctx context.Context, d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
 	parts := strings.SplitN(d.Id(), ":", 3)
-	if len(parts) != 3 {
+	if len(parts) != 3 || parts[0] == "" || parts[1] == "" || parts[2] == "" {
 		return nil, fmt.Errorf("invalid import format, expected tenant_id:sso_config_id:domain_id, got: %s", d.Id())
 	}
 

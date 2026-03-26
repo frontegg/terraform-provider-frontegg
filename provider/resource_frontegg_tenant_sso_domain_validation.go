@@ -48,7 +48,7 @@ func resourceFronteggTenantSSODomainValidation() *schema.Resource {
 
 func resourceFronteggTenantSSODomainValidationImport(ctx context.Context, d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
 	parts := strings.SplitN(d.Id(), ":", 2)
-	if len(parts) != 2 {
+	if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
 		return nil, fmt.Errorf("invalid import format, expected tenant_id:domain, got: %s", d.Id())
 	}
 	tenantID := parts[0]
