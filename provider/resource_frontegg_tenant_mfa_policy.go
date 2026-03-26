@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net/http"
 
@@ -36,7 +37,7 @@ per tenant.
 		UpdateContext: resourceFronteggTenantMFAPolicyUpdate,
 		DeleteContext: resourceFronteggTenantMFAPolicyDelete,
 		Importer: &schema.ResourceImporter{
-			StateContext: schema.ImportStatePassthroughContext,
+			StateContext: tenantMFAPolicyImport,
 		},
 
 		Schema: map[string]*schema.Schema{
@@ -176,4 +177,15 @@ func resourceFronteggTenantMFAPolicyDelete(ctx context.Context, d *schema.Resour
 	log.Printf("[WARN] Cannot destroy tenant MFA policy. Terraform will remove this resource from the " +
 		"state file, but the MFA policy will remain in its last-applied state.")
 	return nil
+}
+
+func tenantMFAPolicyImport(_ context.Context, d *schema.ResourceData, _ interface{}) ([]*schema.ResourceData, error) {
+	tenantID := d.Id()
+	if tenantID == "" {
+		return nil, fmt.Errorf("invalid import ID: tenant_id cannot be empty")
+	}
+	if err := d.Set("tenant_id", tenantID); err != nil {
+		return nil, err
+	}
+	return []*schema.ResourceData{d}, nil
 }
