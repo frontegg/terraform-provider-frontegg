@@ -18,8 +18,8 @@ func resourceFronteggTenantSAMLConfig() *schema.Resource {
 		Type:        schema.TypeString,
 		Optional:    true,
 		Sensitive:   true,
-		DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
-			return samlCertToAPI(old) == samlCertToAPI(new)
+		DiffSuppressFunc: func(k, oldVal, newVal string, d *schema.ResourceData) bool {
+			return samlCertToAPI(oldVal) == samlCertToAPI(newVal)
 		},
 	}
 	s["sign_request"] = &schema.Schema{
