@@ -132,7 +132,7 @@ Required:
 - `device_expiration` (Number) The number of seconds that MFA devices can be remembered for, if allow_remember_my_device is true.
 - `enforce` (String) Whether to force use of MFA.
 
-	Must be one of "off", "on", or "unless-saml".
+Must be one of "off", "on", or "unless-saml".
 
 
 <a id="nestedblock--password_policy"></a>

@@ -1,5 +1,7 @@
 PLATFORM ?= $(shell go env GOOS)_$(shell go env GOARCH)
 VERSION ?= $(shell git describe --tags --match 'v*' --abbrev=0 2>/dev/null | sed 's/^v//' || echo "0.0.0")
+PLUGIN_DIR := $(HOME)/.terraform.d/plugins/registry.terraform.io/frontegg/frontegg/$(VERSION)/$(PLATFORM)
+DEV_OVERRIDE_FILE := $(HOME)/.terraform.d/dev_overrides.tfrc
 
 default: testacc
 
@@ -7,8 +9,9 @@ generate.docs:
 	@go generate
 
 install:
-	@go build -o ~/.terraform.d/plugins/registry.terraform.io/frontegg/frontegg/$(VERSION)/$(PLATFORM)/terraform-provider-frontegg
+	@go build -o $(PLUGIN_DIR)/terraform-provider-frontegg
 	@find . -name ".terraform.lock.hcl" -type f -delete || true
+	@printf 'provider_installation {\n  dev_overrides {\n    "frontegg/frontegg" = "$(PLUGIN_DIR)"\n  }\n  direct {}\n}\n' > $(DEV_OVERRIDE_FILE)
 
 .PHONY: testacc
 testacc:
@@ -34,5 +37,5 @@ lint-fix:
 	@echo "Lint fixes applied!"
 
 capply: install
-	@terraform init
-	@terraform apply
+	@TF_CLI_CONFIG_FILE=$(DEV_OVERRIDE_FILE) terraform init
+	@TF_CLI_CONFIG_FILE=$(DEV_OVERRIDE_FILE) terraform apply -auto-approve
