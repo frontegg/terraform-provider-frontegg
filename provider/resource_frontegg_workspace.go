@@ -19,7 +19,6 @@ const fronteggVendorURL = "/vendors"
 const fronteggCustomDomainURL = "/vendors/custom-domains/v2"
 const fronteggCustomDomainCreateEndpoint = "verify"
 const fronteggMFAURL = "/identity/resources/configurations/v1/mfa"
-const fronteggMFAPolicyURL = "/identity/resources/configurations/v1/mfa-policy"
 const fronteggLockoutPolicyURL = "/identity/resources/configurations/v1/lockout-policy"
 const fronteggPasswordPolicyURL = "/identity/resources/configurations/v1/password"
 const fronteggPasswordHistoryPolicyURL = "/identity/resources/configurations/v1/password-history-policy"
@@ -79,12 +78,6 @@ type fronteggMFA struct {
 type fronteggMFAAuthenticationApp struct {
 	Active      bool   `json:"active"`
 	ServiceName string `json:"serviceName"`
-}
-
-type fronteggMFAPolicy struct {
-	AllowRememberMyDevice bool   `json:"allowRememberMyDevice"`
-	EnforceMFAType        string `json:"enforceMFAType"`
-	MFADeviceExpiration   int    `json:"mfaDeviceExpiration"`
 }
 
 type fronteggLockoutPolicy struct {
@@ -257,7 +250,7 @@ per Frontegg provider.
 						"enforce": {
 							Description: `Whether to force use of MFA.
 
-	Must be one of "off", "on", or "unless-saml".`,
+Must be one of "off", "on", or "unless-saml".`,
 							Type:         schema.TypeString,
 							Required:     true,
 							ValidateFunc: validation.StringInSlice([]string{"off", "on", "unless-saml"}, false),
@@ -453,31 +446,6 @@ per Frontegg provider.
 	}
 }
 
-func resourceFronteggWorkspaceSerializeMFAEnforce(s string) string {
-	switch s {
-	case "off":
-		return "DontForce"
-	case "force":
-		return "Force"
-	case "unless-saml":
-		return "ForceExceptSAML"
-	}
-	panic("unreachable")
-}
-
-func resourceFronteggWorkspaceDeserializeMFAEnforce(s string) string {
-	switch s {
-	case "DontForce":
-		return "off"
-	case "Force":
-		return "on"
-	case "ForceExceptSAML":
-		return "unless-saml"
-	default:
-		return "off"
-	}
-}
-
 func resourceFronteggWorkspaceCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	return resourceFronteggWorkspaceUpdate(ctx, d, meta)
 }
@@ -531,16 +499,14 @@ func resourceFronteggWorkspaceRead(ctx context.Context, d *schema.ResourceData, 
 		}
 	}
 	{
-		var out fronteggMFAPolicy
 		clientHolder.ApiClient.Ignore404()
-		if err := clientHolder.ApiClient.Get(ctx, fronteggMFAPolicyURL, &out); err != nil {
+		out, err := getMFAPolicy(ctx, &clientHolder.ApiClient, nil)
+		if err != nil {
 			return diag.FromErr(err)
 		}
-		enforce := resourceFronteggWorkspaceDeserializeMFAEnforce(out.EnforceMFAType)
-
 		mfa_policy := map[string]interface{}{
 			"allow_remember_device": out.AllowRememberMyDevice,
-			"enforce":               enforce,
+			"enforce":               deserializeMFAEnforce(out.EnforceMFAType),
 			"device_expiration":     out.MFADeviceExpiration,
 		}
 		if err := d.Set("mfa_policy", []interface{}{mfa_policy}); err != nil {
@@ -770,11 +736,10 @@ func resourceFronteggWorkspaceUpdate(ctx context.Context, d *schema.ResourceData
 	{
 		in := fronteggMFAPolicy{
 			AllowRememberMyDevice: d.Get("mfa_policy.0.allow_remember_device").(bool),
-			EnforceMFAType:        resourceFronteggWorkspaceSerializeMFAEnforce(d.Get("mfa_policy.0.enforce").(string)),
+			EnforceMFAType:        serializeMFAEnforce(d.Get("mfa_policy.0.enforce").(string)),
 			MFADeviceExpiration:   d.Get("mfa_policy.0.device_expiration").(int),
 		}
-		clientHolder.ApiClient.ConflictRetryMethod("PATCH")
-		if err := clientHolder.ApiClient.Post(ctx, fronteggMFAPolicyURL, in, nil); err != nil {
+		if err := writeMFAPolicy(ctx, &clientHolder.ApiClient, nil, in); err != nil {
 			return diag.FromErr(err)
 		}
 	}

@@ -73,50 +73,45 @@ func resourceFronteggPlanFeatureCreate(ctx context.Context, d *schema.ResourceDa
 func resourceFronteggPlanFeatureRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	clientHolder := meta.(*restclient.ClientHolder)
 
-	// Use plan ID directly as the resource ID
 	planID := d.Id()
 
-	// Set the plan ID in the state
 	if err := d.Set("plan_id", planID); err != nil {
 		return diag.FromErr(err)
 	}
 
-	// Get the list of features for the plan - using only plan ID as per OpenAPI spec
-	var features struct {
+	type pageResponse struct {
 		Items []struct {
 			ID string `json:"id"`
 		} `json:"items"`
+		HasNext bool `json:"hasNext"`
 	}
 
-	if err := clientHolder.ApiClient.Get(ctx, fmt.Sprintf("/entitlements/resources/plans/v1/%s/features", planID), &features); err != nil {
-		return diag.FromErr(err)
-	}
+	var allFeatureIDs []string
+	offset := 0
+	limit := 10
 
-	// Get the current feature IDs from the state
-	featureIDsSet := d.Get("feature_ids").(*schema.Set)
-	stateFeatureIDs := make([]string, 0, featureIDsSet.Len())
-	for _, v := range featureIDsSet.List() {
-		stateFeatureIDs = append(stateFeatureIDs, v.(string))
-	}
-
-	// Create a map of feature IDs from the API response
-	existingFeatureIDs := make(map[string]bool)
-	for _, feature := range features.Items {
-		existingFeatureIDs[feature.ID] = true
-	}
-
-	// Check if all the features exist in the list
-	allFeaturesFound := true
-	for _, featureID := range stateFeatureIDs {
-		if !existingFeatureIDs[featureID] {
-			allFeaturesFound = false
+	for {
+		var response pageResponse
+		url := fmt.Sprintf("/entitlements/resources/plans/v1/%s/features?offset=%d&limit=%d", planID, offset, limit)
+		if err := clientHolder.ApiClient.Get(ctx, url, &response); err != nil {
+			return diag.FromErr(err)
+		}
+		for _, f := range response.Items {
+			allFeatureIDs = append(allFeatureIDs, f.ID)
+		}
+		if !response.HasNext {
 			break
 		}
+		offset += limit
 	}
 
-	// If not all features are found, mark the resource as gone
-	if !allFeaturesFound {
+	if len(allFeatureIDs) == 0 {
 		d.SetId("")
+		return nil
+	}
+
+	if err := d.Set("feature_ids", allFeatureIDs); err != nil {
+		return diag.FromErr(err)
 	}
 
 	return nil
