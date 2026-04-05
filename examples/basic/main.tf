@@ -241,6 +241,35 @@ resource "frontegg_tenant" "example" {
   }
 }
 
+resource "frontegg_tenant_saml_config" "example" {
+  tenant_id          = resource.frontegg_tenant.example.key
+  enabled            = true
+  sso_endpoint       = "https://idp.example.com/saml/login"
+  public_certificate = "-----BEGIN CERTIFICATE-----\nMIIDFake\n-----END CERTIFICATE-----"
+  sign_request       = false
+  sp_entity_id       = "example-sp-entity"
+}
+
+resource "frontegg_tenant_sso_domain" "example" {
+  tenant_id     = resource.frontegg_tenant.example.key
+  sso_config_id = resource.frontegg_tenant_saml_config.example.id
+  domain        = "example.com"
+}
+
+resource "frontegg_tenant_sso_group_mapping" "example" {
+  tenant_id     = resource.frontegg_tenant.example.key
+  sso_config_id = resource.frontegg_tenant_saml_config.example.id
+  group         = "admins"
+  role_ids      = [resource.frontegg_role.example.id]
+}
+
+resource "frontegg_tenant_mfa_policy" "example" {
+  tenant_id                = resource.frontegg_tenant.example.key
+  enforce_mfa_type         = "off"
+  allow_remember_my_device = false
+  mfa_device_expiration    = 0
+}
+
 output "public_key" {
   value = resource.frontegg_workspace.example.auth_policy.0.jwt_public_key
 }
