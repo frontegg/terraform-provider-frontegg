@@ -11,6 +11,10 @@
       "WebFetch(domain:docs.frontegg.com)",
       "WebFetch(domain:developers.frontegg.com)",
       "WebFetch(domain:github.com)",
+      "WebFetch(domain:frontegg-docs.redocly.app)",
+      "WebFetch(domain:frontegg.com)",
+      "WebFetch(domain:support.frontegg.com)",
+      "Bash(gofmt *)"
     ],
     "deny": []
   }

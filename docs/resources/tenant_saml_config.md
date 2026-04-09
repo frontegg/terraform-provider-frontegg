@@ -25,7 +25,7 @@ Configures a SAML SSO configuration for a Frontegg tenant. Users whose email dom
 - `idp_client_id` (String) The SSO application client ID used to authenticate group-fetch requests from the IdP (for SAML group-to-role mappings).
 - `idp_client_secret` (String, Sensitive) The client secret paired with `idp_client_id` for authenticating group-fetch requests.
 - `override_active_tenant` (Boolean) Whether to override the active tenant for users matched by this SSO configuration.
-- `public_certificate` (String, Sensitive) The IdP's X.509 public certificate (Base64-encoded). Used by Frontegg to verify the signature on incoming SAML assertions.
+- `public_certificate` (String, Sensitive) The IdP's X.509 public certificate (PEM or Base64-encoded). Used by Frontegg to verify the signature on incoming SAML assertions.
 - `sign_request` (Boolean) Whether Frontegg should cryptographically sign outgoing SAML authentication requests sent to the IdP.
 - `skip_email_domain_validation` (Boolean) When true, users can authenticate via this SSO configuration even if the associated email domain has not been validated through DNS TXT record verification.
 - `sp_entity_id` (String) The Service Provider Entity ID — a unique URI that identifies Frontegg in the SAML exchange. Must match the audience restriction in the IdP's SAML assertion.
