@@ -57,7 +57,8 @@ func New(version string) func() *schema.Provider {
 				},
 			},
 			DataSourcesMap: map[string]*schema.Resource{
-				"frontegg_permission": dataSourceFronteggPermission(),
+				"frontegg_entitlements": dataSourceFronteggEntitlements(),
+				"frontegg_permission":   dataSourceFronteggPermission(),
 			},
 			ResourcesMap: map[string]*schema.Resource{
 				"frontegg_permission":                    resourceFronteggPermission(),
@@ -76,6 +77,7 @@ func New(version string) func() *schema.Provider {
 				"frontegg_redirect_uri":                  resourceFronteggRedirectUri(),
 				"frontegg_allowed_origin":                resourceFronteggAllowedOrigin(),
 				"frontegg_email_provider":                resourceFronteggEmailProvider(),
+				"frontegg_entitlement":                   resourceFronteggEntitlement(),
 				"frontegg_application":                   resourceFronteggApplication(),
 				"frontegg_application_tenant_assignment": resourceFronteggApplicationTenantAssignment(),
 				"frontegg_auth0_user_source":             resourceFronteggAuth0UserSource(),
