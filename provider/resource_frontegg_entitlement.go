@@ -34,9 +34,12 @@ type fronteggEntitlementAction struct {
 	ExpirationDate string `json:"expirationDate,omitempty"`
 }
 
+// ExpirationDate uses *string without omitempty so a nil pointer serializes to
+// JSON null — required to clear the server-side value. omitempty would drop the
+// field entirely and the server would treat the update as a no-op on that field.
 type fronteggEntitlementUpdate struct {
-	ID             string `json:"id"`
-	ExpirationDate string `json:"expirationDate,omitempty"`
+	ID             string  `json:"id"`
+	ExpirationDate *string `json:"expirationDate"`
 }
 
 type fronteggBatchActionsRequest struct {
@@ -489,9 +492,17 @@ func resourceFronteggEntitlementUpdate(ctx context.Context, d *schema.ResourceDa
 			if id == "" {
 				continue
 			}
+			// When the user removes expiration_date, newExp == "" — send a nil pointer
+			// so the JSON payload carries `"expirationDate": null` and the server clears
+			// the value. A non-pointer string with omitempty would drop the key entirely
+			// and the server would silently keep the stale expiration.
+			var expPtr *string
+			if newExp != "" {
+				expPtr = &newExp
+			}
 			updates = append(updates, fronteggEntitlementUpdate{
 				ID:             id,
-				ExpirationDate: newExp,
+				ExpirationDate: expPtr,
 			})
 		}
 	}
