@@ -14,7 +14,17 @@
       "WebFetch(domain:frontegg-docs.redocly.app)",
       "WebFetch(domain:frontegg.com)",
       "WebFetch(domain:support.frontegg.com)",
-      "Bash(gofmt *)"
+      "Bash(gofmt *)",
+      "Bash(rtk ls *)",
+      "Bash(gh api *)",
+      "Bash(rtk curl *)",
+      "Bash(rtk wc *)",
+      "Read(//tmp/**)",
+      "Bash(rtk grep *)",
+      "Bash(rtk find *)",
+      "Bash(rtk git *)",
+      "Bash(rtk read *)",
+      "Bash(rtk go *)"
     ],
     "deny": []
   }

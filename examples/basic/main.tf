@@ -270,6 +270,57 @@ resource "frontegg_tenant_mfa_policy" "example" {
   mfa_device_expiration    = 0
 }
 
+resource "frontegg_plan" "basic" {
+  name        = "entitlement-e2e-basic"
+  description = "E2E test plan (basic)"
+}
+
+resource "frontegg_plan" "pro" {
+  name        = "entitlement-e2e-pro"
+  description = "E2E test plan (pro)"
+}
+
+resource "frontegg_user" "example" {
+  email             = "entitlement-e2e@example.com"
+  tenant_id         = resource.frontegg_tenant.example.id
+  role_ids          = [resource.frontegg_role.example.id]
+  skip_invite_email = true
+}
+
+# Exercises: tenant-level, user-level, expiration PATCH, coexistence of
+# tenant+user scoped entitlements for same (plan, tenant).
+resource "frontegg_entitlement" "e2e" {
+  entitlement {
+    plan_id   = resource.frontegg_plan.basic.id
+    tenant_id = resource.frontegg_tenant.example.id
+  }
+
+  entitlement {
+    plan_id         = resource.frontegg_plan.pro.id
+    tenant_id       = resource.frontegg_tenant.example.id
+    expiration_date = "2030-01-01T00:00:00Z"
+  }
+
+  entitlement {
+    plan_id   = resource.frontegg_plan.basic.id
+    tenant_id = resource.frontegg_tenant.example.id
+    user_id   = resource.frontegg_user.example.id
+  }
+}
+
+data "frontegg_entitlements" "for_tenant" {
+  tenant_ids = [resource.frontegg_tenant.example.id]
+  depends_on = [resource.frontegg_entitlement.e2e]
+}
+
+output "entitlement_ids" {
+  value = [for e in resource.frontegg_entitlement.e2e.entitlement : e.id]
+}
+
+output "data_source_count" {
+  value = length(data.frontegg_entitlements.for_tenant.entitlements)
+}
+
 output "public_key" {
   value = resource.frontegg_workspace.example.auth_policy.0.jwt_public_key
 }
