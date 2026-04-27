@@ -10,8 +10,13 @@ import (
 
 func dataSourceFronteggPlan() *schema.Resource {
 	s := resourceFronteggPlan().Schema
+	// Force every field to pure read-only. The resource schema marks several fields
+	// Optional (default_treatment, rules, description, default_time_limitation,
+	// assign_on_signup, feature_keys) — leaving Optional set would advertise them
+	// as user-settable in the data source.
 	for _, field := range s {
 		field.Required = false
+		field.Optional = false
 		field.Computed = true
 		field.Default = nil
 		field.ValidateFunc = nil

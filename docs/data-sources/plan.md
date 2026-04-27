@@ -33,18 +33,15 @@ resource "frontegg_entitlement" "by_name" {
 
 - `name` (String) The name of the plan.
 
-### Optional
+### Read-Only
 
 - `assign_on_signup` (Boolean) Whether the plan is assigned automatically upon signup.
+- `created_at` (String) When the plan was created.
 - `default_time_limitation` (Number) Default time limitation in days for auto-assigned plans.
 - `default_treatment` (String) The default treatment for the plan.
 - `description` (String) A description of the plan.
 - `feature_keys` (List of String) Array of feature keys to be applied on the plan.
-- `rules` (List of Map of String) Set of conditions targeting the plan.
-
-### Read-Only
-
-- `created_at` (String) When the plan was created.
 - `id` (String) The ID of this resource.
+- `rules` (List of Map of String) Set of conditions targeting the plan.
 - `updated_at` (String) When the plan was last updated.
 - `vendor_id` (String) The vendor ID for the plan.
