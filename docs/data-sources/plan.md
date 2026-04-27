@@ -40,7 +40,6 @@ resource "frontegg_entitlement" "by_name" {
 - `default_time_limitation` (Number) Default time limitation in days for auto-assigned plans.
 - `default_treatment` (String) The default treatment for the plan.
 - `description` (String) A description of the plan.
-- `feature_keys` (List of String) Array of feature keys to be applied on the plan.
 - `id` (String) The ID of this resource.
 - `rules` (List of Map of String) Set of conditions targeting the plan.
 - `updated_at` (String) When the plan was last updated.

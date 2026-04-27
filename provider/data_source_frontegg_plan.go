@@ -10,10 +10,16 @@ import (
 
 func dataSourceFronteggPlan() *schema.Resource {
 	s := resourceFronteggPlan().Schema
+	// feature_keys is omitted from the data source: the plan GET response does
+	// not return feature keys and resourceFronteggPlanDeserialize intentionally
+	// preserves the existing state value for that field. A data source has no
+	// prior state, so the attribute would always materialize as empty/null and
+	// mislead consumers that reference data.frontegg_plan.*.feature_keys.
+	delete(s, "feature_keys")
 	// Force every field to pure read-only. The resource schema marks several fields
 	// Optional (default_treatment, rules, description, default_time_limitation,
-	// assign_on_signup, feature_keys) — leaving Optional set would advertise them
-	// as user-settable in the data source.
+	// assign_on_signup) — leaving Optional set would advertise them as
+	// user-settable in the data source.
 	for _, field := range s {
 		field.Required = false
 		field.Optional = false
