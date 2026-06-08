@@ -321,10 +321,13 @@ func TestSafetyCeilingTotalWait(t *testing.T) {
 	}
 }
 
-// TestPreSendWaitBoundedByCeiling verifies that the pre-send wait loop (entered
-// when a route is already known to be rate-limited) is bounded by the safety
-// ceiling, even with a deadline-less context and a reset that keeps being pushed
-// into the future. Addresses Cursor Bugbot "Pre-send wait bypasses ceilings".
+// TestPreSendWaitBoundedByCeiling verifies that the pre-send wait loop is
+// bounded by the safety ceiling when a route's reset is CONTINUALLY pushed out
+// (the realistic concurrent-429 scenario) on a deadline-less context. A
+// background goroutine keeps bumping resetAt by a small amount, so each
+// waitBeforeSend returns a small wait; those accumulate and must eventually
+// trip the ceiling instead of looping forever.
+// Addresses Cursor Bugbot "Pre-send wait bypasses ceilings".
 func TestPreSendWaitBoundedByCeiling(t *testing.T) {
 	var hits int32
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -334,15 +337,36 @@ func TestPreSendWaitBoundedByCeiling(t *testing.T) {
 	defer srv.Close()
 
 	c := newTestClient(srv.URL)
-	c.rl.defaultWait = 10 * time.Millisecond
 	c.rl.jitter = 0
-	c.rl.maxAttempts = 1000                   // attempts never increments here
-	c.rl.maxTotalWait = 50 * time.Millisecond // pre-send waits must hit this
+	c.rl.maxAttempts = 1000000 // attempts never increments in the pre-send loop
+	c.rl.maxTotalWait = 60 * time.Millisecond
 
-	// Seed the route as rate-limited far into the future so waitBeforeSend
-	// always returns a positive wait and the pre-send loop never naturally exits.
 	routeKey := c.rl.routeKey("GET", "/thing")
-	c.rl.resetAt[routeKey] = time.Now().Add(time.Hour)
+
+	// Seed before starting so the very first waitBeforeSend sees a positive wait
+	// (avoids a startup race where the loop exits before the bumper runs).
+	c.rl.mu.Lock()
+	c.rl.resetAt[routeKey] = time.Now().Add(50 * time.Millisecond)
+	c.rl.mu.Unlock()
+
+	// Continuously hold the route ~50ms in the future (tight loop, no gap) so
+	// every waitBeforeSend returns ~50ms and the pre-send loop never naturally
+	// exits. Two such waits (~100ms) exceed the 60ms budget, so the ceiling must
+	// trip rather than looping forever.
+	stop := make(chan struct{})
+	go func() {
+		for {
+			select {
+			case <-stop:
+				return
+			default:
+				c.rl.mu.Lock()
+				c.rl.resetAt[routeKey] = time.Now().Add(50 * time.Millisecond)
+				c.rl.mu.Unlock()
+			}
+		}
+	}()
+	defer close(stop)
 
 	// Background context (no deadline) — only the ceiling can stop this.
 	err := c.Get(context.Background(), "/thing", nil)
@@ -351,6 +375,37 @@ func TestPreSendWaitBoundedByCeiling(t *testing.T) {
 	}
 	if got := atomic.LoadInt32(&hits); got != 0 {
 		t.Fatalf("request should never have been sent (stuck in pre-send wait), but server saw %d hits", got)
+	}
+}
+
+// TestSingleLongResetIsHonored verifies the fix for Cursor Bugbot "Ceiling skips
+// wait entirely": a single 429 whose reset implies a wait near/over the budget
+// must still be waited out and retried — not rejected pre-emptively. Here one
+// reset (~30ms) exceeds maxTotalWait (20ms), yet the request must still succeed
+// after waiting, because the budget was not already spent.
+func TestSingleLongResetIsHonored(t *testing.T) {
+	var calls int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if atomic.AddInt32(&calls, 1) == 1 {
+			w.Header().Set(rateLimitResetHeader, time.Now().Add(1*time.Second).UTC().Format(time.RFC3339))
+			w.WriteHeader(http.StatusTooManyRequests)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer srv.Close()
+
+	c := newTestClient(srv.URL)
+	c.rl.jitter = 0
+	c.rl.maxTotalWait = 100 * time.Millisecond // smaller than the single ~1s reset wait
+
+	// Must succeed: the lone reset is honored even though its wait exceeds the
+	// (deliberately tiny) total budget, because no budget was spent beforehand.
+	if err := c.Get(context.Background(), "/thing", nil); err != nil {
+		t.Fatalf("single long reset should be waited out and succeed, got: %v", err)
+	}
+	if atomic.LoadInt32(&calls) != 2 {
+		t.Fatalf("expected 429 then 200 (2 calls), got %d", calls)
 	}
 }
 

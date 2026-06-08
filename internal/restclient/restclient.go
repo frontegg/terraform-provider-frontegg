@@ -150,7 +150,9 @@ func (c *Client) RequestWithHeaders(ctx context.Context, method string, url stri
 			if wait <= 0 {
 				break
 			}
-			totalWait += wait
+			// Give up only if the budget was ALREADY spent — a single pending
+			// reset is always waited out; the ceiling bounds repeated waits when
+			// concurrent 429s keep pushing the reset out on a deadline-less ctx.
 			if c.rl.exceeded(attempts, totalWait) {
 				return fmt.Errorf(
 					"restclient: rate limited and gave up after %d attempts (%s total) waiting to send: %s %s%s",
@@ -160,6 +162,7 @@ func (c *Client) RequestWithHeaders(ctx context.Context, method string, url stri
 			if err := waitContext(ctx, wait); err != nil {
 				return err
 			}
+			totalWait += wait
 		}
 
 		req, err := c.buildRequest(ctx, method, url, headers, body)
@@ -188,7 +191,9 @@ func (c *Client) RequestWithHeaders(ctx context.Context, method string, url stri
 			wait, source := c.rl.onTooManyRequests(routeKey, res.Header, time.Now())
 
 			attempts++
-			totalWait += wait
+			// Give up only if the budget was ALREADY spent by prior waits — not
+			// because this single wait would cross it. A lone reset window (even
+			// a long one) is always honored; the ceiling bounds repeated cycles.
 			if c.rl.exceeded(attempts, totalWait) {
 				return fmt.Errorf(
 					"restclient: rate limited and gave up after %d attempts (%s total): %s %s: %s: %v: %s",
@@ -202,6 +207,7 @@ func (c *Client) RequestWithHeaders(ctx context.Context, method string, url stri
 			if err := waitContext(ctx, wait); err != nil {
 				return err
 			}
+			totalWait += wait
 			continue
 		case res.StatusCode < 200 || res.StatusCode >= 300:
 			return fmt.Errorf(
