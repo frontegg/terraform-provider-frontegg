@@ -321,6 +321,39 @@ func TestSafetyCeilingTotalWait(t *testing.T) {
 	}
 }
 
+// TestPreSendWaitBoundedByCeiling verifies that the pre-send wait loop (entered
+// when a route is already known to be rate-limited) is bounded by the safety
+// ceiling, even with a deadline-less context and a reset that keeps being pushed
+// into the future. Addresses Cursor Bugbot "Pre-send wait bypasses ceilings".
+func TestPreSendWaitBoundedByCeiling(t *testing.T) {
+	var hits int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		atomic.AddInt32(&hits, 1)
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer srv.Close()
+
+	c := newTestClient(srv.URL)
+	c.rl.defaultWait = 10 * time.Millisecond
+	c.rl.jitter = 0
+	c.rl.maxAttempts = 1000                   // attempts never increments here
+	c.rl.maxTotalWait = 50 * time.Millisecond // pre-send waits must hit this
+
+	// Seed the route as rate-limited far into the future so waitBeforeSend
+	// always returns a positive wait and the pre-send loop never naturally exits.
+	routeKey := c.rl.routeKey("GET", "/thing")
+	c.rl.resetAt[routeKey] = time.Now().Add(time.Hour)
+
+	// Background context (no deadline) — only the ceiling can stop this.
+	err := c.Get(context.Background(), "/thing", nil)
+	if err == nil || !strings.Contains(err.Error(), "gave up after") {
+		t.Fatalf("expected pre-send ceiling error, got %v", err)
+	}
+	if got := atomic.LoadInt32(&hits); got != 0 {
+		t.Fatalf("request should never have been sent (stuck in pre-send wait), but server saw %d hits", got)
+	}
+}
+
 // TestContextStopsPersistent429 verifies that, with no ceiling reached, a
 // persistent 429 is still bounded by the request context.
 func TestContextStopsPersistent429(t *testing.T) {

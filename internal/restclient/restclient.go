@@ -141,11 +141,21 @@ func (c *Client) RequestWithHeaders(ctx context.Context, method string, url stri
 	for {
 		// Pre-send wait: if this route is known to be rate-limited, wait until
 		// its reset before sending. Re-check after each wait (TOCTOU) since
-		// another goroutine may push the reset further out.
+		// another goroutine may push the reset further out. These waits count
+		// toward the same safety ceiling as retries, so a route whose reset is
+		// continually pushed out by concurrent 429s cannot make a deadline-less
+		// request sleep forever.
 		for {
 			wait := c.rl.waitBeforeSend(routeKey, time.Now())
 			if wait <= 0 {
 				break
+			}
+			totalWait += wait
+			if c.rl.exceeded(attempts, totalWait) {
+				return fmt.Errorf(
+					"restclient: rate limited and gave up after %d attempts (%s total) waiting to send: %s %s%s",
+					attempts, totalWait, method, c.baseURL, url,
+				)
 			}
 			if err := waitContext(ctx, wait); err != nil {
 				return err
