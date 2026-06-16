@@ -246,8 +246,13 @@ func resourceFronteggJWTTemplateTargetingRead(ctx context.Context, d *schema.Res
 func resourceFronteggJWTTemplateTargetingUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	clientHolder := m.(*restclient.ClientHolder)
 	in := resourceFronteggJWTTemplateTargetingSerialize(d)
+	// Pass nil: the targeting PUT returns an empty body (see Create), so
+	// unmarshalling the response directly would fail. Always GET afterwards.
+	if err := clientHolder.ApiClient.Put(ctx, fronteggJWTTemplateTargetingPath, in, nil); err != nil {
+		return diag.FromErr(err)
+	}
 	var out fronteggJWTTemplateTargeting
-	if err := clientHolder.ApiClient.Put(ctx, fronteggJWTTemplateTargetingPath, in, &out); err != nil {
+	if err := clientHolder.ApiClient.Get(ctx, fronteggJWTTemplateTargetingPath, &out); err != nil {
 		return diag.FromErr(err)
 	}
 	if err := resourceFronteggJWTTemplateTargetingDeserialize(d, out); err != nil {

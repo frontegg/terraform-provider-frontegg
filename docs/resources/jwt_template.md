@@ -20,10 +20,18 @@ resource "frontegg_jwt_template" "example" {
   expiration  = 3600
   algorithm   = "RS256"
 
+  # Frontegg requires the standard OIDC claims (iss, sub, aud, exp, iat) and the
+  # Frontegg claims (type, tenantId) in every template. Additional custom claims
+  # may be added alongside them.
   claims = {
-    sub      = "{{user.id}}"
+    iss      = "{{iss}}"
+    sub      = "{{sub}}"
+    aud      = "{{aud}}"
+    exp      = "{{exp}}"
+    iat      = "{{iat}}"
+    type     = "{{type}}"
+    tenantId = "{{user.tenantId}}"
     email    = "{{user.email}}"
-    tenantId = "{{tenant.id}}"
   }
 }
 ```

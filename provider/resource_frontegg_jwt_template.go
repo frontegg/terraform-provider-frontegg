@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/frontegg/terraform-provider-frontegg/internal/restclient"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -11,6 +12,12 @@ import (
 )
 
 const fronteggJWTTemplatePath = "/identity/resources/jwt-templates/v1"
+
+// fronteggJWTTemplateRequiredClaims are the claims that Frontegg requires in
+// every JWT template. The server rejects templates that omit them, so we
+// validate at plan time to surface the error before an apply is attempted.
+// See https://developers.frontegg.com/ciam/guides/security-center/token-management/claims
+var fronteggJWTTemplateRequiredClaims = []string{"iss", "sub", "aud", "exp", "iat", "type", "tenantId"}
 
 type fronteggJWTTemplateSchema struct {
 	Claims map[string]interface{} `json:"claims"`
@@ -36,6 +43,7 @@ func resourceFronteggJWTTemplate() *schema.Resource {
 		ReadContext:   resourceFronteggJWTTemplateRead,
 		UpdateContext: resourceFronteggJWTTemplateUpdate,
 		DeleteContext: resourceFronteggJWTTemplateDelete,
+		CustomizeDiff: resourceFronteggJWTTemplateValidateClaims,
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},
@@ -96,6 +104,37 @@ func resourceFronteggJWTTemplate() *schema.Resource {
 			},
 		},
 	}
+}
+
+// resourceFronteggJWTTemplateValidateClaims enforces that the claims map
+// includes every claim Frontegg requires. The claim keys are always known at
+// plan time (only their values may reference computed attributes), so this is
+// safe to evaluate during CustomizeDiff.
+func resourceFronteggJWTTemplateValidateClaims(_ context.Context, d *schema.ResourceDiff, _ interface{}) error {
+	claims, ok := d.Get("claims").(map[string]interface{})
+	if !ok {
+		return nil
+	}
+	if missing := missingRequiredClaims(claims); len(missing) > 0 {
+		return fmt.Errorf(
+			"jwt template claims must include the required OIDC and Frontegg claims (%s); missing: %s",
+			strings.Join(fronteggJWTTemplateRequiredClaims, ", "),
+			strings.Join(missing, ", "),
+		)
+	}
+	return nil
+}
+
+// missingRequiredClaims returns the required claims absent from the given
+// claims map, preserving the canonical order of fronteggJWTTemplateRequiredClaims.
+func missingRequiredClaims(claims map[string]interface{}) []string {
+	var missing []string
+	for _, claim := range fronteggJWTTemplateRequiredClaims {
+		if _, present := claims[claim]; !present {
+			missing = append(missing, claim)
+		}
+	}
+	return missing
 }
 
 func resourceFronteggJWTTemplateSerialize(d *schema.ResourceData) fronteggJWTTemplate {
