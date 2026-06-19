@@ -86,11 +86,107 @@ type fronteggLockoutPolicy struct {
 }
 
 type fronteggPasswordPolicy struct {
-	AllowPassphrases       bool `json:"allowPassphrases"`
-	MinLength              int  `json:"minLength"`
-	MaxLength              int  `json:"maxLength"`
-	MinOptionalTestsToPass int  `json:"minOptionalTestsToPass"`
-	MinPhraseLength        int  `json:"minPhraseLength"`
+	AllowPassphrases       bool                   `json:"allowPassphrases"`
+	MinLength              int                    `json:"minLength"`
+	MaxLength              int                    `json:"maxLength"`
+	MinOptionalTestsToPass int                    `json:"minOptionalTestsToPass"`
+	MinPhraseLength        int                    `json:"minPhraseLength"`
+	OptionalTests          *fronteggPasswordTests `json:"optionalTests,omitempty"`
+	RequiredTests          *fronteggPasswordTests `json:"requiredTests,omitempty"`
+}
+
+// fronteggPasswordTests holds the password complexity tests that can be applied
+// either as optional tests (each enabled test counts toward min_tests) or as
+// required tests (each enabled test must pass).
+type fronteggPasswordTests struct {
+	RequireLowercase        bool `json:"requireLowercase"`
+	RequireUppercase        bool `json:"requireUppercase"`
+	RequireNumbers          bool `json:"requireNumbers"`
+	RequireSpecialChars     bool `json:"requireSpecialChars"`
+	CheckThreeRepeatedChars bool `json:"checkThreeRepeatedChars"`
+}
+
+// fronteggPasswordTestsElem returns the schema shared by the optional_tests and
+// required_tests nested blocks. The fields are Optional+Computed so that
+// configurations which omit them do not produce plan churn while Read still
+// reflects the values configured outside of Terraform.
+func fronteggPasswordTestsElem() *schema.Resource {
+	boolField := func(description string) *schema.Schema {
+		return &schema.Schema{
+			Description: description,
+			Type:        schema.TypeBool,
+			Optional:    true,
+			Computed:    true,
+		}
+	}
+	return &schema.Resource{
+		Schema: map[string]*schema.Schema{
+			"require_lowercase":          boolField("Require at least one lowercase letter."),
+			"require_uppercase":          boolField("Require at least one uppercase letter."),
+			"require_numbers":            boolField("Require at least one number."),
+			"require_special_chars":      boolField("Require at least one special character."),
+			"check_three_repeated_chars": boolField("Disallow three or more repeated characters in a row."),
+		},
+	}
+}
+
+func expandFronteggPasswordTests(raw []interface{}) *fronteggPasswordTests {
+	if len(raw) == 0 || raw[0] == nil {
+		return nil
+	}
+	m := raw[0].(map[string]interface{})
+	return &fronteggPasswordTests{
+		RequireLowercase:        m["require_lowercase"].(bool),
+		RequireUppercase:        m["require_uppercase"].(bool),
+		RequireNumbers:          m["require_numbers"].(bool),
+		RequireSpecialChars:     m["require_special_chars"].(bool),
+		CheckThreeRepeatedChars: m["check_three_repeated_chars"].(bool),
+	}
+}
+
+func flattenFronteggPasswordTests(t *fronteggPasswordTests) []interface{} {
+	if t == nil {
+		return []interface{}{}
+	}
+	return []interface{}{map[string]interface{}{
+		"require_lowercase":          t.RequireLowercase,
+		"require_uppercase":          t.RequireUppercase,
+		"require_numbers":            t.RequireNumbers,
+		"require_special_chars":      t.RequireSpecialChars,
+		"check_three_repeated_chars": t.CheckThreeRepeatedChars,
+	}}
+}
+
+// validateFronteggPasswordTests reports a clear error when the same password
+// test is enabled in both optional_tests and required_tests, which is
+// contradictory: a test is either optional (counts toward min_tests) or
+// required (must always pass), not both.
+func validateFronteggPasswordTests(optional, required *fronteggPasswordTests) error {
+	if optional == nil || required == nil {
+		return nil
+	}
+	var conflicting []string
+	for _, c := range []struct {
+		name     string
+		opt, req bool
+	}{
+		{"require_lowercase", optional.RequireLowercase, required.RequireLowercase},
+		{"require_uppercase", optional.RequireUppercase, required.RequireUppercase},
+		{"require_numbers", optional.RequireNumbers, required.RequireNumbers},
+		{"require_special_chars", optional.RequireSpecialChars, required.RequireSpecialChars},
+		{"check_three_repeated_chars", optional.CheckThreeRepeatedChars, required.CheckThreeRepeatedChars},
+	} {
+		if c.opt && c.req {
+			conflicting = append(conflicting, c.name)
+		}
+	}
+	if len(conflicting) > 0 {
+		return fmt.Errorf(
+			"password test(s) %s cannot be enabled in both optional_tests and required_tests; enable each test in only one",
+			strings.Join(conflicting, ", "),
+		)
+	}
+	return nil
 }
 
 type fronteggPasswordHistoryPolicy struct {
@@ -329,6 +425,22 @@ Must be one of "off", "on", or "unless-saml".`,
 							Type:        schema.TypeInt,
 							Required:    true,
 						},
+						"optional_tests": {
+							Description: "Optional password complexity tests. Each enabled test counts toward `min_tests`.",
+							Type:        schema.TypeList,
+							Optional:    true,
+							Computed:    true,
+							MaxItems:    1,
+							Elem:        fronteggPasswordTestsElem(),
+						},
+						"required_tests": {
+							Description: "Required password complexity tests. Each enabled test must pass for a password to be accepted.",
+							Type:        schema.TypeList,
+							Optional:    true,
+							Computed:    true,
+							MaxItems:    1,
+							Elem:        fronteggPasswordTestsElem(),
+						},
 					},
 				},
 			},
@@ -565,6 +677,8 @@ func resourceFronteggWorkspaceRead(ctx context.Context, d *schema.ResourceData, 
 			"min_tests":         out.MinOptionalTestsToPass,
 			"min_phrase_length": out.MinPhraseLength,
 			"history":           history,
+			"optional_tests":    flattenFronteggPasswordTests(out.OptionalTests),
+			"required_tests":    flattenFronteggPasswordTests(out.RequiredTests),
 		}
 		if err := d.Set("password_policy", []interface{}{password_policy}); err != nil {
 			return diag.FromErr(err)
@@ -777,6 +891,11 @@ func resourceFronteggWorkspaceUpdate(ctx context.Context, d *schema.ResourceData
 			MaxLength:              d.Get("password_policy.0.max_length").(int),
 			MinOptionalTestsToPass: d.Get("password_policy.0.min_tests").(int),
 			MinPhraseLength:        d.Get("password_policy.0.min_phrase_length").(int),
+			OptionalTests:          expandFronteggPasswordTests(d.Get("password_policy.0.optional_tests").([]interface{})),
+			RequiredTests:          expandFronteggPasswordTests(d.Get("password_policy.0.required_tests").([]interface{})),
+		}
+		if err := validateFronteggPasswordTests(in.OptionalTests, in.RequiredTests); err != nil {
+			return diag.FromErr(err)
 		}
 		if err := clientHolder.ApiClient.Post(ctx, fronteggPasswordPolicyURL, in, nil); err != nil {
 			return diag.FromErr(err)

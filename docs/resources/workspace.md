@@ -56,6 +56,19 @@ resource "frontegg_workspace" "example" {
     min_tests         = 2
     min_phrase_length = 6
     history           = 2
+
+    # Optional complexity tests count toward `min_tests`.
+    optional_tests {
+      require_lowercase     = true
+      require_uppercase     = true
+      require_numbers       = true
+      require_special_chars = true
+    }
+
+    # Required complexity tests must always pass.
+    required_tests {
+      check_three_repeated_chars = true
+    }
   }
 
   captcha_policy {
@@ -146,6 +159,34 @@ Required:
 - `min_length` (Number) The minimum length of a password.
 - `min_phrase_length` (Number)
 - `min_tests` (Number) The minimum number of strength tests the password must meet.
+
+Optional:
+
+- `optional_tests` (Block List, Max: 1) Optional password complexity tests. Each enabled test counts toward `min_tests`. (see [below for nested schema](#nestedblock--password_policy--optional_tests))
+- `required_tests` (Block List, Max: 1) Required password complexity tests. Each enabled test must pass for a password to be accepted. (see [below for nested schema](#nestedblock--password_policy--required_tests))
+
+<a id="nestedblock--password_policy--optional_tests"></a>
+### Nested Schema for `password_policy.optional_tests`
+
+Optional:
+
+- `check_three_repeated_chars` (Boolean) Disallow three or more repeated characters in a row.
+- `require_lowercase` (Boolean) Require at least one lowercase letter.
+- `require_numbers` (Boolean) Require at least one number.
+- `require_special_chars` (Boolean) Require at least one special character.
+- `require_uppercase` (Boolean) Require at least one uppercase letter.
+
+
+<a id="nestedblock--password_policy--required_tests"></a>
+### Nested Schema for `password_policy.required_tests`
+
+Optional:
+
+- `check_three_repeated_chars` (Boolean) Disallow three or more repeated characters in a row.
+- `require_lowercase` (Boolean) Require at least one lowercase letter.
+- `require_numbers` (Boolean) Require at least one number.
+- `require_special_chars` (Boolean) Require at least one special character.
+- `require_uppercase` (Boolean) Require at least one uppercase letter.
 
 
 <a id="nestedblock--captcha_policy"></a>
