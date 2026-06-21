@@ -10,7 +10,11 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 )
 
-const fronteggSessionManagementPolicyURL = "/identity/resources/configurations/sessions/v1/vendor"
+// The session configuration API is asymmetric: reads come from the "/vendor"
+// path (the resolved vendor default), but writes are POSTed to the base path
+// without the "/vendor" suffix. POST is an idempotent upsert (returns 201).
+const fronteggSessionManagementPolicyReadURL = "/identity/resources/configurations/sessions/v1/vendor"
+const fronteggSessionManagementPolicyWriteURL = "/identity/resources/configurations/sessions/v1"
 
 // sessionManagementPolicyID is the synthetic ID for this singleton resource.
 const sessionManagementPolicyID = "session-management"
@@ -150,7 +154,7 @@ func resourceFronteggSessionManagementPolicyCreate(ctx context.Context, d *schem
 func resourceFronteggSessionManagementPolicyRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	clientHolder := meta.(*restclient.ClientHolder)
 	var out fronteggSessionManagementPolicy
-	if err := clientHolder.ApiClient.Get(ctx, fronteggSessionManagementPolicyURL, &out); err != nil {
+	if err := clientHolder.ApiClient.Get(ctx, fronteggSessionManagementPolicyReadURL, &out); err != nil {
 		return diag.FromErr(err)
 	}
 	if err := resourceFronteggSessionManagementPolicyDeserialize(d, out); err != nil {
@@ -162,7 +166,7 @@ func resourceFronteggSessionManagementPolicyRead(ctx context.Context, d *schema.
 func resourceFronteggSessionManagementPolicyUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	clientHolder := meta.(*restclient.ClientHolder)
 	in := resourceFronteggSessionManagementPolicySerialize(d)
-	if err := clientHolder.ApiClient.Post(ctx, fronteggSessionManagementPolicyURL, in, nil); err != nil {
+	if err := clientHolder.ApiClient.Post(ctx, fronteggSessionManagementPolicyWriteURL, in, nil); err != nil {
 		return diag.FromErr(err)
 	}
 	return resourceFronteggSessionManagementPolicyRead(ctx, d, meta)
