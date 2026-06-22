@@ -189,6 +189,7 @@ Optional:
 - `require_uppercase` (Boolean) Require at least one uppercase letter.
 
 
+
 <a id="nestedblock--captcha_policy"></a>
 ### Nested Schema for `captcha_policy`
 
