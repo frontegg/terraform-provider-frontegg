@@ -332,11 +332,13 @@ This resource configures the Frontegg Admin Portal settings, including navigatio
 				Description: "Configures the theme name for the admin portal.",
 				Type:        schema.TypeString,
 				Optional:    true,
+				Computed:    true,
 			},
 			"login_box_theme_name": {
 				Description: "Configures the theme name for the login box.",
 				Type:        schema.TypeString,
 				Optional:    true,
+				Computed:    true,
 			},
 			"enable_confirmation_step": {
 				Description: "Enable confirmation step (link access verification) for authentication flows. " +
@@ -651,45 +653,56 @@ func resourceFronteggAdminPortalUpdate(ctx context.Context, d *schema.ResourceDa
 	configuration.Navigation.Users = serializeVisibility("enable_users")
 	configuration.Navigation.Webhooks = serializeVisibility("enable_webhooks")
 
-	paletteSuccess := d.Get("palette.0.success")
-	log.Printf("[DEBUG] paletteSuccess: %v", paletteSuccess)
-	if reflect.TypeOf(paletteSuccess).Kind() == reflect.String {
-		log.Printf("[DEBUG] paletteSuccess is a string")
-		configuration.Theme = serializeOldPalette("palette")
-	} else if isNonEmptySlice(paletteSuccess) {
-		log.Printf("[DEBUG] paletteSuccess is a slice")
-		configuration.ThemeV2.LoginBox.Palette = serializeNewPalette("palette")
-	} else {
-		log.Printf("[DEBUG] paletteSuccess is not a string or slice")
-		if isNonEmptySlice(d.Get("palette_admin_portal.0.success")) {
-			configuration.ThemeV2.AdminPortal.Palette = serializeNewPalette("palette_admin_portal")
-		}
-		if isNonEmptySlice(d.Get("palette_login_box.0.success")) {
-			configuration.ThemeV2.LoginBox.Palette = serializeNewPalette("palette_login_box")
-		}
-		configuration.ThemeV2.LoginBox.ThemeName = d.Get("login_box_theme_name").(string)
-		configuration.ThemeV2.AdminPortal.ThemeName = d.Get("admin_portal_theme_name").(string)
+	merged := metadataResponseConfiguration
+	if merged == nil {
+		merged = map[string]interface{}{}
 	}
 
-	// Serialize confirmation step configuration (prestep)
-	enabled := d.Get("enable_confirmation_step").(bool)
-	if configuration.ThemeV2.LoginBox.Prestep == nil {
-		configuration.ThemeV2.LoginBox.Prestep = &fronteggPrestepOptions{}
+	merged["navigation"] = configuration.Navigation
+
+	asMap := func(parent map[string]interface{}, key string) map[string]interface{} {
+		if existing, ok := parent[key].(map[string]interface{}); ok {
+			return existing
+		}
+		created := map[string]interface{}{}
+		parent[key] = created
+		return created
 	}
-	configuration.ThemeV2.LoginBox.Prestep.Enabled = &enabled
+	themeV2 := asMap(merged, "themeV2")
+	loginBox := asMap(themeV2, "loginBox")
+	adminPortalTheme := asMap(themeV2, "adminPortal")
+
+	paletteSuccess := d.Get("palette.0.success")
+	if paletteSuccess != nil && reflect.TypeOf(paletteSuccess).Kind() == reflect.String {
+		merged["theme"] = serializeOldPalette("palette")
+	} else if isNonEmptySlice(paletteSuccess) {
+		loginBox["palette"] = serializeNewPalette("palette")
+	} else {
+		if isNonEmptySlice(d.Get("palette_admin_portal.0.success")) {
+			adminPortalTheme["palette"] = serializeNewPalette("palette_admin_portal")
+		}
+		if isNonEmptySlice(d.Get("palette_login_box.0.success")) {
+			loginBox["palette"] = serializeNewPalette("palette_login_box")
+		}
+		if name := d.Get("login_box_theme_name").(string); name != "" {
+			loginBox["themeName"] = name
+		}
+		if name := d.Get("admin_portal_theme_name").(string); name != "" {
+			adminPortalTheme["themeName"] = name
+		}
+	}
+
+	prestep := asMap(loginBox, "prestep")
+	prestep["enabled"] = d.Get("enable_confirmation_step").(bool)
 
 	type MergedObject struct {
 		EntityName    string                 `json:"entityName"`
 		Configuration map[string]interface{} `json:"configuration"`
 	}
-	var mergedObject MergedObject
-	mergedObject.EntityName = adminPortal.EntityName
-
-	var adminPortalMapped = structToMap(adminPortal.Configuration)
-	merged := mergeMaps(metadataResponseConfiguration, adminPortalMapped)
-	mergedObject.Configuration = merged
-
-	if err := clientHolder.ApiClient.Post(ctx, fronteggAdminPortalURL, mergedObject, nil); err != nil {
+	if err := clientHolder.ApiClient.Post(ctx, fronteggAdminPortalURL, MergedObject{
+		EntityName:    adminPortal.EntityName,
+		Configuration: merged,
+	}, nil); err != nil {
 		return diag.FromErr(err)
 	}
 
@@ -820,34 +833,4 @@ func getMetadataUnstructuredConfiguration(metadataResponse map[string]interface{
 	}
 
 	return metadataResponseConfiguration
-}
-
-func mergeMaps(m1, m2 map[string]interface{}) map[string]interface{} {
-	merged := make(map[string]interface{})
-
-	for k, v := range m1 {
-		merged[k] = v
-	}
-
-	for k, v := range m2 {
-		merged[k] = v
-	}
-
-	return merged
-}
-
-func structToMap(input interface{}) map[string]interface{} {
-	result := make(map[string]interface{})
-
-	val := reflect.ValueOf(input)
-	typ := reflect.TypeOf(input)
-
-	for i := 0; i < val.NumField(); i++ {
-		field := val.Field(i)
-		fieldType := typ.Field(i)
-		jsonTag := fieldType.Tag.Get("json")
-		result[jsonTag] = field.Interface()
-	}
-
-	return result
 }
