@@ -24,28 +24,23 @@ func TestMissingRequiredClaims(t *testing.T) {
 	}{
 		{
 			name:   "all required claims present",
-			claims: asClaims("iss", "sub", "aud", "exp", "iat", "type", "tenantId"),
+			claims: asClaims("iss", "sub", "aud", "exp", "iat"),
 			want:   nil,
 		},
 		{
-			name:   "required claims plus extras present",
-			claims: asClaims("iss", "sub", "aud", "exp", "iat", "type", "tenantId", "email", "roles"),
+			name:   "required claims plus custom extras present",
+			claims: asClaims("iss", "sub", "aud", "exp", "iat", "email", "roles"),
 			want:   nil,
 		},
 		{
 			name:   "empty claims map missing everything",
 			claims: map[string]interface{}{},
-			want:   []string{"iss", "sub", "aud", "exp", "iat", "type", "tenantId"},
-		},
-		{
-			name:   "missing only Frontegg claims",
-			claims: asClaims("iss", "sub", "aud", "exp", "iat"),
-			want:   []string{"type", "tenantId"},
+			want:   []string{"iss", "sub", "aud", "exp", "iat"},
 		},
 		{
 			name:   "missing reported in canonical order",
-			claims: asClaims("sub", "exp", "type"),
-			want:   []string{"iss", "aud", "iat", "tenantId"},
+			claims: asClaims("sub", "exp"),
+			want:   []string{"iss", "aud", "iat"},
 		},
 	}
 
@@ -53,6 +48,36 @@ func TestMissingRequiredClaims(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := missingRequiredClaims(tt.claims); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("missingRequiredClaims() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+// TestPresentReservedClaims verifies detection of claims that Frontegg reserves
+// for internal use (type, tenantId), which the API rejects if supplied.
+func TestPresentReservedClaims(t *testing.T) {
+	asClaims := func(keys ...string) map[string]interface{} {
+		m := make(map[string]interface{}, len(keys))
+		for _, k := range keys {
+			m[k] = "{{" + k + "}}"
+		}
+		return m
+	}
+
+	tests := []struct {
+		name   string
+		claims map[string]interface{}
+		want   []string
+	}{
+		{name: "no reserved claims", claims: asClaims("iss", "sub", "aud", "exp", "iat", "email"), want: nil},
+		{name: "type reserved claim present", claims: asClaims("iss", "type"), want: []string{"type"}},
+		{name: "both reserved in canonical order", claims: asClaims("tenantId", "sub", "type"), want: []string{"type", "tenantId"}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := presentReservedClaims(tt.claims); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("presentReservedClaims() = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -66,8 +91,8 @@ func TestResourceFronteggJWTTemplateSerialize(t *testing.T) {
 		"expiration":  3600,
 		"algorithm":   "RS256",
 		"claims": map[string]interface{}{
-			"sub":      "{{sub}}",
-			"tenantId": "{{user.tenantId}}",
+			"sub":   "{{sub}}",
+			"email": "{{user.email}}",
 		},
 	})
 
@@ -81,7 +106,7 @@ func TestResourceFronteggJWTTemplateSerialize(t *testing.T) {
 	if got.Algorithm != "RS256" {
 		t.Errorf("algorithm = %q, want RS256", got.Algorithm)
 	}
-	if got.TemplateSchema.Claims["sub"] != "{{sub}}" || got.TemplateSchema.Claims["tenantId"] != "{{user.tenantId}}" {
+	if got.TemplateSchema.Claims["sub"] != "{{sub}}" || got.TemplateSchema.Claims["email"] != "{{user.email}}" {
 		t.Errorf("claims not carried into templateSchema: %+v", got.TemplateSchema.Claims)
 	}
 }
@@ -127,7 +152,7 @@ func TestResourceFronteggJWTTemplateDeserialize(t *testing.T) {
 		Description:    "d",
 		Expiration:     120,
 		Algorithm:      "HS256",
-		TemplateSchema: fronteggJWTTemplateSchema{Claims: map[string]interface{}{"sub": "{{sub}}", "tenantId": "{{user.tenantId}}"}},
+		TemplateSchema: fronteggJWTTemplateSchema{Claims: map[string]interface{}{"sub": "{{sub}}", "email": "{{user.email}}"}},
 		CreatedAt:      "2024-01-01T00:00:00Z",
 		UpdatedAt:      "2024-01-02T00:00:00Z",
 	}
@@ -155,7 +180,7 @@ func TestResourceFronteggJWTTemplateDeserialize(t *testing.T) {
 		t.Errorf("expiration = %d, want 120", d.Get("expiration").(int))
 	}
 	claims := d.Get("claims").(map[string]interface{})
-	if claims["sub"] != "{{sub}}" || claims["tenantId"] != "{{user.tenantId}}" {
+	if claims["sub"] != "{{sub}}" || claims["email"] != "{{user.email}}" {
 		t.Errorf("claims round-trip mismatch: %+v", claims)
 	}
 }

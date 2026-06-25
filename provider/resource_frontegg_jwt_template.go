@@ -13,11 +13,17 @@ import (
 
 const fronteggJWTTemplatePath = "/identity/resources/jwt-templates/v1"
 
-// fronteggJWTTemplateRequiredClaims are the claims that Frontegg requires in
-// every JWT template. The server rejects templates that omit them, so we
+// fronteggJWTTemplateRequiredClaims are the OIDC claims that Frontegg requires
+// in every JWT template. The server rejects templates that omit them, so we
 // validate at plan time to surface the error before an apply is attempted.
+// Note: the aud claim must resolve to {{clientId}} or {{applicationId}}.
 // See https://developers.frontegg.com/ciam/guides/security-center/token-management/claims
-var fronteggJWTTemplateRequiredClaims = []string{"iss", "sub", "aud", "exp", "iat", "type", "tenantId"}
+var fronteggJWTTemplateRequiredClaims = []string{"iss", "sub", "aud", "exp", "iat"}
+
+// fronteggJWTTemplateReservedClaims are claims Frontegg populates internally and
+// rejects when supplied in a template ("Claims reserved for internal use are not
+// allowed"). We reject them at plan time so the failure surfaces before apply.
+var fronteggJWTTemplateReservedClaims = []string{"type", "tenantId"}
 
 type fronteggJWTTemplateSchema struct {
 	Claims map[string]interface{} `json:"claims"`
@@ -117,9 +123,16 @@ func resourceFronteggJWTTemplateValidateClaims(_ context.Context, d *schema.Reso
 	}
 	if missing := missingRequiredClaims(claims); len(missing) > 0 {
 		return fmt.Errorf(
-			"jwt template claims must include the required OIDC and Frontegg claims (%s); missing: %s",
+			"jwt template claims must include the required OIDC claims (%s); missing: %s",
 			strings.Join(fronteggJWTTemplateRequiredClaims, ", "),
 			strings.Join(missing, ", "),
+		)
+	}
+	if reserved := presentReservedClaims(claims); len(reserved) > 0 {
+		return fmt.Errorf(
+			"jwt template claims must not include claims reserved for internal use by Frontegg (%s); remove: %s",
+			strings.Join(fronteggJWTTemplateReservedClaims, ", "),
+			strings.Join(reserved, ", "),
 		)
 	}
 	return nil
@@ -135,6 +148,18 @@ func missingRequiredClaims(claims map[string]interface{}) []string {
 		}
 	}
 	return missing
+}
+
+// presentReservedClaims returns the reserved claims present in the given claims
+// map, preserving the canonical order of fronteggJWTTemplateReservedClaims.
+func presentReservedClaims(claims map[string]interface{}) []string {
+	var present []string
+	for _, claim := range fronteggJWTTemplateReservedClaims {
+		if _, ok := claims[claim]; ok {
+			present = append(present, claim)
+		}
+	}
+	return present
 }
 
 func resourceFronteggJWTTemplateSerialize(d *schema.ResourceData) fronteggJWTTemplate {
