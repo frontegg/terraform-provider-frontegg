@@ -44,6 +44,7 @@ resource "frontegg_application" "example" {
 ### Optional
 
 - `access_type` (String) The access type of the application.
+- `allow_dcr` (Boolean) Whether to allow OAuth dynamic client registration (DCR), letting third-party applications and AI agents self-register clients.
 - `description` (String) A description of the application.
 - `frontend_stack` (String) The frontend stack used by the application.
 - `is_active` (Boolean) Whether the application is active.

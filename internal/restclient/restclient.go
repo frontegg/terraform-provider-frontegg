@@ -8,6 +8,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -42,6 +43,13 @@ func (c *Client) ConflictRetryMethod(method string) {
 
 func (c *Client) Ignore404() {
 	c.ignore404 = true
+}
+
+// IsNotFound reports whether err represents a 404 response from the REST
+// client. Use this in Read functions instead of Ignore404(), which sets a
+// shared mutable flag on the client and is not safe for concurrent use.
+func IsNotFound(err error) bool {
+	return err != nil && strings.Contains(err.Error(), ": 404 ")
 }
 
 func (c *Client) DeleteWithHeaders(ctx context.Context, url string, headers http.Header, out interface{}) error {

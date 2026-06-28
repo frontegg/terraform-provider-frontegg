@@ -90,6 +90,7 @@ func New(version string) func() *schema.Provider {
 				"frontegg_plan_feature":                  resourceFronteggPlanFeature(),
 				"frontegg_prehook":                       resourceFronteggPrehook(),
 				"frontegg_secret":                        resourceFronteggSecret(),
+				"frontegg_session_management_policy":     resourceFronteggSessionManagementPolicy(),
 				"frontegg_tenant_saml_config":            resourceFronteggTenantSAMLConfig(),
 				"frontegg_tenant_oidc_config":            resourceFronteggTenantOIDCConfig(),
 				"frontegg_tenant_sso_domain":             resourceFronteggTenantSSODomain(),
@@ -97,6 +98,8 @@ func New(version string) func() *schema.Provider {
 				"frontegg_tenant_mfa_policy":             resourceFronteggTenantMFAPolicy(),
 				"frontegg_tenant_sso_domain_validation":  resourceFronteggTenantSSODomainValidation(),
 				"frontegg_tenant_api_token":              resourceFronteggTenantAPIToken(),
+				"frontegg_jwt_template":                  resourceFronteggJWTTemplate(),
+				"frontegg_jwt_template_targeting":        resourceFronteggJWTTemplateTargeting(),
 			},
 			ConfigureContextFunc: func(ctx context.Context, d *schema.ResourceData) (interface{}, diag.Diagnostics) {
 				environmentId := d.Get("environment_id").(string)

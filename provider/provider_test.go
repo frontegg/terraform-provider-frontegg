@@ -1,10 +1,25 @@
 package provider
 
 import (
+	"os"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
+
+var testAccProviderFactories = map[string]func() (*schema.Provider, error){
+	"frontegg": func() (*schema.Provider, error) {
+		return New("test")(), nil
+	},
+}
+
+func testAccPreCheck(t *testing.T) {
+	for _, key := range []string{"FRONTEGG_CLIENT_ID", "FRONTEGG_SECRET_KEY"} {
+		if os.Getenv(key) == "" {
+			t.Skipf("%s must be set for acceptance tests", key)
+		}
+	}
+}
 
 func TestValidateProviderSchema(t *testing.T) {
 	scm := schema.InternalMap(New("0.0.0")().Schema)

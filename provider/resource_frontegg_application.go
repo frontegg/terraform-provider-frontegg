@@ -21,6 +21,7 @@ type fronteggApplication struct {
 	AccessType            string            `json:"accessType,omitempty"`
 	IsDefault             bool              `json:"isDefault"`
 	IsActive              bool              `json:"isActive"`
+	AllowDcr              bool              `json:"allowDcr"`
 	Type                  string            `json:"type,omitempty"`
 	FrontendStack         string            `json:"frontendStack,omitempty"`
 	Description           string            `json:"description,omitempty"`
@@ -88,6 +89,12 @@ func resourceFronteggApplication() *schema.Resource {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				Default:     true,
+			},
+			"allow_dcr": {
+				Description: "Whether to allow OAuth dynamic client registration (DCR), letting third-party applications and AI agents self-register clients.",
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     false,
 			},
 			"type": {
 				Description: "The type of the application.",
@@ -175,6 +182,7 @@ func resourceFronteggApplicationSerialize(d *schema.ResourceData) fronteggApplic
 		AccessType:    d.Get("access_type").(string),
 		IsDefault:     d.Get("is_default").(bool),
 		IsActive:      d.Get("is_active").(bool),
+		AllowDcr:      d.Get("allow_dcr").(bool),
 		Type:          d.Get("type").(string),
 		FrontendStack: d.Get("frontend_stack").(string),
 		Description:   d.Get("description").(string),
@@ -203,6 +211,9 @@ func resourceFronteggApplicationDeserialize(d *schema.ResourceData, f fronteggAp
 		return err
 	}
 	if err := d.Set("is_active", f.IsActive); err != nil {
+		return err
+	}
+	if err := d.Set("allow_dcr", f.AllowDcr); err != nil {
 		return err
 	}
 	if err := d.Set("type", f.Type); err != nil {
