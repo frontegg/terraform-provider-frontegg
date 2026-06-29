@@ -47,9 +47,11 @@ per Frontegg provider.
 
 		Schema: map[string]*schema.Schema{
 			"allow_unverified_users": {
-				Description: "Whether unverified users are allowed to log in.",
-				Type:        schema.TypeBool,
-				Required:    true,
+				Description: "Whether unverified users are allowed to log in. This is the email verification control: " +
+					"set to `false` to require email verification (a verification link is sent to the user's email " +
+					"and they must verify before they can log in); set to `true` to allow login without verifying the email.",
+				Type:     schema.TypeBool,
+				Required: true,
 			},
 			"allow_signups": {
 				Description: "Whether users are allowed to sign up.",
