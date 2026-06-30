@@ -43,7 +43,7 @@ resource "frontegg_auth_policy" "example" {
 
 - `allow_signups` (Boolean) Whether users are allowed to sign up.
 - `allow_tenant_invitations` (Boolean) Allow tenants to invite new users via an invitation link.
-- `allow_unverified_users` (Boolean) Whether unverified users are allowed to log in.
+- `allow_unverified_users` (Boolean) Whether unverified users are allowed to log in. This is the email verification control: set to `false` to require email verification (a verification link is sent to the user's email and they must verify before they can log in); set to `true` to allow login without verifying the email.
 - `auth_strategy` (String) The authentication strategy to use for people logging in.
 
 Must be one of "EmailAndPassword", "Code", "MagicLink", "NoLocalAuthentication", "SmsCode"
