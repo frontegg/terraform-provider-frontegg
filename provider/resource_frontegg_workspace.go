@@ -1002,17 +1002,35 @@ func resourceFronteggWorkspaceUpdate(ctx context.Context, d *schema.ResourceData
 
 	{
 		saml := d.Get("saml").([]interface{})
-		in := fronteggSSOSAML{
-			EntityName: "saml",
-		}
 		if len(saml) > 0 {
-			in.Configuration.ACSUrl = d.Get("saml.0.acs_url").(string)
-			in.Configuration.SPEntityID = d.Get("saml.0.sp_entity_id").(string)
-			in.Configuration.RedirectUrl = d.Get("saml.0.redirect_url").(string)
-			in.IsActive = true
-		}
-		if err := clientHolder.ApiClient.Post(ctx, fronteggSSOSAMLURL, in, nil); err != nil {
-			return diag.FromErr(err)
+			var existing struct {
+				Rows []struct {
+					Configuration map[string]interface{} `json:"configuration"`
+				} `json:"rows"`
+			}
+			if err := clientHolder.ApiClient.Get(ctx, fronteggSSOSAMLURL, &existing); err != nil {
+				return diag.FromErr(err)
+			}
+			configuration := map[string]interface{}{}
+			if len(existing.Rows) > 0 && existing.Rows[0].Configuration != nil {
+				configuration = existing.Rows[0].Configuration
+			}
+			configuration["acsUrl"] = d.Get("saml.0.acs_url").(string)
+			configuration["spEntityId"] = d.Get("saml.0.sp_entity_id").(string)
+			configuration["redirectUri"] = d.Get("saml.0.redirect_url").(string)
+			in := map[string]interface{}{
+				"entityName":    "saml",
+				"isActive":      true,
+				"configuration": configuration,
+			}
+			if err := clientHolder.ApiClient.Post(ctx, fronteggSSOSAMLURL, in, nil); err != nil {
+				return diag.FromErr(err)
+			}
+		} else {
+			in := fronteggSSOSAML{EntityName: "saml"}
+			if err := clientHolder.ApiClient.Post(ctx, fronteggSSOSAMLURL, in, nil); err != nil {
+				return diag.FromErr(err)
+			}
 		}
 	}
 	{
