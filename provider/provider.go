@@ -85,6 +85,7 @@ func New(version string) func() *schema.Provider {
 				"frontegg_cognito_user_source":           resourceFronteggCognitoUserSource(),
 				"frontegg_firebase_user_source":          resourceFronteggFirebaseUserSource(),
 				"frontegg_custom_code_user_source":       resourceFronteggCustomCodeUserSource(),
+				"frontegg_federation_user_source":        resourceFronteggFederationUserSource(),
 				"frontegg_feature":                       resourceFronteggFeature(),
 				"frontegg_plan":                          resourceFronteggPlan(),
 				"frontegg_plan_feature":                  resourceFronteggPlanFeature(),
