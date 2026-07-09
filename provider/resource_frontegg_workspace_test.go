@@ -2,9 +2,47 @@ package provider
 
 import (
 	"encoding/json"
+	"reflect"
 	"strings"
 	"testing"
 )
+
+func TestMergeFronteggSAMLConfiguration(t *testing.T) {
+	existing := map[string]interface{}{
+		"acsUrl":            "https://old.example.com/acs",
+		"spEntityId":        "old-sp",
+		"redirectUri":       "https://old.example.com/redirect",
+		"ssoEndpoint":       "https://idp.example.com/sso",
+		"publicCertificate": "CERT-DATA",
+		"type":              "saml",
+		"signRequest":       true,
+	}
+
+	got := mergeFronteggSAMLConfiguration(existing, "https://new.example.com/acs", "new-sp", "https://new.example.com/redirect")
+
+	want := map[string]interface{}{
+		"acsUrl":            "https://new.example.com/acs",
+		"spEntityId":        "new-sp",
+		"redirectUri":       "https://new.example.com/redirect",
+		"ssoEndpoint":       "https://idp.example.com/sso",
+		"publicCertificate": "CERT-DATA",
+		"type":              "saml",
+		"signRequest":       true,
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("mergeFronteggSAMLConfiguration() = %#v, want %#v", got, want)
+	}
+
+	if existing["acsUrl"] != "https://old.example.com/acs" {
+		t.Errorf("input configuration was mutated: acsUrl = %v", existing["acsUrl"])
+	}
+
+	fromNil := mergeFronteggSAMLConfiguration(nil, "acs", "sp", "redirect")
+	wantFromNil := map[string]interface{}{"acsUrl": "acs", "spEntityId": "sp", "redirectUri": "redirect"}
+	if !reflect.DeepEqual(fromNil, wantFromNil) {
+		t.Errorf("mergeFronteggSAMLConfiguration(nil, ...) = %#v, want %#v", fromNil, wantFromNil)
+	}
+}
 
 func TestExpandFronteggPasswordTests(t *testing.T) {
 	// Omitted/empty blocks must expand to nil so the field is not sent on the
