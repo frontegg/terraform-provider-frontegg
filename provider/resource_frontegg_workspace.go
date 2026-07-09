@@ -786,6 +786,17 @@ func resourceFronteggWorkspaceRead(ctx context.Context, d *schema.ResourceData, 
 	return diag.Diagnostics{}
 }
 
+func mergeFronteggSAMLConfiguration(existing map[string]interface{}, acsURL, spEntityID, redirectURI string) map[string]interface{} {
+	configuration := map[string]interface{}{}
+	for key, value := range existing {
+		configuration[key] = value
+	}
+	configuration["acsUrl"] = acsURL
+	configuration["spEntityId"] = spEntityID
+	configuration["redirectUri"] = redirectURI
+	return configuration
+}
+
 func resourceFronteggWorkspaceUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	clientHolder := meta.(*restclient.ClientHolder)
 	{
@@ -1002,17 +1013,38 @@ func resourceFronteggWorkspaceUpdate(ctx context.Context, d *schema.ResourceData
 
 	{
 		saml := d.Get("saml").([]interface{})
-		in := fronteggSSOSAML{
-			EntityName: "saml",
-		}
 		if len(saml) > 0 {
-			in.Configuration.ACSUrl = d.Get("saml.0.acs_url").(string)
-			in.Configuration.SPEntityID = d.Get("saml.0.sp_entity_id").(string)
-			in.Configuration.RedirectUrl = d.Get("saml.0.redirect_url").(string)
-			in.IsActive = true
-		}
-		if err := clientHolder.ApiClient.Post(ctx, fronteggSSOSAMLURL, in, nil); err != nil {
-			return diag.FromErr(err)
+			var existing struct {
+				Rows []struct {
+					Configuration map[string]interface{} `json:"configuration"`
+				} `json:"rows"`
+			}
+			if err := clientHolder.ApiClient.Get(ctx, fronteggSSOSAMLURL, &existing); err != nil {
+				return diag.FromErr(err)
+			}
+			var existingConfiguration map[string]interface{}
+			if len(existing.Rows) > 0 {
+				existingConfiguration = existing.Rows[0].Configuration
+			}
+			configuration := mergeFronteggSAMLConfiguration(
+				existingConfiguration,
+				d.Get("saml.0.acs_url").(string),
+				d.Get("saml.0.sp_entity_id").(string),
+				d.Get("saml.0.redirect_url").(string),
+			)
+			in := map[string]interface{}{
+				"entityName":    "saml",
+				"isActive":      true,
+				"configuration": configuration,
+			}
+			if err := clientHolder.ApiClient.Post(ctx, fronteggSSOSAMLURL, in, nil); err != nil {
+				return diag.FromErr(err)
+			}
+		} else {
+			in := fronteggSSOSAML{EntityName: "saml"}
+			if err := clientHolder.ApiClient.Post(ctx, fronteggSSOSAMLURL, in, nil); err != nil {
+				return diag.FromErr(err)
+			}
 		}
 	}
 	{
