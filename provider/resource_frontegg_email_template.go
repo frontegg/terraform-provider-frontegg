@@ -20,6 +20,12 @@ type fronteggEmailTemplateResource struct {
 	SenderEmail        string `json:"senderEmail"`
 	Subject            string `json:"subject"`
 	Type               string `json:"type"`
+
+	// The API renders template variables (e.g. "{{APP_ID}}") in redirectURL
+	// and successRedirectUrl in its responses, and returns the raw configured
+	// values in these read-only pattern fields.
+	RedirectURLPattern        string `json:"redirectURLPattern,omitempty"`
+	SuccessRedirectURLPattern string `json:"successRedirectUrlPattern,omitempty"`
 }
 
 func resourceFronteggEmailTemplate() *schema.Resource {
@@ -127,10 +133,21 @@ func resourceFronteggEmailTemplateDeserialize(d *schema.ResourceData, f frontegg
 		return err
 	}
 
-	if err := d.Set("redirect_url", f.RedirectURL); err != nil {
+	// Prefer the raw pattern fields: the API substitutes template variables
+	// (e.g. "{{APP_ID}}") in redirectURL and successRedirectUrl, which would
+	// produce a permanent diff for configurations that use such variables.
+	redirectURL := f.RedirectURL
+	if f.RedirectURLPattern != "" {
+		redirectURL = f.RedirectURLPattern
+	}
+	if err := d.Set("redirect_url", redirectURL); err != nil {
 		return err
 	}
-	if err := d.Set("success_redirect_url", f.SuccessRedirectURL); err != nil {
+	successRedirectURL := f.SuccessRedirectURL
+	if f.SuccessRedirectURLPattern != "" {
+		successRedirectURL = f.SuccessRedirectURLPattern
+	}
+	if err := d.Set("success_redirect_url", successRedirectURL); err != nil {
 		return err
 	}
 	return nil
