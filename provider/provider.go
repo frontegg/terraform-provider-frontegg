@@ -90,6 +90,7 @@ func New(version string) func() *schema.Provider {
 				"frontegg_plan":                          resourceFronteggPlan(),
 				"frontegg_plan_feature":                  resourceFronteggPlanFeature(),
 				"frontegg_prehook":                       resourceFronteggPrehook(),
+				"frontegg_custom_code_prehook":           resourceFronteggCustomCodePrehook(),
 				"frontegg_secret":                        resourceFronteggSecret(),
 				"frontegg_session_management_policy":     resourceFronteggSessionManagementPolicy(),
 				"frontegg_tenant_saml_config":            resourceFronteggTenantSAMLConfig(),

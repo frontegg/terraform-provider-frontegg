@@ -3,12 +3,12 @@
 page_title: "frontegg_prehook Resource - terraform-provider-frontegg"
 subcategory: ""
 description: |-
-  Configures a Frontegg prehook.
+  Configures a Frontegg prehook that sends events to an external URL. To run custom code hosted by Frontegg instead, use frontegg_custom_code_prehook.
 ---
 
 # frontegg_prehook (Resource)
 
-Configures a Frontegg prehook.
+Configures a Frontegg prehook that sends events to an external URL. To run custom code hosted by Frontegg instead, use `frontegg_custom_code_prehook`.
 
 ## Example Usage
 

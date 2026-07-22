@@ -25,7 +25,7 @@ type fronteggPrehook struct {
 
 func resourceFronteggPrehook() *schema.Resource {
 	return &schema.Resource{
-		Description:   `Configures a Frontegg prehook.`,
+		Description:   `Configures a Frontegg prehook that sends events to an external URL. To run custom code hosted by Frontegg instead, use ` + "`frontegg_custom_code_prehook`" + `.`,
 		CreateContext: resourceFronteggPrehookCreate,
 		ReadContext:   resourceFronteggPrehookRead,
 		UpdateContext: resourceFronteggPrehookUpdate,
