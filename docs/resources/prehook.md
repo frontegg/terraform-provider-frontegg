@@ -3,26 +3,57 @@
 page_title: "frontegg_prehook Resource - terraform-provider-frontegg"
 subcategory: ""
 description: |-
-  Configures a Frontegg prehook that sends events to an external URL. To run custom code hosted by Frontegg instead, use frontegg_custom_code_prehook.
+  Configures a Frontegg prehook.
+  A prehook subscribes to an event and either sends it to an external URL (type = "API") or runs
+  custom JavaScript hosted by Frontegg (type = "CUSTOM_CODE"). Frontegg allows only a single prehook
+  per event, regardless of type.
 ---
 
 # frontegg_prehook (Resource)
 
-Configures a Frontegg prehook that sends events to an external URL. To run custom code hosted by Frontegg instead, use `frontegg_custom_code_prehook`.
+Configures a Frontegg prehook.
+
+A prehook subscribes to an event and either sends it to an external URL (`type = "API"`) or runs
+custom JavaScript hosted by Frontegg (`type = "CUSTOM_CODE"`). Frontegg allows only a single prehook
+per event, regardless of type.
 
 ## Example Usage
 
 ```terraform
-resource "frontegg_prehook" "example" {
+resource "frontegg_prehook" "api_example" {
   enabled     = true
-  name        = "Example prehook"
-  description = "An example of a prehook"
+  name        = "Example API prehook"
+  description = "An example of a prehook that sends events to a URL"
+  type        = "API"
   url         = "https://example.com/prehook"
   secret      = "example-secret"
   events = [
     "SIGN_UP"
   ]
   fail_method = "CLOSE"
+}
+
+resource "frontegg_prehook" "custom_code_example" {
+  enabled     = true
+  name        = "Example custom code prehook"
+  description = "An example of a prehook that runs custom code on Frontegg"
+  type        = "CUSTOM_CODE"
+  runtime     = "NODE_20"
+  timeout     = 10
+  events = [
+    "USER_INVITE"
+  ]
+  fail_method = "CLOSE"
+
+  code = <<-EOT
+    async function onEvent(eventData) {
+      return {
+        verdict: 'allow',
+      };
+    }
+
+    exports.onEvent = onEvent;
+  EOT
 }
 ```
 
@@ -35,13 +66,18 @@ resource "frontegg_prehook" "example" {
 - `enabled` (Boolean) Whether the prehook is enabled.
 - `events` (Set of String) The name of the event to subscribe to.
 - `fail_method` (String) The action to take when the prehook fails.
-- `secret` (String) A secret to validate the event with.
-- `url` (String) The URL to send events to.
 
 ### Optional
 
+- `code` (String) The JavaScript source that handles the event. It must define and export an `onEvent` handler. Required when `type` is `CUSTOM_CODE`.
 - `name` (String) A human-readable name for the prehook.
+- `runtime` (String) The runtime to execute the code with (e.g. `NODE_20`). Only used when `type` is `CUSTOM_CODE`.
+- `secret` (String) A secret to validate the event with. Required when `type` is `API`.
+- `timeout` (Number) The execution timeout in seconds. Only used when `type` is `CUSTOM_CODE`.
+- `type` (String) The prehook type. `API` sends events to `url`; `CUSTOM_CODE` runs `code` on Frontegg.
+- `url` (String) The URL to send events to. Required when `type` is `API`.
 
 ### Read-Only
 
+- `executor_identifier` (String) The identifier of the custom code executor backing this prehook.
 - `id` (String) The ID of this resource.
