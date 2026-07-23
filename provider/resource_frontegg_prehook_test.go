@@ -1,10 +1,17 @@
 package provider
 
 import (
+	"bytes"
 	"encoding/json"
+	"fmt"
+	"net/http"
+	"os"
+	"regexp"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 )
 
 func prehookResourceData(t *testing.T, raw map[string]interface{}) *schema.ResourceData {
@@ -181,4 +188,204 @@ func TestPrehookCustomizeDiffRequiredFields(t *testing.T) {
 			}
 		})
 	}
+}
+
+const testAccPrehookCustomCodeCreate = `
+resource "frontegg_prehook" "cc" {
+  enabled     = true
+  name        = "tf-acc custom code"
+  description = "created"
+  type        = "CUSTOM_CODE"
+  events      = ["USER_INVITE"]
+  fail_method = "OPEN"
+  code        = "async function onEvent(e){return {verdict:\"allow\"}}\nexports.onEvent = onEvent;"
+}
+`
+
+const testAccPrehookCustomCodeUpdate = `
+resource "frontegg_prehook" "cc" {
+  enabled     = true
+  name        = "tf-acc custom code"
+  description = "updated"
+  type        = "CUSTOM_CODE"
+  timeout     = 5
+  events      = ["USER_INVITE"]
+  fail_method = "CLOSE"
+  code        = "async function onEvent(e){return {verdict:\"block\"}}\nexports.onEvent = onEvent;"
+}
+`
+
+func TestAccFronteggPrehook_customCodeLifecycle(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckPrehookDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccPrehookCustomCodeCreate,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("frontegg_prehook.cc", "type", "CUSTOM_CODE"),
+					resource.TestCheckResourceAttr("frontegg_prehook.cc", "description", "created"),
+					resource.TestCheckResourceAttr("frontegg_prehook.cc", "runtime", "NODE_20"),
+					resource.TestCheckResourceAttr("frontegg_prehook.cc", "timeout", "10"),
+					resource.TestCheckResourceAttrSet("frontegg_prehook.cc", "executor_identifier"),
+				),
+			},
+			{
+				Config:   testAccPrehookCustomCodeCreate,
+				PlanOnly: true,
+			},
+			{
+				Config: testAccPrehookCustomCodeUpdate,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("frontegg_prehook.cc", "description", "updated"),
+					resource.TestCheckResourceAttr("frontegg_prehook.cc", "fail_method", "CLOSE"),
+					resource.TestCheckResourceAttr("frontegg_prehook.cc", "timeout", "5"),
+				),
+			},
+			{
+				ResourceName:      "frontegg_prehook.cc",
+				ImportState:       true,
+				ImportStateVerify: true,
+				ImportStateVerifyIgnore: []string{
+					// code content is fetched from the executor and may be
+					// normalized by the backend; not part of the list payload.
+					"code",
+				},
+			},
+		},
+	})
+}
+
+const testAccPrehookAPICreate = `
+resource "frontegg_prehook" "api" {
+  enabled     = true
+  name        = "tf-acc api"
+  description = "api hook"
+  type        = "API"
+  url         = "https://example.com/prehook"
+  secret      = "tf-acc-secret"
+  events      = ["USER_INVITE"]
+  fail_method = "CLOSE"
+}
+`
+
+func TestAccFronteggPrehook_apiLifecycle(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckPrehookDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccPrehookAPICreate,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("frontegg_prehook.api", "type", "API"),
+					resource.TestCheckResourceAttr("frontegg_prehook.api", "url", "https://example.com/prehook"),
+				),
+			},
+			{
+				Config:   testAccPrehookAPICreate,
+				PlanOnly: true,
+			},
+		},
+	})
+}
+
+const testAccPrehookDuplicateEvent = `
+resource "frontegg_prehook" "a" {
+  enabled     = true
+  name        = "tf-acc dup a"
+  description = "first"
+  type        = "API"
+  url         = "https://example.com/a"
+  secret      = "s"
+  events      = ["USER_INVITE"]
+  fail_method = "OPEN"
+}
+
+resource "frontegg_prehook" "b" {
+  enabled     = true
+  name        = "tf-acc dup b"
+  description = "second"
+  type        = "API"
+  url         = "https://example.com/b"
+  secret      = "s"
+  events      = ["USER_INVITE"]
+  fail_method = "OPEN"
+  depends_on  = [frontegg_prehook.a]
+}
+`
+
+func TestAccFronteggPrehook_duplicateEventRejected(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckPrehookDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config:      testAccPrehookDuplicateEvent,
+				ExpectError: regexp.MustCompile(`(?i)already exists? for`),
+			},
+		},
+	})
+}
+
+func testAccCheckPrehookDestroy(s *terraform.State) error {
+	base := os.Getenv("FRONTEGG_API_BASE_URL")
+	if base == "" {
+		base = "https://api.frontegg.com"
+	}
+	var ids []string
+	for _, rs := range s.RootModule().Resources {
+		if rs.Type == "frontegg_prehook" {
+			ids = append(ids, rs.Primary.ID)
+		}
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+
+	token := fronteggVendorTokenNoT(base)
+	req, err := http.NewRequest(http.MethodGet, base+"/prehooks/resources/configurations/v1", nil)
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Authorization", "Bearer "+token)
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	var out []struct {
+		ID string `json:"id"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
+		return err
+	}
+	for _, p := range out {
+		for _, id := range ids {
+			if p.ID == id {
+				return fmt.Errorf("prehook %s still exists after destroy", id)
+			}
+		}
+	}
+	return nil
+}
+
+func fronteggVendorTokenNoT(base string) string {
+	body, _ := json.Marshal(map[string]string{
+		"clientId": os.Getenv("FRONTEGG_CLIENT_ID"),
+		"secret":   os.Getenv("FRONTEGG_SECRET_KEY"),
+	})
+	resp, err := http.Post(base+"/auth/vendor", "application/json", bytes.NewReader(body))
+	if err != nil {
+		return ""
+	}
+	defer resp.Body.Close()
+	var out struct {
+		Token string `json:"token"`
+	}
+	_ = json.NewDecoder(resp.Body).Decode(&out)
+	return out.Token
 }

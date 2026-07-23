@@ -3,9 +3,12 @@ package provider
 import (
 	"context"
 	"fmt"
+	"strings"
+	"time"
 
 	"github.com/frontegg/terraform-provider-frontegg/internal/restclient"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 )
@@ -21,6 +24,11 @@ const (
 
 const fronteggPrehookDefaultRuntime = "NODE_20"
 const fronteggPrehookDefaultTimeout = 10
+
+// A custom code prehook's executor (a serverless function) provisions
+// asynchronously, so writes made immediately after creation can briefly return
+// 5xx until it is ready. Retry those within this window.
+const fronteggPrehookProvisionTimeout = 2 * time.Minute
 
 type fronteggPrehook struct {
 	ID                 string   `json:"id,omitempty"`
@@ -110,10 +118,11 @@ per event, regardless of type.`,
 				Computed:    true,
 			},
 			"timeout": {
-				Description: "The execution timeout in seconds. Only used when `type` is `CUSTOM_CODE`.",
-				Type:        schema.TypeInt,
-				Optional:    true,
-				Computed:    true,
+				Description:  "The execution timeout in seconds (max 10). Only used when `type` is `CUSTOM_CODE`.",
+				Type:         schema.TypeInt,
+				Optional:     true,
+				Computed:     true,
+				ValidateFunc: validation.IntBetween(1, 10),
 			},
 			"executor_identifier": {
 				Description: "The identifier of the custom code executor backing this prehook.",
@@ -170,6 +179,41 @@ func validateFronteggPrehookFields(d fronteggFieldGetter) error {
 
 func resourceFronteggPrehookIsCustomCode(d *schema.ResourceData) bool {
 	return d.Get("type").(string) == fronteggPrehookTypeCustomCode
+}
+
+// fronteggPrehookIsTransientError reports whether err is a retryable server-side
+// failure, such as those returned while a custom code executor is provisioning.
+func fronteggPrehookIsTransientError(err error) bool {
+	if err == nil {
+		return false
+	}
+	msg := err.Error()
+	for _, status := range []string{
+		"500 Internal Server Error",
+		"502 Bad Gateway",
+		"503 Service Unavailable",
+		"504 Gateway Timeout",
+	} {
+		if strings.Contains(msg, status) {
+			return true
+		}
+	}
+	return false
+}
+
+// fronteggPrehookRetry runs fn, retrying transient server errors until the
+// executor provisioning window elapses.
+func fronteggPrehookRetry(ctx context.Context, fn func() error) error {
+	return retry.RetryContext(ctx, fronteggPrehookProvisionTimeout, func() *retry.RetryError {
+		err := fn()
+		if err == nil {
+			return nil
+		}
+		if fronteggPrehookIsTransientError(err) {
+			return retry.RetryableError(err)
+		}
+		return retry.NonRetryableError(err)
+	})
 }
 
 func resourceFronteggPrehookSerialize(d *schema.ResourceData) fronteggPrehook {
@@ -293,6 +337,27 @@ func resourceFronteggPrehookCheckEventConflict(ctx context.Context, clientHolder
 	return nil
 }
 
+// resourceFronteggPrehookFinalize writes the API response into state, fetching the
+// custom code content (runtime + source) when needed, since the prehook create,
+// update, and list responses carry only the executorIdentifier, not the code.
+func resourceFronteggPrehookFinalize(ctx context.Context, clientHolder *restclient.ClientHolder, d *schema.ResourceData, out fronteggPrehook) diag.Diagnostics {
+	if out.Type == "" {
+		out.Type = d.Get("type").(string)
+	}
+	var code *fronteggCustomCode
+	if out.Type == fronteggPrehookTypeCustomCode && out.ExecutorIdentifier != "" {
+		var fetched fronteggCustomCode
+		if err := clientHolder.ApiClient.Get(ctx, fmt.Sprintf("%s/%s", fronteggCustomCodePath, out.ExecutorIdentifier), &fetched); err != nil {
+			return diag.FromErr(err)
+		}
+		code = &fetched
+	}
+	if err := resourceFronteggPrehookDeserialize(d, out, code); err != nil {
+		return diag.FromErr(err)
+	}
+	return nil
+}
+
 func resourceFronteggPrehookCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	clientHolder := m.(*restclient.ClientHolder)
 	in := resourceFronteggPrehookSerialize(d)
@@ -304,7 +369,9 @@ func resourceFronteggPrehookCreate(ctx context.Context, d *schema.ResourceData, 
 	var out fronteggPrehook
 	if resourceFronteggPrehookIsCustomCode(d) {
 		in.ID = "create"
-		if err := clientHolder.ApiClient.Post(ctx, fronteggPrehookCustomCodePath, in, &out); err != nil {
+		if err := fronteggPrehookRetry(ctx, func() error {
+			return clientHolder.ApiClient.Post(ctx, fronteggPrehookCustomCodePath, in, &out)
+		}); err != nil {
 			return diag.FromErr(err)
 		}
 	} else {
@@ -313,10 +380,7 @@ func resourceFronteggPrehookCreate(ctx context.Context, d *schema.ResourceData, 
 		}
 	}
 
-	if err := resourceFronteggPrehookDeserialize(d, out, nil); err != nil {
-		return diag.FromErr(err)
-	}
-	return nil
+	return resourceFronteggPrehookFinalize(ctx, clientHolder, d, out)
 }
 
 func resourceFronteggPrehookRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
@@ -359,7 +423,9 @@ func resourceFronteggPrehookUpdate(ctx context.Context, d *schema.ResourceData, 
 
 	var out fronteggPrehook
 	if resourceFronteggPrehookIsCustomCode(d) {
-		if err := clientHolder.ApiClient.Patch(ctx, fmt.Sprintf("%s/%s", fronteggPrehookCustomCodePath, d.Id()), in, &out); err != nil {
+		if err := fronteggPrehookRetry(ctx, func() error {
+			return clientHolder.ApiClient.Patch(ctx, fmt.Sprintf("%s/%s", fronteggPrehookCustomCodePath, d.Id()), in, &out)
+		}); err != nil {
 			return diag.FromErr(err)
 		}
 	} else {
@@ -371,10 +437,7 @@ func resourceFronteggPrehookUpdate(ctx context.Context, d *schema.ResourceData, 
 	if out.ID == "" {
 		out.ID = d.Id()
 	}
-	if err := resourceFronteggPrehookDeserialize(d, out, nil); err != nil {
-		return diag.FromErr(err)
-	}
-	return nil
+	return resourceFronteggPrehookFinalize(ctx, clientHolder, d, out)
 }
 
 func resourceFronteggPrehookDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
