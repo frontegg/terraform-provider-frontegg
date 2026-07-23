@@ -43,7 +43,7 @@ resource "frontegg_custom_code_prehook" "example" {
 
 - `code` (String) The JavaScript source that handles the event. It must define and export an `onEvent` handler.
 - `enabled` (Boolean) Whether the prehook is enabled.
-- `events` (Set of String) The name of the event to subscribe to.
+- `events` (Set of String) The name of the event to subscribe to. Custom code prehooks support exactly one event.
 - `fail_method` (String) The action to take when the prehook fails.
 
 ### Optional
