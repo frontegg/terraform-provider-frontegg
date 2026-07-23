@@ -79,9 +79,8 @@ func resourceFronteggCustomCodePrehook() *schema.Resource {
 				Default:     10,
 			},
 			"events": {
-				Description: "The name of the event to subscribe to. Custom code prehooks support exactly one event.",
+				Description: "The name of the event to subscribe to.",
 				Type:        schema.TypeSet,
-				MaxItems:    1,
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
