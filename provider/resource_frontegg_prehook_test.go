@@ -330,6 +330,48 @@ func TestAccFronteggPrehook_duplicateEventRejected(t *testing.T) {
 	})
 }
 
+const testAccPrehookAPIMissingURL = `
+resource "frontegg_prehook" "bad" {
+  enabled     = true
+  name        = "tf-acc bad"
+  description = "missing url"
+  type        = "API"
+  secret      = "s"
+  events      = ["USER_INVITE"]
+  fail_method = "OPEN"
+}
+`
+
+const testAccPrehookCustomCodeMissingCode = `
+resource "frontegg_prehook" "bad" {
+  enabled     = true
+  name        = "tf-acc bad"
+  description = "missing code"
+  type        = "CUSTOM_CODE"
+  events      = ["USER_INVITE"]
+  fail_method = "OPEN"
+}
+`
+
+func TestAccFronteggPrehook_requiresURLOrCode(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		ProviderFactories: testAccProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config:      testAccPrehookAPIMissingURL,
+				PlanOnly:    true,
+				ExpectError: regexp.MustCompile(`url is required when type is API`),
+			},
+			{
+				Config:      testAccPrehookCustomCodeMissingCode,
+				PlanOnly:    true,
+				ExpectError: regexp.MustCompile(`code is required when type is CUSTOM_CODE`),
+			},
+		},
+	})
+}
+
 func testAccCheckPrehookDestroy(s *terraform.State) error {
 	base := os.Getenv("FRONTEGG_API_BASE_URL")
 	if base == "" {

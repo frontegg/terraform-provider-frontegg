@@ -78,7 +78,7 @@ per event, regardless of type.`,
 			"name": {
 				Description: "A human-readable name for the prehook.",
 				Type:        schema.TypeString,
-				Optional:    true,
+				Required:    true,
 			},
 			"description": {
 				Description: "A human-readable description of the prehook.",

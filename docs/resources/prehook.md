@@ -66,11 +66,11 @@ resource "frontegg_prehook" "custom_code_example" {
 - `enabled` (Boolean) Whether the prehook is enabled.
 - `events` (Set of String) The name of the event to subscribe to.
 - `fail_method` (String) The action to take when the prehook fails.
+- `name` (String) A human-readable name for the prehook.
 
 ### Optional
 
 - `code` (String) The JavaScript source that handles the event. It must define and export an `onEvent` handler. Required when `type` is `CUSTOM_CODE`.
-- `name` (String) A human-readable name for the prehook.
 - `runtime` (String) The runtime to execute the code with (e.g. `NODE_20`). Only used when `type` is `CUSTOM_CODE`.
 - `secret` (String) A secret to validate the event with. Required when `type` is `API`.
 - `timeout` (Number) The execution timeout in seconds (max 10). Only used when `type` is `CUSTOM_CODE`.
