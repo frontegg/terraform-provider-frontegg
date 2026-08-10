@@ -164,7 +164,11 @@ func resourceFronteggEmailTemplateRead(ctx context.Context, d *schema.ResourceDa
 		return diag.FromErr(err)
 	}
 
+	// On import only the ID is set, and the ID is the template type.
 	templateType := d.Get("template_type").(string)
+	if templateType == "" {
+		templateType = d.Id()
+	}
 	for _, template := range out {
 		if template.Type == templateType {
 			if err := resourceFronteggEmailTemplateDeserialize(d, template); err != nil {

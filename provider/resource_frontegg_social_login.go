@@ -120,7 +120,11 @@ func resourceFronteggSocialLoginCreate(ctx context.Context, d *schema.ResourceDa
 
 func resourceFronteggSocialLoginRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	clientHolder := meta.(*restclient.ClientHolder)
+	// On import only the ID is set, and the ID is the provider name.
 	providerName := d.Get("provider_name").(string)
+	if providerName == "" {
+		providerName = d.Id()
+	}
 
 	var out fronteggSSO
 	clientHolder.ApiClient.Ignore404()

@@ -3,6 +3,7 @@ package provider
 import (
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
@@ -57,4 +58,40 @@ func TestSocialLoginDeserializeKeepsCustomisedCredentials(t *testing.T) {
 	if got := d.Get("secret").(string); got != "my-secret" {
 		t.Errorf("secret = %q, want my-secret", got)
 	}
+}
+
+// facebook is deliberately chosen: it is the provider least likely to already
+// be configured, so the test does not overwrite live credentials.
+const testAccSocialLogin = `
+resource "frontegg_social_login" "test" {
+  provider_name = "facebook"
+  redirect_url  = "https://tf-acc.example.com/oauth/callback"
+  customised    = false
+}
+`
+
+func TestAccFronteggSocialLogin_lifecycle(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		ProviderFactories: testAccProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccSocialLogin,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("frontegg_social_login.test", "provider_name", "facebook"),
+					resource.TestCheckResourceAttr("frontegg_social_login.test", "client_id", ""),
+				),
+			},
+			{
+				Config:   testAccSocialLogin,
+				PlanOnly: true,
+			},
+			{
+				ResourceName:      "frontegg_social_login.test",
+				ImportState:       true,
+				ImportStateVerify: true,
+				ImportStateId:     "facebook",
+			},
+		},
+	})
 }
