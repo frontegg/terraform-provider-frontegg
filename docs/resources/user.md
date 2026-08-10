@@ -4,11 +4,16 @@ page_title: "frontegg_user Resource - terraform-provider-frontegg"
 subcategory: ""
 description: |-
   Configures a Frontegg user.
+  Import this resource using the tenant_id:user_id format, since the
+  tenant cannot be recovered from the user ID alone.
 ---
 
 # frontegg_user (Resource)
 
 Configures a Frontegg user.
+
+Import this resource using the `tenant_id:user_id` format, since the
+tenant cannot be recovered from the user ID alone.
 
 
 

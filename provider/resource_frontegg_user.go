@@ -71,14 +71,17 @@ func fronteggUserApplicationError(err error) error {
 
 func resourceFronteggUser() *schema.Resource {
 	return &schema.Resource{
-		Description: `Configures a Frontegg user.`,
+		Description: `Configures a Frontegg user.
+
+Import this resource using the ` + "`tenant_id:user_id`" + ` format, since the
+tenant cannot be recovered from the user ID alone.`,
 
 		CreateContext: resourceFronteggUserCreate,
 		ReadContext:   resourceFronteggUserRead,
 		DeleteContext: resourceFronteggUserDelete,
 		UpdateContext: resourceFronteggUserUpdate,
 		Importer: &schema.ResourceImporter{
-			StateContext: schema.ImportStatePassthroughContext,
+			StateContext: resourceFronteggUserImport,
 		},
 
 		Schema: map[string]*schema.Schema{
@@ -116,6 +119,7 @@ func resourceFronteggUser() *schema.Resource {
 				Description: "The tenant ID for this user.",
 				Type:        schema.TypeString,
 				Required:    true,
+				ForceNew:    true,
 			},
 			"superuser": {
 				Description: "Whether the user is a super user.",
@@ -124,6 +128,20 @@ func resourceFronteggUser() *schema.Resource {
 			},
 		},
 	}
+}
+
+// The identity routes are tenant-scoped, so tenant_id has to survive an
+// import. It is not part of the API response, hence the compound import ID.
+func resourceFronteggUserImport(ctx context.Context, d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
+	parts := strings.SplitN(d.Id(), ":", 2)
+	if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
+		return nil, fmt.Errorf("invalid import format, expected tenant_id:user_id, got: %s", d.Id())
+	}
+	if err := d.Set("tenant_id", parts[0]); err != nil {
+		return nil, err
+	}
+	d.SetId(parts[1])
+	return []*schema.ResourceData{d}, nil
 }
 
 func resourceFronteggUserSerialize(d *schema.ResourceData) fronteggUser {
