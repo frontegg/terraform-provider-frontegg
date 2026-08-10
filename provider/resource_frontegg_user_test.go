@@ -11,11 +11,13 @@ import (
 var (
 	errNoApplication = errors.New(
 		`restclient: request failed: POST https://api.frontegg.com/identity/resources/users/v2: ` +
-			`403 Forbidden: map[]: {"errors":["Application ID is not specified"],"errorCode":"ER-00008"}`,
+			`403 Forbidden (trace 468ccbfcb42b35d6f7462a49e4be21af): ` +
+			`{"errors":["Application ID is not specified"],"errorCode":"ER-00008"}`,
 	)
 	errTenantNotAssigned = errors.New(
 		`restclient: request failed: POST https://api.frontegg.com/identity/resources/users/v2: ` +
-			`404 Not Found: map[]: {"errors":["This account/tenant is not assigned to the requested application"],"errorCode":"ER-01008"}`,
+			`404 Not Found (trace 0e1631177c43f600ed747b6392560cf6): ` +
+			`{"errors":["This account/tenant is not assigned to the requested application"],"errorCode":"ER-01008"}`,
 	)
 )
 
