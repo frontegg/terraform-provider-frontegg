@@ -90,17 +90,33 @@ resource "frontegg_role" "test" {
   permission_ids = []
 }
 
+resource "frontegg_role" "second" {
+  key            = "tf-acc-portal-user-role-2"
+  name           = "tf-acc portal user role 2"
+  description    = "second role for the portal user acceptance test"
+  level          = 2
+  default        = false
+  permission_ids = []
+}
+
 resource "frontegg_portal_user" "test" {
   tenant_id  = frontegg_tenant.test.id
-  email      = "tf-acc-portal-user@example.com"
-  role_ids   = [frontegg_role.test.id]
+  email      = "%s"
+  role_ids   = [%s]
   depends_on = [frontegg_application_tenant_assignment.test]
 }
 `
 
-func testAccPortalUserConfig() string {
-	return fmt.Sprintf(testAccPortalUserCreate, os.Getenv("FRONTEGG_APPLICATION_ID"))
+func testAccPortalUserConfig(email, roles string) string {
+	return fmt.Sprintf(testAccPortalUserCreate, os.Getenv("FRONTEGG_APPLICATION_ID"), email, roles)
 }
+
+const (
+	testAccPortalUserEmail        = "tf-acc-portal-user@example.com"
+	testAccPortalUserEmailUpdated = "tf-acc-portal-user-updated@example.com"
+	testAccPortalUserOneRole      = "frontegg_role.test.id"
+	testAccPortalUserTwoRoles     = "frontegg_role.test.id, frontegg_role.second.id"
+)
 
 // Creating a user requires an application unless the environment has a
 // default one, and the identity API rejects the request outright otherwise.
@@ -117,16 +133,28 @@ func TestAccFronteggPortalUser_lifecycle(t *testing.T) {
 		ProviderFactories: testAccProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccPortalUserConfig(),
+				Config: testAccPortalUserConfig(testAccPortalUserEmail, testAccPortalUserOneRole),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("frontegg_portal_user.test", "email", "tf-acc-portal-user@example.com"),
+					resource.TestCheckResourceAttr("frontegg_portal_user.test", "email", testAccPortalUserEmail),
 					resource.TestCheckResourceAttrPair("frontegg_portal_user.test", "tenant_id", "frontegg_tenant.test", "id"),
 					resource.TestCheckResourceAttr("frontegg_portal_user.test", "role_ids.#", "1"),
 				),
 			},
 			{
-				Config:   testAccPortalUserConfig(),
+				Config:   testAccPortalUserConfig(testAccPortalUserEmail, testAccPortalUserOneRole),
 				PlanOnly: true,
+			},
+			{
+				Config: testAccPortalUserConfig(testAccPortalUserEmailUpdated, testAccPortalUserTwoRoles),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("frontegg_portal_user.test", "email", testAccPortalUserEmailUpdated),
+					resource.TestCheckResourceAttr("frontegg_portal_user.test", "role_ids.#", "2"),
+				),
+			},
+			{
+				Config: testAccPortalUserConfig(testAccPortalUserEmailUpdated, testAccPortalUserOneRole),
+				Check: resource.TestCheckResourceAttr(
+					"frontegg_portal_user.test", "role_ids.#", "1"),
 			},
 			{
 				ResourceName:      "frontegg_portal_user.test",
