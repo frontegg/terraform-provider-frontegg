@@ -89,13 +89,20 @@ func resourceFronteggSocialLoginDeserialize(d *schema.ResourceData, f fronteggSS
 	if err := d.Set("provider_name", providerName); err != nil {
 		return err
 	}
-	if err := d.Set("client_id", f.ClientID); err != nil {
+	// The API keeps and returns credentials even for a provider that is not
+	// using customised ones. Writing those into state produces permanent drift
+	// against a configuration that deliberately omits them.
+	clientID, secret := f.ClientID, f.Secret
+	if !f.Cusomised {
+		clientID, secret = "", ""
+	}
+	if err := d.Set("client_id", clientID); err != nil {
 		return err
 	}
 	if err := d.Set("redirect_url", f.RedirectURL); err != nil {
 		return err
 	}
-	if err := d.Set("secret", f.Secret); err != nil {
+	if err := d.Set("secret", secret); err != nil {
 		return err
 	}
 	if err := d.Set("customised", f.Cusomised); err != nil {

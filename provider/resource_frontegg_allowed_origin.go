@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/frontegg/terraform-provider-frontegg/internal/restclient"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -95,7 +96,7 @@ func resourceFronteggAllowedOriginDelete(ctx context.Context, d *schema.Resource
 
 	newOrigins := make([]string, 0, len(allowedOrigins.AllowedOrigins)-1)
 	for _, origin := range allowedOrigins.AllowedOrigins {
-		if origin != originToDelete {
+		if normalizeAllowedOrigin(origin) != normalizeAllowedOrigin(originToDelete) {
 			newOrigins = append(newOrigins, origin)
 		}
 	}
@@ -127,9 +128,17 @@ func updateAllowedOrigins(ctx context.Context, meta interface{}, origins *fronte
 	return nil
 }
 
+// The API stores origins with a trailing slash regardless of how they were
+// submitted, so comparisons have to ignore it. Without this every read reports
+// the origin as missing, which shows up as permanent drift and makes delete
+// fail with "origin does not exist".
+func normalizeAllowedOrigin(origin string) string {
+	return strings.TrimSuffix(origin, "/")
+}
+
 func containsAllowedOrigin(origins *fronteggAllowedOrigins, newOrigin string) bool {
 	for _, origin := range origins.AllowedOrigins {
-		if origin == newOrigin {
+		if normalizeAllowedOrigin(origin) == normalizeAllowedOrigin(newOrigin) {
 			return true
 		}
 	}
