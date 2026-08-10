@@ -157,7 +157,9 @@ func resourceFronteggPortalUserUpdate(ctx context.Context, d *schema.ResourceDat
 	// Email address:
 	if d.HasChange("email") {
 		email := d.Get("email").(string)
-		if err := clientHolder.ApiClient.PutWithHeaders(ctx, fmt.Sprintf("%s/%s/email", fronteggUserPathV1, d.Id()), resourceFronteggPortalUserHeaders(d), struct {
+		// The email route is vendor-level and rejects a tenant header with
+		// "Tenant ID is defined - forbidden route for tenants".
+		if err := clientHolder.ApiClient.Put(ctx, fmt.Sprintf("%s/%s/email", fronteggUserPathV1, d.Id()), struct {
 			Email string `json:"email"`
 		}{email}, nil); err != nil {
 			return diag.FromErr(err)
