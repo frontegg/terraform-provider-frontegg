@@ -111,7 +111,7 @@ func resourceFronteggPortalUserCreate(ctx context.Context, d *schema.ResourceDat
 	in := resourceFronteggPortalUserSerialize(d)
 	var out fronteggUser
 	if err := clientHolder.ApiClient.RequestWithHeaders(ctx, "POST", fronteggUserPath, resourceFronteggPortalUserHeaders(d), in, &out); err != nil {
-		return diag.FromErr(err)
+		return diag.FromErr(fronteggUserApplicationError(err))
 	}
 
 	if err := resourceFronteggPortalUserDeserialize(d, out); err != nil {
