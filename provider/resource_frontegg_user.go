@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strings"
 
 	"github.com/frontegg/terraform-provider-frontegg/internal/restclient"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -33,6 +34,40 @@ type fronteggUser struct {
 
 const fronteggUserPath = "/identity/resources/users/v2"
 const fronteggUserPathV1 = "/identity/resources/users/v1"
+
+// Frontegg error codes returned when user creation cannot resolve an
+// application. The gateway reports both as bare HTTP failures that say
+// nothing about which provider setting is missing.
+const (
+	fronteggErrNoApplicationID    = "ER-00008"
+	fronteggErrTenantNotInAppCode = "ER-01008"
+)
+
+// fronteggUserApplicationError turns the two opaque application failures from
+// the identity API into guidance naming the setting and resource that fix
+// them. Any other error is returned unchanged.
+func fronteggUserApplicationError(err error) error {
+	if err == nil {
+		return nil
+	}
+	switch {
+	case strings.Contains(err.Error(), fronteggErrNoApplicationID):
+		return fmt.Errorf(
+			"creating a Frontegg user requires an application, and this environment has no default one. "+
+				"Set `application_id` on the provider (or the FRONTEGG_APPLICATION_ID environment variable) "+
+				"to the application the user should belong to.\n\noriginal error: %w",
+			err,
+		)
+	case strings.Contains(err.Error(), fronteggErrTenantNotInAppCode):
+		return fmt.Errorf(
+			"the tenant is not assigned to the application named by `application_id`. "+
+				"Assign it with a `frontegg_application_tenant_assignment` resource, and make the user "+
+				"depend on that assignment so it is created first.\n\noriginal error: %w",
+			err,
+		)
+	}
+	return err
+}
 
 func resourceFronteggUser() *schema.Resource {
 	return &schema.Resource{
@@ -124,7 +159,7 @@ func resourceFronteggUserCreate(ctx context.Context, d *schema.ResourceData, met
 	headers := http.Header{}
 	headers.Add("frontegg-tenant-id", d.Get("tenant_id").(string))
 	if err := clientHolder.ApiClient.RequestWithHeaders(ctx, "POST", fronteggUserPath, headers, in, &out); err != nil {
-		return diag.FromErr(err)
+		return diag.FromErr(fronteggUserApplicationError(err))
 	}
 
 	if err := resourceFronteggUserDeserialize(d, out); err != nil {
