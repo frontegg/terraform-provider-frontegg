@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strings"
 
 	"github.com/frontegg/terraform-provider-frontegg/internal/restclient"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -13,17 +14,26 @@ import (
 
 func resourceFronteggPortalUser() *schema.Resource {
 	return &schema.Resource{
-		Description: `Configures a Frontegg portal user.`,
+		Description: `Configures a Frontegg portal user.
+
+Import this resource using the ` + "`tenant_id:user_id`" + ` format, since the
+tenant cannot be recovered from the user ID alone.`,
 
 		CreateContext: resourceFronteggPortalUserCreate,
 		ReadContext:   resourceFronteggPortalUserRead,
 		DeleteContext: resourceFronteggPortalUserDelete,
 		UpdateContext: resourceFronteggPortalUserUpdate,
 		Importer: &schema.ResourceImporter{
-			StateContext: schema.ImportStatePassthroughContext,
+			StateContext: resourceFronteggPortalUserImport,
 		},
 
 		Schema: map[string]*schema.Schema{
+			"tenant_id": {
+				Description: "The ID of the tenant that the user belongs to.",
+				Type:        schema.TypeString,
+				Required:    true,
+				ForceNew:    true,
+			},
 			"email": {
 				Description: "The user's email address.",
 				Type:        schema.TypeString,
@@ -50,6 +60,26 @@ func resourceFronteggPortalUser() *schema.Resource {
 			},
 		},
 	}
+}
+
+// The identity routes are tenant-scoped, so tenant_id has to survive an
+// import. It is not part of the API response, hence the compound import ID.
+func resourceFronteggPortalUserImport(ctx context.Context, d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
+	parts := strings.SplitN(d.Id(), ":", 2)
+	if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
+		return nil, fmt.Errorf("invalid import format, expected tenant_id:user_id, got: %s", d.Id())
+	}
+	if err := d.Set("tenant_id", parts[0]); err != nil {
+		return nil, err
+	}
+	d.SetId(parts[1])
+	return []*schema.ResourceData{d}, nil
+}
+
+func resourceFronteggPortalUserHeaders(d *schema.ResourceData) http.Header {
+	headers := http.Header{}
+	headers.Add("frontegg-tenant-id", d.Get("tenant_id").(string))
+	return headers
 }
 
 func resourceFronteggPortalUserSerialize(d *schema.ResourceData) fronteggUser {
@@ -80,8 +110,7 @@ func resourceFronteggPortalUserCreate(ctx context.Context, d *schema.ResourceDat
 	clientHolder := meta.(*restclient.ClientHolder)
 	in := resourceFronteggPortalUserSerialize(d)
 	var out fronteggUser
-	headers := http.Header{}
-	if err := clientHolder.PortalClient.RequestWithHeaders(ctx, "POST", fronteggUserPath, headers, in, &out); err != nil {
+	if err := clientHolder.ApiClient.RequestWithHeaders(ctx, "POST", fronteggUserPath, resourceFronteggPortalUserHeaders(d), in, &out); err != nil {
 		return diag.FromErr(err)
 	}
 
@@ -94,11 +123,13 @@ func resourceFronteggPortalUserCreate(ctx context.Context, d *schema.ResourceDat
 
 func resourceFronteggPortalUserRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	clientHolder := meta.(*restclient.ClientHolder)
-	client := clientHolder.PortalClient
-	client.Ignore404()
 	var out fronteggUser
-	headers := http.Header{}
-	if err := client.RequestWithHeaders(ctx, "GET", fmt.Sprintf("%s/%s", fronteggUserPathV1, d.Id()), headers, nil, &out); err != nil {
+	err := clientHolder.ApiClient.RequestWithHeaders(ctx, "GET", fmt.Sprintf("%s/%s", fronteggUserPathV1, d.Id()), resourceFronteggPortalUserHeaders(d), nil, &out)
+	if restclient.IsNotFound(err) {
+		d.SetId("")
+		return nil
+	}
+	if err != nil {
 		return diag.FromErr(err)
 	}
 	if out.Key == "" {
@@ -114,7 +145,8 @@ func resourceFronteggPortalUserRead(ctx context.Context, d *schema.ResourceData,
 
 func resourceFronteggPortalUserDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	clientHolder := meta.(*restclient.ClientHolder)
-	if err := clientHolder.PortalClient.Delete(ctx, fmt.Sprintf("%s/%s", fronteggUserPathV1, d.Id()), nil); err != nil {
+	err := clientHolder.ApiClient.DeleteWithHeaders(ctx, fmt.Sprintf("%s/%s", fronteggUserPathV1, d.Id()), resourceFronteggPortalUserHeaders(d), nil)
+	if err != nil && !restclient.IsNotFound(err) {
 		return diag.FromErr(err)
 	}
 	return nil
@@ -125,7 +157,7 @@ func resourceFronteggPortalUserUpdate(ctx context.Context, d *schema.ResourceDat
 	// Email address:
 	if d.HasChange("email") {
 		email := d.Get("email").(string)
-		if err := clientHolder.PortalClient.Put(ctx, fmt.Sprintf("%s/%s/email", fronteggUserPathV1, d.Id()), struct {
+		if err := clientHolder.ApiClient.PutWithHeaders(ctx, fmt.Sprintf("%s/%s/email", fronteggUserPathV1, d.Id()), resourceFronteggPortalUserHeaders(d), struct {
 			Email string `json:"email"`
 		}{email}, nil); err != nil {
 			return diag.FromErr(err)
@@ -138,7 +170,7 @@ func resourceFronteggPortalUserUpdate(ctx context.Context, d *schema.ResourceDat
 
 	// Roles:
 	if d.HasChange("role_ids") {
-		headers := http.Header{}
+		headers := resourceFronteggPortalUserHeaders(d)
 
 		oldsI, newsI := d.GetChange("role_ids")
 		olds := oldsI.(*schema.Set)
@@ -157,14 +189,14 @@ func resourceFronteggPortalUserUpdate(ctx context.Context, d *schema.ResourceDat
 		}
 
 		if len(toAdd) > 0 {
-			if err := clientHolder.PortalClient.RequestWithHeaders(ctx, "POST", fmt.Sprintf("%s/%s/roles", fronteggUserPathV1, d.Id()), headers, struct {
+			if err := clientHolder.ApiClient.RequestWithHeaders(ctx, "POST", fmt.Sprintf("%s/%s/roles", fronteggUserPathV1, d.Id()), headers, struct {
 				RoleIds []string `json:"roleIds"`
 			}{toAdd}, nil); err != nil {
 				return diag.FromErr(err)
 			}
 		}
 		if len(toDel) > 0 {
-			if err := clientHolder.PortalClient.RequestWithHeaders(ctx, "DELETE", fmt.Sprintf("%s/%s/roles", fronteggUserPathV1, d.Id()), headers, struct {
+			if err := clientHolder.ApiClient.RequestWithHeaders(ctx, "DELETE", fmt.Sprintf("%s/%s/roles", fronteggUserPathV1, d.Id()), headers, struct {
 				RoleIds []string `json:"roleIds"`
 			}{toDel}, nil); err != nil {
 				return diag.FromErr(err)
