@@ -632,3 +632,78 @@ func TestStoryExampleResetParses(t *testing.T) {
 	}
 	_ = fmt.Sprintf("%v", d)
 }
+
+// TestErrorOmitsResponseHeaders verifies the failure message carries the
+// status and body without the response header dump that used to bury them.
+func TestErrorOmitsResponseHeaders(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("X-Amz-Cf-Pop", "LHR82-P3")
+		w.Header().Set("Content-Security-Policy", "default-src 'self'")
+		w.WriteHeader(http.StatusForbidden)
+		_, _ = w.Write([]byte(`{"errors":["nope"],"errorCode":"ER-00008"}`))
+	}))
+	defer srv.Close()
+
+	c := newTestClient(srv.URL)
+	err := c.Get(context.Background(), "/thing", nil)
+	if err == nil {
+		t.Fatal("expected an error")
+	}
+	for _, want := range []string{"403 Forbidden", "ER-00008"} {
+		if !strings.Contains(err.Error(), want) {
+			t.Errorf("error is missing %q: %s", want, err)
+		}
+	}
+	for _, unwanted := range []string{"X-Amz-Cf-Pop", "Content-Security-Policy", "LHR82-P3"} {
+		if strings.Contains(err.Error(), unwanted) {
+			t.Errorf("error still dumps response headers (%q): %s", unwanted, err)
+		}
+	}
+}
+
+// TestErrorIncludesTraceID verifies the Frontegg trace ID survives the trim,
+// since that is the one header worth quoting when escalating a failure.
+func TestErrorIncludesTraceID(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Frontegg-Trace-Id", "abc123")
+		w.Header().Set("X-Amz-Cf-Pop", "LHR82-P3")
+		w.WriteHeader(http.StatusInternalServerError)
+		_, _ = w.Write([]byte("boom"))
+	}))
+	defer srv.Close()
+
+	c := newTestClient(srv.URL)
+	err := c.Get(context.Background(), "/thing", nil)
+	if err == nil || !strings.Contains(err.Error(), "(trace abc123)") {
+		t.Fatalf("expected the trace ID in the error, got %v", err)
+	}
+	if strings.Contains(err.Error(), "X-Amz-Cf-Pop") {
+		t.Errorf("only the trace ID should survive: %s", err)
+	}
+}
+
+// TestIsNotFoundSurvivesTrimmedFormat guards the substring IsNotFound matches
+// on, which the error format change could silently break.
+func TestIsNotFoundSurvivesTrimmedFormat(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Frontegg-Trace-Id", "abc123")
+		w.WriteHeader(http.StatusNotFound)
+		_, _ = w.Write([]byte(`{"errors":["User not found"]}`))
+	}))
+	defer srv.Close()
+
+	c := newTestClient(srv.URL)
+	err := c.Get(context.Background(), "/thing", nil)
+	if !IsNotFound(err) {
+		t.Fatalf("IsNotFound must still recognize a 404: %v", err)
+	}
+
+	srv2 := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer srv2.Close()
+	c2 := newTestClient(srv2.URL)
+	if IsNotFound(c2.Get(context.Background(), "/thing", nil)) {
+		t.Error("IsNotFound must not match a 500")
+	}
+}
