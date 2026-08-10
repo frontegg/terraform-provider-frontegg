@@ -69,7 +69,11 @@ func resourceFronteggAllowedOriginRead(ctx context.Context, d *schema.ResourceDa
 		return diag.FromErr(err)
 	}
 
+	// On import only the ID is set, and the ID is the origin itself.
 	origin := d.Get("allowed_origin").(string)
+	if origin == "" {
+		origin = d.Id()
+	}
 	if !containsAllowedOrigin(allowedOrigins, origin) {
 		d.SetId("")
 		return nil
