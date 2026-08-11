@@ -114,7 +114,54 @@ func resourceFronteggSocialLoginDeserialize(d *schema.ResourceData, f fronteggSS
 	return nil
 }
 
+// socialLoginAdoptionReason reports why creating over an existing provider
+// configuration would destroy information Terraform did not supply, or "" when
+// it is safe to proceed.
+//
+// Creating a provider is a POST that overwrites whatever is already there, so
+// pointing this resource at a provider somebody configured by hand silently
+// takes it over — and applying without credentials erases the ones already
+// stored, unrecoverably in the case of the secret.
+//
+// Deleting only deactivates a provider and leaves its credentials behind, so
+// neither check may fire on the configuration this resource itself left
+// behind: after a destroy the provider is inactive, and a customised resource
+// re-supplies the same client ID it had before.
+func socialLoginAdoptionReason(existing fronteggSSO, configuredClientID string) string {
+	if existing.Active {
+		return "it is already active"
+	}
+	if existing.ClientID != "" && configuredClientID == "" {
+		return "it already has credentials, which this configuration does not set and would erase"
+	}
+	return ""
+}
+
 func resourceFronteggSocialLoginCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	clientHolder := meta.(*restclient.ClientHolder)
+	providerName := d.Get("provider_name").(string)
+
+	var existing fronteggSSO
+	err := clientHolder.ApiClient.Get(ctx, fmt.Sprintf("%s/%s", fronteggSSOURL, providerName), &existing)
+	switch {
+	case restclient.IsNotFound(err):
+		// Nothing configured for this provider; safe to create.
+	case err != nil:
+		return diag.FromErr(err)
+	default:
+		if reason := socialLoginAdoptionReason(existing, d.Get("client_id").(string)); reason != "" {
+			return diag.Errorf(
+				"social login provider %q cannot be created because %s.\n\n"+
+					"Terraform will not take over a provider configuration it did not create, "+
+					"because applying over one overwrites its settings and can erase credentials "+
+					"that cannot be recovered. To manage the existing configuration, import it:\n\n"+
+					"    terraform import <resource address> %s\n\n"+
+					"Otherwise remove the provider configuration in Frontegg first.",
+				providerName, reason, providerName,
+			)
+		}
+	}
+
 	return resourceFronteggSocialLoginUpdate(ctx, d, meta)
 }
 
