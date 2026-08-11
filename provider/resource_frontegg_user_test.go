@@ -204,3 +204,76 @@ func TestUserTenantIDForcesNew(t *testing.T) {
 		t.Error("tenant_id must force replacement")
 	}
 }
+
+const testAccUserTenantSwitch = `
+resource "frontegg_tenant" "first" {
+  key  = "tf-acc-user-tenant-first"
+  name = "tf-acc user tenant first"
+}
+
+resource "frontegg_tenant" "second" {
+  key  = "tf-acc-user-tenant-second"
+  name = "tf-acc user tenant second"
+}
+
+resource "frontegg_application_tenant_assignment" "first" {
+  app_id    = "%[1]s"
+  tenant_id = frontegg_tenant.first.id
+}
+
+resource "frontegg_application_tenant_assignment" "second" {
+  app_id    = "%[1]s"
+  tenant_id = frontegg_tenant.second.id
+}
+
+resource "frontegg_role" "switch" {
+  key            = "tf-acc-user-switch-role"
+  name           = "tf-acc user switch role"
+  description    = "role for the tenant switch test"
+  level          = 1
+  default        = false
+  permission_ids = []
+}
+
+resource "frontegg_user" "switch" {
+  tenant_id         = frontegg_tenant.%[2]s.id
+  email             = "tf-acc-user-switch@example.com"
+  role_ids          = [frontegg_role.switch.id]
+  skip_invite_email = true
+  depends_on = [
+    frontegg_application_tenant_assignment.first,
+    frontegg_application_tenant_assignment.second,
+  ]
+}
+`
+
+func testAccUserTenantSwitchConfig(tenant string) string {
+	return fmt.Sprintf(testAccUserTenantSwitch, os.Getenv("FRONTEGG_APPLICATION_ID"), tenant)
+}
+
+// tenant_id is ForceNew because the identity API has no way to move a user
+// between tenants. Before that, changing it updated state while leaving the
+// user in the original tenant, and the following plan proposed a fresh create
+// on top of the orphan. This checks the replacement lands and settles.
+func TestAccFronteggUser_tenantChangeReplaces(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheckApplication(t) },
+		ProviderFactories: testAccProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccUserTenantSwitchConfig("first"),
+				Check: resource.TestCheckResourceAttrPair(
+					"frontegg_user.switch", "tenant_id", "frontegg_tenant.first", "id"),
+			},
+			{
+				Config: testAccUserTenantSwitchConfig("second"),
+				Check: resource.TestCheckResourceAttrPair(
+					"frontegg_user.switch", "tenant_id", "frontegg_tenant.second", "id"),
+			},
+			{
+				Config:   testAccUserTenantSwitchConfig("second"),
+				PlanOnly: true,
+			},
+		},
+	})
+}
