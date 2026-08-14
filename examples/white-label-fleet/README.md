@@ -51,10 +51,10 @@ and the per-brand module takes `auth_host` and `app_url` as inputs it *uses* but
 not own. This is the one place the fleet cannot be expressed as "everything for a brand
 lives in the brand module", and it is worth understanding before extending this example.
 
-There is a standalone `frontegg_allowed_origin` resource, and using it here instead
-would look tempting. Don't: it reads and rewrites the whole vendor origin list on every
-create, so N of them running in parallel lose each other's writes. Aggregating in the
-root is both correct and a single API call.
+There is a standalone `frontegg_allowed_origin` resource, and it works correctly per
+brand. It is not used here because the workspace already sets `allowed_origins` from
+the same data, and two things managing one attribute is what this section is about.
+Aggregating in the root is also a single API call rather than one per brand.
 
 The DNS side is still yours: each `auth_host` needs a CNAME pointing at the environment,
 and Frontegg will report the domain as `Pending` until that record resolves.
