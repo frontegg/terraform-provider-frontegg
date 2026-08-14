@@ -42,10 +42,6 @@ resource "frontegg_application_tenant_assignment" "this" {
   tenant_id = frontegg_tenant.this.id
 }
 
-resource "frontegg_allowed_origin" "this" {
-  allowed_origin = var.app_url
-}
-
 resource "frontegg_redirect_uri" "this" {
   for_each = local.redirect_uris
 

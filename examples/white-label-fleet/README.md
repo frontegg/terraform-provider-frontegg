@@ -33,21 +33,28 @@ terraform init
 terraform plan
 ```
 
-## Why custom domains live in the root, not the module
+## Why custom domains and allowed origins live in the root, not the module
 
-`custom_domains` is an *attribute* of the single `frontegg_workspace` resource, not a
-resource per domain. Terraform cannot have several resources managing one attribute —
-they would each plan to overwrite the others on every apply.
+Both `custom_domains` and `allowed_origins` are *attributes* of the single
+`frontegg_workspace` resource, not resources per domain. Terraform cannot have several
+resources managing one attribute — they would each plan to overwrite the others on
+every apply.
 
-So the workspace aggregates every brand's host:
+So the workspace aggregates them across every brand:
 
 ```hcl
-custom_domains = [for brand in var.brands : brand.auth_host]
+custom_domains  = [for brand in var.brands : brand.auth_host]
+allowed_origins = [for brand in var.brands : brand.app_url]
 ```
 
-and the per-brand module takes `auth_host` as an input it *uses* but does not own.
-This is the one place the fleet cannot be expressed as "everything for a brand lives in
-the brand module", and it is worth understanding before extending this example.
+and the per-brand module takes `auth_host` and `app_url` as inputs it *uses* but does
+not own. This is the one place the fleet cannot be expressed as "everything for a brand
+lives in the brand module", and it is worth understanding before extending this example.
+
+There is a standalone `frontegg_allowed_origin` resource, and using it here instead
+would look tempting. Don't: it reads and rewrites the whole vendor origin list on every
+create, so N of them running in parallel lose each other's writes. Aggregating in the
+root is both correct and a single API call.
 
 The DNS side is still yours: each `auth_host` needs a CNAME pointing at the environment,
 and Frontegg will report the domain as `Pending` until that record resolves.
