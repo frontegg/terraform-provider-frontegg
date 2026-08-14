@@ -1,0 +1,36 @@
+workspace_name  = "Example Health"
+frontegg_domain = "example.frontegg.com"
+
+brands = {
+  northwind = {
+    name      = "Northwind Clinic"
+    auth_host = "auth.northwind.example.com"
+    app_url   = "https://app.northwind.example.com"
+
+    mobile_bundle_ids = {
+      ios     = ["com.example.northwind"]
+      android = ["com.example.northwind"]
+    }
+  }
+
+  lakeside = {
+    name      = "Lakeside Health"
+    auth_host = "auth.lakeside.example.com"
+    app_url   = "https://app.lakeside.example.com"
+
+    mobile_bundle_ids = {
+      ios = ["com.example.lakeside"]
+    }
+
+    metadata = {
+      region = "us-east"
+    }
+  }
+
+  # A brand with no mobile app yet.
+  harbourview = {
+    name      = "Harbourview Medical"
+    auth_host = "auth.harbourview.example.com"
+    app_url   = "https://app.harbourview.example.com"
+  }
+}
