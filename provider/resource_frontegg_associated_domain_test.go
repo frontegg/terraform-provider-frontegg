@@ -1,6 +1,7 @@
 package provider
 
 import (
+	"context"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -101,7 +102,7 @@ func TestAssociatedDomainImportIdParsing(t *testing.T) {
 	} {
 		d := associatedDomainResourceData(t, map[string]interface{}{})
 		d.SetId(tc.id)
-		got, err := resourceFronteggAssociatedDomainImport(nil, d, nil)
+		got, err := resourceFronteggAssociatedDomainImport(context.Background(), d, nil)
 		if tc.wantErr {
 			if err == nil {
 				t.Errorf("import %q: expected error", tc.id)
