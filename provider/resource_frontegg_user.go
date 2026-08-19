@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strings"
 
 	"github.com/frontegg/terraform-provider-frontegg/internal/restclient"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -34,16 +35,53 @@ type fronteggUser struct {
 const fronteggUserPath = "/identity/resources/users/v2"
 const fronteggUserPathV1 = "/identity/resources/users/v1"
 
+// Frontegg error codes returned when user creation cannot resolve an
+// application. The gateway reports both as bare HTTP failures that say
+// nothing about which provider setting is missing.
+const (
+	fronteggErrNoApplicationID    = "ER-00008"
+	fronteggErrTenantNotInAppCode = "ER-01008"
+)
+
+// fronteggUserApplicationError turns the two opaque application failures from
+// the identity API into guidance naming the setting and resource that fix
+// them. Any other error is returned unchanged.
+func fronteggUserApplicationError(err error) error {
+	if err == nil {
+		return nil
+	}
+	switch {
+	case strings.Contains(err.Error(), fronteggErrNoApplicationID):
+		return fmt.Errorf(
+			"creating a Frontegg user requires an application, and this environment has no default one. "+
+				"Set `application_id` on the provider (or the FRONTEGG_APPLICATION_ID environment variable) "+
+				"to the application the user should belong to.\n\noriginal error: %w",
+			err,
+		)
+	case strings.Contains(err.Error(), fronteggErrTenantNotInAppCode):
+		return fmt.Errorf(
+			"the tenant is not assigned to the application named by `application_id`. "+
+				"Assign it with a `frontegg_application_tenant_assignment` resource, and make the user "+
+				"depend on that assignment so it is created first.\n\noriginal error: %w",
+			err,
+		)
+	}
+	return err
+}
+
 func resourceFronteggUser() *schema.Resource {
 	return &schema.Resource{
-		Description: `Configures a Frontegg user.`,
+		Description: `Configures a Frontegg user.
+
+Import this resource using the ` + "`tenant_id:user_id`" + ` format, since the
+tenant cannot be recovered from the user ID alone.`,
 
 		CreateContext: resourceFronteggUserCreate,
 		ReadContext:   resourceFronteggUserRead,
 		DeleteContext: resourceFronteggUserDelete,
 		UpdateContext: resourceFronteggUserUpdate,
 		Importer: &schema.ResourceImporter{
-			StateContext: schema.ImportStatePassthroughContext,
+			StateContext: resourceFronteggUserImport,
 		},
 
 		Schema: map[string]*schema.Schema{
@@ -81,6 +119,7 @@ func resourceFronteggUser() *schema.Resource {
 				Description: "The tenant ID for this user.",
 				Type:        schema.TypeString,
 				Required:    true,
+				ForceNew:    true,
 			},
 			"superuser": {
 				Description: "Whether the user is a super user.",
@@ -89,6 +128,20 @@ func resourceFronteggUser() *schema.Resource {
 			},
 		},
 	}
+}
+
+// The identity routes are tenant-scoped, so tenant_id has to survive an
+// import. It is not part of the API response, hence the compound import ID.
+func resourceFronteggUserImport(ctx context.Context, d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
+	parts := strings.SplitN(d.Id(), ":", 2)
+	if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
+		return nil, fmt.Errorf("invalid import format, expected tenant_id:user_id, got: %s", d.Id())
+	}
+	if err := d.Set("tenant_id", parts[0]); err != nil {
+		return nil, err
+	}
+	d.SetId(parts[1])
+	return []*schema.ResourceData{d}, nil
 }
 
 func resourceFronteggUserSerialize(d *schema.ResourceData) fronteggUser {
@@ -124,7 +177,7 @@ func resourceFronteggUserCreate(ctx context.Context, d *schema.ResourceData, met
 	headers := http.Header{}
 	headers.Add("frontegg-tenant-id", d.Get("tenant_id").(string))
 	if err := clientHolder.ApiClient.RequestWithHeaders(ctx, "POST", fronteggUserPath, headers, in, &out); err != nil {
-		return diag.FromErr(err)
+		return diag.FromErr(fronteggUserApplicationError(err))
 	}
 
 	if err := resourceFronteggUserDeserialize(d, out); err != nil {

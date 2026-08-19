@@ -4,11 +4,16 @@ page_title: "frontegg_portal_user Resource - terraform-provider-frontegg"
 subcategory: ""
 description: |-
   Configures a Frontegg portal user.
+  Import this resource using the tenant_id:user_id format, since the
+  tenant cannot be recovered from the user ID alone.
 ---
 
 # frontegg_portal_user (Resource)
 
 Configures a Frontegg portal user.
+
+Import this resource using the `tenant_id:user_id` format, since the
+tenant cannot be recovered from the user ID alone.
 
 ## Example Usage
 
@@ -31,6 +36,7 @@ resource "frontegg_portal_user" "example" {
 
 - `email` (String) The user's email address.
 - `role_ids` (Set of String) List of the role IDs that the user has in the tenant
+- `tenant_id` (String) The ID of the tenant that the user belongs to.
 
 ### Optional
 

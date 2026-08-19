@@ -52,6 +52,16 @@ func IsNotFound(err error) bool {
 	return err != nil && strings.Contains(err.Error(), ": 404 ")
 }
 
+// traceSuffix returns the Frontegg trace ID as a short parenthetical, for
+// quoting when escalating a failure. The full response headers are dumped at
+// TRACE level instead of into the error, where they buried the response body.
+func traceSuffix(h http.Header) string {
+	if id := h.Get("Frontegg-Trace-Id"); id != "" {
+		return fmt.Sprintf(" (trace %s)", id)
+	}
+	return ""
+}
+
 func (c *Client) DeleteWithHeaders(ctx context.Context, url string, headers http.Header, out interface{}) error {
 	return c.RequestWithHeaders(ctx, "DELETE", url, headers, nil, out)
 }
@@ -203,9 +213,10 @@ func (c *Client) RequestWithHeaders(ctx context.Context, method string, url stri
 			// because this single wait would cross it. A lone reset window (even
 			// a long one) is always honored; the ceiling bounds repeated cycles.
 			if c.rl.exceeded(attempts, totalWait) {
+				log.Printf("[TRACE] Response headers for failed request: %v", res.Header)
 				return fmt.Errorf(
-					"restclient: rate limited and gave up after %d attempts (%s total): %s %s: %s: %v: %s",
-					attempts, totalWait, req.Method, req.URL, res.Status, res.Header, resBody,
+					"restclient: rate limited and gave up after %d attempts (%s total): %s %s: %s%s: %s",
+					attempts, totalWait, req.Method, req.URL, res.Status, traceSuffix(res.Header), resBody,
 				)
 			}
 			log.Printf(
@@ -218,9 +229,10 @@ func (c *Client) RequestWithHeaders(ctx context.Context, method string, url stri
 			totalWait += wait
 			continue
 		case res.StatusCode < 200 || res.StatusCode >= 300:
+			log.Printf("[TRACE] Response headers for failed request: %v", res.Header)
 			return fmt.Errorf(
-				"restclient: request failed: %s %s: %s: %v: %s",
-				req.Method, req.URL, res.Status, res.Header, resBody,
+				"restclient: request failed: %s %s: %s%s: %s",
+				req.Method, req.URL, res.Status, traceSuffix(res.Header), resBody,
 			)
 		}
 
