@@ -76,6 +76,7 @@ func New(version string) func() *schema.Provider {
 				"frontegg_user":                          resourceFronteggUser(),
 				"frontegg_portal_user":                   resourceFronteggPortalUser(),
 				"frontegg_redirect_uri":                  resourceFronteggRedirectUri(),
+				"frontegg_associated_domain":             resourceFronteggAssociatedDomain(),
 				"frontegg_allowed_origin":                resourceFronteggAllowedOrigin(),
 				"frontegg_email_provider":                resourceFronteggEmailProvider(),
 				"frontegg_entitlement":                   resourceFronteggEntitlement(),
