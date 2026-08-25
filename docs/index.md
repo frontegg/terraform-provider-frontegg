@@ -27,6 +27,15 @@ portal. To configure multiple environments you will need to configure multiple
 copies of provider with one environment ID per each. If no environment ID was
 provided the configuration will be cross-environments.
 
+If MFA is configured per application in your environment, set `application_id` to
+the ID of the application whose configuration you want to manage. The provider
+sends it as the `frontegg-application-id` header on every request, so the
+`mfa_policy` and `mfa_authentication_app` settings on `frontegg_workspace` and the
+`frontegg_tenant_mfa_policy` resource are read and written against that
+application. Without it, those calls are not scoped to an application. Since the
+header applies to every request, configure one copy of the provider per
+application.
+
 ## Example Usage
 
 ```terraform
@@ -56,7 +65,7 @@ If you're upgrading from v1.0.x to v2.0.0, please see the [Migration Guide](guid
 ### Optional
 
 - `api_base_url` (String) The Frontegg api url. Override to change region. Defaults to EU url.
-- `application_id` (String) The application ID for multi-application support. When set, adds frontegg-application-id header to all requests.
+- `application_id` (String) The application ID for multi-application support. When set, adds the frontegg-application-id header to all requests. Set this in environments where MFA is configured per application, so that MFA policy and authentication app settings are read and written against that application.
 - `environment_id` (String, Sensitive) The client ID from environment settings.
 - `portal_base_url` (String) The Frontegg portal url. Override to change region. Defaults to EU url.
 
