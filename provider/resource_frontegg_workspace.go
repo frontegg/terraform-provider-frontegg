@@ -331,7 +331,7 @@ per Frontegg provider.
 				Required: true,
 			},
 			"mfa_policy": {
-				Description: "Configures the multi-factor authentication (MFA) policy.",
+				Description: "Configures the multi-factor authentication (MFA) policy. In environments where MFA is configured per application, set `application_id` on the provider so that this policy is read and written against that application.",
 				Type:        schema.TypeList,
 				Required:    true,
 				MinItems:    1,
@@ -360,7 +360,7 @@ Must be one of "off", "on", or "unless-saml".`,
 				},
 			},
 			"mfa_authentication_app": {
-				Description: "Configures the multi-factor authentication (MFA) via an authentication app.",
+				Description: "Configures the multi-factor authentication (MFA) via an authentication app. In environments where MFA is configured per application, set `application_id` on the provider so that this configuration is read and written against that application.",
 				Type:        schema.TypeList,
 				Optional:    true,
 				MaxItems:    1,
