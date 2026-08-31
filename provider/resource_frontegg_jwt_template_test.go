@@ -1,11 +1,14 @@
 package provider
 
 import (
+	"context"
 	"encoding/json"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 )
 
 func TestMissingRequiredClaims(t *testing.T) {
@@ -53,31 +56,76 @@ func TestMissingRequiredClaims(t *testing.T) {
 	}
 }
 
-// TestPresentReservedClaims verifies detection of claims that Frontegg reserves
-// for internal use (type, tenantId), which the API rejects if supplied.
-func TestPresentReservedClaims(t *testing.T) {
-	asClaims := func(keys ...string) map[string]interface{} {
-		m := make(map[string]interface{}, len(keys))
-		for _, k := range keys {
-			m[k] = "{{" + k + "}}"
+func TestResourceFronteggJWTTemplateValidateClaims(t *testing.T) {
+	requiredClaims := map[string]interface{}{
+		"iss": "{{iss}}",
+		"sub": "{{sub}}",
+		"aud": "{{clientId}}",
+		"exp": "{{exp}}",
+		"iat": "{{iat}}",
+	}
+	withClaims := func(extra map[string]string) map[string]interface{} {
+		claims := map[string]interface{}{}
+		for k, v := range requiredClaims {
+			claims[k] = v
 		}
-		return m
+		for k, v := range extra {
+			claims[k] = v
+		}
+		return map[string]interface{}{
+			"key":        "k",
+			"name":       "n",
+			"expiration": 3600,
+			"algorithm":  "RS256",
+			"claims":     claims,
+		}
 	}
 
 	tests := []struct {
-		name   string
-		claims map[string]interface{}
-		want   []string
+		name    string
+		raw     map[string]interface{}
+		wantErr string
 	}{
-		{name: "no reserved claims", claims: asClaims("iss", "sub", "aud", "exp", "iat", "email"), want: nil},
-		{name: "type reserved claim present", claims: asClaims("iss", "type"), want: []string{"type"}},
-		{name: "both reserved in canonical order", claims: asClaims("tenantId", "sub", "type"), want: []string{"type", "tenantId"}},
+		{
+			name: "tenantId is accepted",
+			raw:  withClaims(map[string]string{"tenantId": "{{user.tenantId}}"}),
+		},
+		{
+			name: "type is left to the API",
+			raw:  withClaims(map[string]string{"type": "userToken"}),
+		},
+		{
+			name: "custom claims are accepted",
+			raw:  withClaims(map[string]string{"email": "{{user.email}}"}),
+		},
+		{
+			name: "missing required claims are rejected at plan time",
+			raw: map[string]interface{}{
+				"key":        "k",
+				"name":       "n",
+				"expiration": 3600,
+				"algorithm":  "RS256",
+				"claims":     map[string]interface{}{"email": "{{user.email}}"},
+			},
+			wantErr: "missing: iss, sub, aud, exp, iat",
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := presentReservedClaims(tt.claims); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("presentReservedClaims() = %v, want %v", got, tt.want)
+			r := resourceFronteggJWTTemplate()
+			_, err := r.Diff(context.Background(), nil, terraform.NewResourceConfigRaw(tt.raw), nil)
+			if tt.wantErr == "" {
+				if err != nil {
+					t.Fatalf("Diff() returned an unexpected error: %v", err)
+				}
+				return
+			}
+			if err == nil {
+				t.Fatal("Diff() returned no error, want one")
+			}
+			if !strings.Contains(err.Error(), tt.wantErr) {
+				t.Errorf("Diff() error = %q, want it to contain %q", err, tt.wantErr)
 			}
 		})
 	}
