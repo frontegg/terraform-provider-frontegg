@@ -3,10 +3,14 @@ package provider
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"net/http"
+	"os"
 	"reflect"
 	"strings"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 )
@@ -243,5 +247,81 @@ func TestResourceFronteggJWTTemplateDeserializeRejectsNonStringClaim(t *testing.
 	}
 	if err := resourceFronteggJWTTemplateDeserialize(d, in); err == nil {
 		t.Fatal("expected an error for a non-string claim value, got nil")
+	}
+}
+
+const testAccJWTTemplateWithTenantID = `
+resource "frontegg_jwt_template" "test" {
+  key         = "tf-acc-tenant-id"
+  name        = "TF acceptance tenantId"
+  description = "FR-26867 regression coverage"
+  expiration  = 3600
+  algorithm   = "RS256"
+
+  claims = {
+    iss      = "{{iss}}"
+    sub      = "{{sub}}"
+    aud      = "{{clientId}}"
+    exp      = "{{exp}}"
+    iat      = "{{iat}}"
+    tenantId = "{{user.tenantId}}"
+    email    = "{{user.email}}"
+  }
+}
+`
+
+func TestAccFronteggJWTTemplate_tenantIDClaimIsAccepted(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckJWTTemplateDestroyed(t),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccJWTTemplateWithTenantID,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("frontegg_jwt_template.test", "claims.tenantId", "{{user.tenantId}}"),
+					resource.TestCheckResourceAttrSet("frontegg_jwt_template.test", "id"),
+					resource.TestCheckResourceAttrSet("frontegg_jwt_template.test", "vendor_id"),
+				),
+			},
+			{
+				Config:   testAccJWTTemplateWithTenantID,
+				PlanOnly: true,
+			},
+			{
+				ResourceName:      "frontegg_jwt_template.test",
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+		},
+	})
+}
+
+func testAccCheckJWTTemplateDestroyed(t *testing.T) func(*terraform.State) error {
+	return func(s *terraform.State) error {
+		base := os.Getenv("FRONTEGG_API_BASE_URL")
+		if base == "" {
+			base = "https://api.frontegg.com"
+		}
+		token := fronteggVendorToken(t, base)
+		for _, rs := range s.RootModule().Resources {
+			if rs.Type != "frontegg_jwt_template" {
+				continue
+			}
+			req, err := http.NewRequest(http.MethodGet, base+fronteggJWTTemplatePath+"/"+rs.Primary.ID, nil)
+			if err != nil {
+				return fmt.Errorf("build jwt template lookup: %w", err)
+			}
+			req.Header.Set("Authorization", "Bearer "+token)
+			resp, err := http.DefaultClient.Do(req)
+			if err != nil {
+				return fmt.Errorf("look up jwt template %s: %w", rs.Primary.ID, err)
+			}
+			resp.Body.Close()
+			if resp.StatusCode != http.StatusNotFound {
+				return fmt.Errorf("jwt template %s still exists after destroy (HTTP %d)", rs.Primary.ID, resp.StatusCode)
+			}
+		}
+		return nil
 	}
 }
