@@ -29,6 +29,9 @@ func resourceFronteggTenantMFAPolicy() *schema.Resource {
 This is a singleton resource per tenant. You must only create one frontegg_tenant_mfa_policy resource
 per tenant.
 
+In environments where MFA is configured per application, set ` + "`application_id`" + ` on the provider so that this
+policy is read and written against that application.
+
 **Note:** This resource cannot be deleted. When destroyed, Terraform will remove it from the state file, but the MFA policy will remain in its last-applied state.`,
 
 		CreateContext: resourceFronteggTenantMFAPolicyCreate,

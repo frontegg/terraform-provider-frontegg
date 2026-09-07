@@ -115,7 +115,7 @@ resource "frontegg_workspace" "example" {
 
     The domain must end with ".frontegg.com" or ".us.frontegg.com".
 - `frontend_stack` (String) The frontend stack of the application associated with the worksapce.
-- `mfa_policy` (Block List, Min: 1, Max: 1) Configures the multi-factor authentication (MFA) policy. (see [below for nested schema](#nestedblock--mfa_policy))
+- `mfa_policy` (Block List, Min: 1, Max: 1) Configures the multi-factor authentication (MFA) policy. In environments where MFA is configured per application, set `application_id` on the provider so that this policy is read and written against that application. (see [below for nested schema](#nestedblock--mfa_policy))
 - `name` (String) The name of the workspace.
 - `open_saas_installed` (Boolean) Whether the application associated with the workspace has OpenSaaS installed.
 - `password_policy` (Block List, Min: 1, Max: 1) Configures the password policy. (see [below for nested schema](#nestedblock--password_policy))
@@ -127,7 +127,7 @@ resource "frontegg_workspace" "example" {
 				You must configure CNAME for each domain, you can get record values from the portal.
 - `hosted_login` (Block List, Max: 1) Configures Frontegg-hosted OAuth login. (see [below for nested schema](#nestedblock--hosted_login))
 - `lockout_policy` (Block List, Max: 1) Configures the user lockout policy. (see [below for nested schema](#nestedblock--lockout_policy))
-- `mfa_authentication_app` (Block List, Max: 1) Configures the multi-factor authentication (MFA) via an authentication app. (see [below for nested schema](#nestedblock--mfa_authentication_app))
+- `mfa_authentication_app` (Block List, Max: 1) Configures the multi-factor authentication (MFA) via an authentication app. In environments where MFA is configured per application, set `application_id` on the provider so that this configuration is read and written against that application. (see [below for nested schema](#nestedblock--mfa_authentication_app))
 - `oidc` (Block List, Max: 1) Configures SSO via OIDC. (see [below for nested schema](#nestedblock--oidc))
 - `saml` (Block List, Max: 1) Configures SSO via SAML. (see [below for nested schema](#nestedblock--saml))
 - `sso_multi_tenant_policy` (Block List, Max: 1) Configures how multiple tenants can claim the same SSO domain. (see [below for nested schema](#nestedblock--sso_multi_tenant_policy))

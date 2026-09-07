@@ -22,15 +22,22 @@ resource "frontegg_jwt_template" "example" {
 
   # Frontegg requires the standard OIDC claims (iss, sub, aud, exp, iat) in every
   # template, where aud must be {{clientId}} or {{applicationId}}. Additional
-  # custom claims may be added alongside them. Claims reserved for internal use
-  # (e.g. type, tenantId) are populated by Frontegg and must not be set here.
+  # custom claims may be added alongside them.
+  #
+  # Claims are NOT auto-populated: whatever this map contains is what the token
+  # carries. In particular, set tenantId yourself if your application or the
+  # Frontegg frontend SDK expects it — tokens issued without it break the SDK.
+  #
+  # A small set of claims is reserved for internal use and rejected by the API
+  # (for example type, userId, superUser, act, amr, acr, auth_time, nonce).
   claims = {
-    iss   = "{{iss}}"
-    sub   = "{{sub}}"
-    aud   = "{{clientId}}"
-    exp   = "{{exp}}"
-    iat   = "{{iat}}"
-    email = "{{user.email}}"
+    iss      = "{{iss}}"
+    sub      = "{{sub}}"
+    aud      = "{{clientId}}"
+    exp      = "{{exp}}"
+    iat      = "{{iat}}"
+    tenantId = "{{user.tenantId}}"
+    email    = "{{user.email}}"
   }
 }
 ```
@@ -41,7 +48,7 @@ resource "frontegg_jwt_template" "example" {
 ### Required
 
 - `algorithm` (String) The JWT signing algorithm. Valid values are `RS256` and `HS256`.
-- `claims` (Map of String) Key-value pairs representing the JWT claims included in the template.
+- `claims` (Map of String) Key-value pairs representing the JWT claims included in the template. Claims are not auto-populated: the token carries exactly what is set here, so include `tenantId` if your application or the Frontegg frontend SDK expects it. The standard OIDC claims (`iss`, `sub`, `aud`, `exp`, `iat`) are required, where `aud` must be `{{clientId}}` or `{{applicationId}}`. A small set of claims is reserved for internal use and rejected by the API (for example `type`, `userId`, `superUser`, `act`, `amr`, `acr`, `auth_time`, `nonce`).
 - `expiration` (Number) The token expiration time in seconds.
 - `key` (String) A unique identifier key for the JWT template.
 - `name` (String) A human-readable name for the JWT template.

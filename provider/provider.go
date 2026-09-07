@@ -50,7 +50,7 @@ func New(version string) func() *schema.Provider {
 					Sensitive:   true,
 				},
 				"application_id": {
-					Description: "The application ID for multi-application support. When set, adds frontegg-application-id header to all requests.",
+					Description: "The application ID for multi-application support. When set, adds the frontegg-application-id header to all requests. Set this in environments where MFA is configured per application, so that MFA policy and authentication app settings are read and written against that application.",
 					Type:        schema.TypeString,
 					Optional:    true,
 					DefaultFunc: schema.EnvDefaultFunc("FRONTEGG_APPLICATION_ID", nil),
