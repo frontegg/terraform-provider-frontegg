@@ -13,6 +13,7 @@ import (
 )
 
 const fronteggAssociatedDomainPath = "/vendors/resources/associated-domains/v1"
+const fronteggAppRedirectSyncPath = "/oauth/resources/configurations/v1/redirect-uri/sync"
 
 // The API exposes no update: the documented path is delete-and-recreate, which
 // is why every attribute below is ForceNew.
@@ -42,6 +43,10 @@ callbacks, magic links, password resets and passkeys.`,
 
 		CreateContext: resourceFronteggAssociatedDomainCreate,
 		ReadContext:   resourceFronteggAssociatedDomainRead,
+		// Every attribute the API knows about is ForceNew; sync_redirect_uris is
+		// local behaviour, so changing it needs an update that does no API work
+		// rather than a destroy and recreate of the registration.
+		UpdateContext: resourceFronteggAssociatedDomainRead,
 		DeleteContext: resourceFronteggAssociatedDomainDelete,
 		Importer: &schema.ResourceImporter{
 			StateContext: resourceFronteggAssociatedDomainImport,
@@ -77,6 +82,17 @@ callbacks, magic links, password resets and passkeys.`,
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
+			},
+			"sync_redirect_uris": {
+				Description: "Whether to register the OAuth redirect URIs this app implies after changing the registration. " +
+					"The Frontegg mobile SDKs derive their callback from the auth host, and it has to be allow-listed or " +
+					"authorization fails after the user has already signed in. Leaving this off means registering that URI " +
+					"separately, with `frontegg_redirect_uri` or by hand. " +
+					"Off by default because it depends on a sync endpoint that is not available in every environment yet; " +
+					"where it is missing the sync is skipped with a warning rather than failing the apply.",
+				Type:     schema.TypeBool,
+				Optional: true,
+				Default:  false,
 			},
 		},
 	}
@@ -152,7 +168,7 @@ func resourceFronteggAssociatedDomainCreate(ctx context.Context, d *schema.Resou
 
 	if id := out.configurationId(); id != "" {
 		d.SetId(id)
-		return nil
+		return syncAppRedirectUris(ctx, d, clientHolder)
 	}
 
 	// The create response did not carry an id; find the configuration in the list.
@@ -163,10 +179,39 @@ func resourceFronteggAssociatedDomainCreate(ctx context.Context, d *schema.Resou
 	for _, c := range configs {
 		if resourceFronteggAssociatedDomainMatches(d, c) {
 			d.SetId(c.configurationId())
-			return nil
+			return syncAppRedirectUris(ctx, d, clientHolder)
 		}
 	}
 	return diag.Errorf("associated domain configuration was created but could not be found afterwards")
+}
+
+// Registering an app changes the association files Frontegg serves, and the OAuth
+// redirect URIs the mobile SDKs use are derived from those. Asking the service to
+// reconcile here keeps the two in step; without it the URI is registered whenever
+// the vendor configuration next changes, which may be long after the app ships.
+func syncAppRedirectUris(
+	ctx context.Context,
+	d *schema.ResourceData,
+	clientHolder *restclient.ClientHolder,
+) diag.Diagnostics {
+	if !d.Get("sync_redirect_uris").(bool) {
+		return nil
+	}
+
+	if err := clientHolder.ApiClient.Post(ctx, fronteggAppRedirectSyncPath, struct{}{}, nil); err != nil {
+		if restclient.IsNotFound(err) {
+			return diag.Diagnostics{{
+				Severity: diag.Warning,
+				Summary:  "Redirect URI sync is not available in this environment",
+				Detail: "The associated domain was registered, but the OAuth redirect URIs it implies were not, " +
+					"because this environment does not expose the sync endpoint. Register them with " +
+					"frontegg_redirect_uri, or set sync_redirect_uris = false to silence this.",
+			}}
+		}
+		return diag.FromErr(err)
+	}
+
+	return nil
 }
 
 func resourceFronteggAssociatedDomainRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
@@ -211,7 +256,11 @@ func resourceFronteggAssociatedDomainDelete(ctx context.Context, d *schema.Resou
 	if err != nil && !restclient.IsNotFound(err) {
 		return diag.FromErr(err)
 	}
-	return nil
+
+	// Reconciliation only adds URIs, so this does not withdraw the callback for the
+	// app just removed. It keeps the sync point consistent with create, and picks up
+	// anything else the association files still publish.
+	return syncAppRedirectUris(ctx, d, clientHolder)
 }
 
 // Import expects "{platform}/{configurationId}", because the API namespaces

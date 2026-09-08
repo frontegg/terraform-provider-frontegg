@@ -53,6 +53,7 @@ resource "frontegg_associated_domain" "android" {
 - `app_id` (String) The iOS app identifier in `{teamId}.{bundleId}` form, as published in the `apple-app-site-association` file. iOS only.
 - `package_name` (String) The Android application package name, as published in `assetlinks.json`. Android only.
 - `sha256_cert_fingerprints` (List of String) SHA-256 signing-certificate fingerprints of the Android app. Include every certificate the app ships under (debug, release, Play App Signing).
+- `sync_redirect_uris` (Boolean) Whether to register the OAuth redirect URIs this app implies after changing the registration. The Frontegg mobile SDKs derive their callback from the auth host, and it has to be allow-listed or authorization fails after the user has already signed in. Leaving this off means registering that URI separately, with `frontegg_redirect_uri` or by hand. Off by default because it depends on a sync endpoint that is not available in every environment yet; where it is missing the sync is skipped with a warning rather than failing the apply.
 
 ### Read-Only
 

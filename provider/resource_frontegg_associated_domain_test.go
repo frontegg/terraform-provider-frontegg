@@ -87,6 +87,16 @@ func TestAssociatedDomainMatches(t *testing.T) {
 	}
 }
 
+func TestSyncRedirectUrisDefaultsOff(t *testing.T) {
+	d := associatedDomainResourceData(t, map[string]interface{}{
+		"platform": "ios",
+		"app_id":   "ABCDE12345.com.example.app",
+	})
+	if d.Get("sync_redirect_uris").(bool) {
+		t.Error("sync_redirect_uris should default to false, so the resource works where the endpoint is absent")
+	}
+}
+
 func TestAssociatedDomainImportIdParsing(t *testing.T) {
 	for _, tc := range []struct {
 		id           string
