@@ -18,7 +18,7 @@ Configures a Frontegg Email provider.
 ### Required
 
 - `provider_name` (String) Name of the email provider (If the provider is changed, the old provider's configuration will be deleted).
-- `secret` (String) A secret to be included with the event.
+- `secret` (String, Sensitive) A secret to be included with the event.
 
 ### Optional
 
