@@ -165,6 +165,9 @@ func resourceFronteggEmailTemplateRead(ctx context.Context, d *schema.ResourceDa
 	}
 
 	templateType := d.Get("template_type").(string)
+	if templateType == "" {
+		templateType = d.Id()
+	}
 	for _, template := range out {
 		if template.Type == templateType {
 			if err := resourceFronteggEmailTemplateDeserialize(d, template); err != nil {
