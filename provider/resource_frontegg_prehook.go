@@ -105,6 +105,7 @@ per event, regardless of type.`,
 				Description: "A secret to validate the event with. Required when `type` is `API`.",
 				Type:        schema.TypeString,
 				Optional:    true,
+				Sensitive:   true,
 			},
 			"code": {
 				Description: "The JavaScript source that handles the event. It must define and export an `onEvent` handler. Required when `type` is `CUSTOM_CODE`.",

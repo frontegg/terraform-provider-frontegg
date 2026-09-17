@@ -63,6 +63,7 @@ func resourceFronteggWebhook() *schema.Resource {
 				Description: "A secret to include with the event.",
 				Type:        schema.TypeString,
 				Required:    true,
+				Sensitive:   true,
 			},
 			"events": {
 				Description: "The names of the events to subscribe to.",

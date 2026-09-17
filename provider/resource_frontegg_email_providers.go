@@ -71,6 +71,7 @@ func resourceFronteggEmailProvider() *schema.Resource {
 				Description: "A secret to be included with the event.",
 				Type:        schema.TypeString,
 				Required:    true,
+				Sensitive:   true,
 			},
 			"provider_name": {
 				Description:  "Name of the email provider (If the provider is changed, the old provider's configuration will be deleted).",
