@@ -59,3 +59,31 @@ func assertSecretsSensitive(t *testing.T, path string, attrs map[string]*schema.
 		}
 	}
 }
+
+func TestBaseURLsHonourEnvironment(t *testing.T) {
+	t.Setenv("FRONTEGG_API_BASE_URL", "https://api.us.frontegg.com")
+	t.Setenv("FRONTEGG_PORTAL_BASE_URL", "https://frontegg-prod.us.frontegg.com")
+
+	d := schema.TestResourceDataRaw(t, New("0.0.0")().Schema, map[string]interface{}{})
+
+	if got := d.Get("api_base_url"); got != "https://api.us.frontegg.com" {
+		t.Errorf("api_base_url = %q, want the FRONTEGG_API_BASE_URL value", got)
+	}
+	if got := d.Get("portal_base_url"); got != "https://frontegg-prod.us.frontegg.com" {
+		t.Errorf("portal_base_url = %q, want the FRONTEGG_PORTAL_BASE_URL value", got)
+	}
+}
+
+func TestBaseURLsFallBackToEU(t *testing.T) {
+	t.Setenv("FRONTEGG_API_BASE_URL", "")
+	t.Setenv("FRONTEGG_PORTAL_BASE_URL", "")
+
+	d := schema.TestResourceDataRaw(t, New("0.0.0")().Schema, map[string]interface{}{})
+
+	if got := d.Get("api_base_url"); got != "https://api.frontegg.com" {
+		t.Errorf("api_base_url = %q, want https://api.frontegg.com", got)
+	}
+	if got := d.Get("portal_base_url"); got != "https://frontegg-prod.frontegg.com" {
+		t.Errorf("portal_base_url = %q, want https://frontegg-prod.frontegg.com", got)
+	}
+}
