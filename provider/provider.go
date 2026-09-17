@@ -20,15 +20,13 @@ func New(version string) func() *schema.Provider {
 					Description: "The Frontegg api url. Override to change region. Defaults to EU url.",
 					Type:        schema.TypeString,
 					Optional:    true,
-					Default:     "https://api.frontegg.com",
-					DefaultFunc: schema.EnvDefaultFunc("FRONTEGG_API_BASE_URL", nil),
+					DefaultFunc: schema.EnvDefaultFunc("FRONTEGG_API_BASE_URL", "https://api.frontegg.com"),
 				},
 				"portal_base_url": {
 					Description: "The Frontegg portal url. Override to change region. Defaults to EU url.",
 					Type:        schema.TypeString,
 					Optional:    true,
-					Default:     "https://frontegg-prod.frontegg.com",
-					DefaultFunc: schema.EnvDefaultFunc("FRONTEGG_PORTAL_BASE_URL", nil),
+					DefaultFunc: schema.EnvDefaultFunc("FRONTEGG_PORTAL_BASE_URL", "https://frontegg-prod.frontegg.com"),
 				},
 				"client_id": {
 					Description: "The client ID for a Frontegg portal API key.",
