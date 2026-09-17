@@ -82,6 +82,9 @@ func resourceFronteggAllowedOriginRead(ctx context.Context, d *schema.ResourceDa
 	}
 
 	origin := d.Get("allowed_origin").(string)
+	if origin == "" {
+		origin = d.Id()
+	}
 	if !containsAllowedOrigin(allowedOrigins, origin) {
 		d.SetId("")
 		return nil

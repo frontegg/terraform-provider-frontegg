@@ -1,9 +1,12 @@
 package provider
 
 import (
+	"context"
+	"os"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 )
 
 // TestEmailTemplateDeserializePrefersPatternFields verifies that reading a
@@ -54,5 +57,31 @@ func TestEmailTemplateDeserializePrefersPatternFields(t *testing.T) {
 				t.Errorf("success_redirect_url = %q, want %q", got, tt.wantSuccessRedirectURL)
 			}
 		})
+	}
+}
+
+func TestAccEmailTemplateImportRead(t *testing.T) {
+	testAccPreCheck(t)
+
+	p := New("test")()
+	cfg := terraform.NewResourceConfigRaw(map[string]interface{}{
+		"client_id":  os.Getenv("FRONTEGG_CLIENT_ID"),
+		"secret_key": os.Getenv("FRONTEGG_SECRET_KEY"),
+	})
+	if diags := p.Configure(context.Background(), cfg); diags.HasError() {
+		t.Fatalf("configure provider: %v", diags)
+	}
+
+	d := schema.TestResourceDataRaw(t, resourceFronteggEmailTemplate().Schema, map[string]interface{}{})
+	d.SetId("ResetPassword")
+
+	if diags := resourceFronteggEmailTemplateRead(context.Background(), d, p.Meta()); diags.HasError() {
+		t.Fatalf("read: %v", diags)
+	}
+	if d.Id() == "" {
+		t.Fatal("read cleared the ID, so import would fail")
+	}
+	if got := d.Get("template_type").(string); got != "ResetPassword" {
+		t.Errorf("template_type = %q, want ResetPassword", got)
 	}
 }

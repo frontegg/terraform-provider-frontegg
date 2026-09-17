@@ -3,6 +3,8 @@ package provider
 import (
 	"sync"
 	"testing"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 )
 
 func TestNormalizeAllowedOrigin(t *testing.T) {
@@ -69,4 +71,34 @@ func TestAllowedOriginMutexSerializesReadModifyWrite(t *testing.T) {
 	if len(shared) != 50 {
 		t.Errorf("len(shared) = %d, want 50 - writes were lost", len(shared))
 	}
+}
+
+const testAccAllowedOrigin = `
+resource "frontegg_allowed_origin" "test" {
+  allowed_origin = "https://tf-acc-origin.example.com"
+}
+`
+
+func TestAccFronteggAllowedOrigin_lifecycle(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		ProviderFactories: testAccProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccAllowedOrigin,
+				Check: resource.TestCheckResourceAttr(
+					"frontegg_allowed_origin.test", "allowed_origin", "https://tf-acc-origin.example.com"),
+			},
+			{
+				Config:   testAccAllowedOrigin,
+				PlanOnly: true,
+			},
+			{
+				ResourceName:      "frontegg_allowed_origin.test",
+				ImportState:       true,
+				ImportStateVerify: true,
+				ImportStateId:     "https://tf-acc-origin.example.com",
+			},
+		},
+	})
 }
