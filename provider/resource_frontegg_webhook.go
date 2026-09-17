@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"regexp"
 
 	"github.com/frontegg/terraform-provider-frontegg/internal/restclient"
@@ -12,6 +13,17 @@ import (
 )
 
 const fronteggWebhookPath = "/webhook"
+
+func fronteggWebhookHeaders(clientHolder *restclient.ClientHolder) (http.Header, error) {
+	if clientHolder.VendorID == "" {
+		return nil, fmt.Errorf(
+			"cannot determine the vendor ID for the frontegg-tenant-id header; " +
+				"set environment_id on the provider")
+	}
+	headers := http.Header{}
+	headers.Add("frontegg-tenant-id", clientHolder.VendorID)
+	return headers, nil
+}
 
 type fronteggWebhook struct {
 	ID          string   `json:"_id,omitempty"`
@@ -146,7 +158,11 @@ func resourceFronteggWebhookCreate(ctx context.Context, d *schema.ResourceData, 
 	clientHolder := meta.(*restclient.ClientHolder)
 	in := resourceFronteggWebhookSerialize(d)
 	var out fronteggWebhook
-	if err := clientHolder.PortalClient.Post(ctx, fronteggWebhookPath+"/custom", in, &out); err != nil {
+	headers, headerErr := fronteggWebhookHeaders(clientHolder)
+	if headerErr != nil {
+		return diag.FromErr(headerErr)
+	}
+	if err := clientHolder.ApiClient.PostWithHeaders(ctx, fronteggWebhookPath+"/custom", headers, in, &out); err != nil {
 		return diag.FromErr(err)
 	}
 	if err := resourceFronteggWebhookDeserialize(d, out); err != nil {
@@ -158,7 +174,11 @@ func resourceFronteggWebhookCreate(ctx context.Context, d *schema.ResourceData, 
 func resourceFronteggWebhookRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	clientHolder := meta.(*restclient.ClientHolder)
 	var out []fronteggWebhook
-	if err := clientHolder.PortalClient.Get(ctx, fronteggWebhookPath, &out); err != nil {
+	headers, headerErr := fronteggWebhookHeaders(clientHolder)
+	if headerErr != nil {
+		return diag.FromErr(headerErr)
+	}
+	if err := clientHolder.ApiClient.GetWithHeaders(ctx, fronteggWebhookPath, headers, &out); err != nil {
 		return diag.FromErr(err)
 	}
 	for _, c := range out {
@@ -169,6 +189,7 @@ func resourceFronteggWebhookRead(ctx context.Context, d *schema.ResourceData, me
 			return diag.Diagnostics{}
 		}
 	}
+	d.SetId("")
 	return nil
 }
 
@@ -176,7 +197,11 @@ func resourceFronteggWebhookUpdate(ctx context.Context, d *schema.ResourceData, 
 	clientHolder := meta.(*restclient.ClientHolder)
 	in := resourceFronteggWebhookSerialize(d)
 	var out fronteggWebhook
-	if err := clientHolder.PortalClient.Patch(ctx, fmt.Sprintf("%s/%s", fronteggWebhookPath, d.Id()), in, &out); err != nil {
+	headers, headerErr := fronteggWebhookHeaders(clientHolder)
+	if headerErr != nil {
+		return diag.FromErr(headerErr)
+	}
+	if err := clientHolder.ApiClient.PatchWithHeaders(ctx, fmt.Sprintf("%s/%s", fronteggWebhookPath, d.Id()), headers, in, &out); err != nil {
 		return diag.FromErr(err)
 	}
 	if err := resourceFronteggWebhookDeserialize(d, out); err != nil {
@@ -188,14 +213,12 @@ func resourceFronteggWebhookUpdate(ctx context.Context, d *schema.ResourceData, 
 func resourceFronteggWebhookDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	clientHolder := meta.(*restclient.ClientHolder)
 
-	// Configure the client to ignore 404 errors
-	clientHolder.PortalClient.Ignore404()
-
-	// Attempt to delete the webhook
-	err := clientHolder.PortalClient.Delete(ctx, fmt.Sprintf("%s/%s", fronteggWebhookPath, d.Id()), nil)
-
-	// Handle errors other than 404
-	if err != nil {
+	headers, headerErr := fronteggWebhookHeaders(clientHolder)
+	if headerErr != nil {
+		return diag.FromErr(headerErr)
+	}
+	err := clientHolder.ApiClient.DeleteWithHeaders(ctx, fmt.Sprintf("%s/%s", fronteggWebhookPath, d.Id()), headers, nil)
+	if err != nil && !restclient.IsNotFound(err) {
 		return diag.FromErr(err)
 	}
 
