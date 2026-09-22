@@ -115,7 +115,7 @@ func socialLoginAdoptionReason(existing fronteggSSO, configuredClientID string) 
 	if existing.Active {
 		return "it is already active"
 	}
-	if existing.ClientID != "" && configuredClientID == "" {
+	if existing.Cusomised && existing.ClientID != "" && configuredClientID == "" {
 		return "it already has credentials, which this configuration does not set and would erase"
 	}
 	return ""

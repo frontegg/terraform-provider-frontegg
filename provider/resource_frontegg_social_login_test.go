@@ -123,6 +123,10 @@ func TestSocialLoginAdoptionReason(t *testing.T) {
 			existing:           fronteggSSO{Active: false, ClientID: "ours", Cusomised: true},
 			configuredClientID: "ours",
 		},
+		{
+			name:     "inactive provider holding only the shared credentials is free to take",
+			existing: fronteggSSO{Active: false, ClientID: "shared", Cusomised: false},
+		},
 	}
 
 	for _, tt := range tests {
