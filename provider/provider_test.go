@@ -41,3 +41,21 @@ func TestValidateResourceSchemas(t *testing.T) {
 		})
 	}
 }
+
+func TestSecretAttributesAreSensitive(t *testing.T) {
+	for name, res := range New("0.0.0")().ResourcesMap {
+		assertSecretsSensitive(t, name, res.Schema)
+	}
+}
+
+func assertSecretsSensitive(t *testing.T, path string, attrs map[string]*schema.Schema) {
+	t.Helper()
+	for key, attr := range attrs {
+		if key == "secret" && !attr.Sensitive {
+			t.Errorf("%s.%s must be Sensitive", path, key)
+		}
+		if nested, ok := attr.Elem.(*schema.Resource); ok {
+			assertSecretsSensitive(t, path+"."+key, nested.Schema)
+		}
+	}
+}

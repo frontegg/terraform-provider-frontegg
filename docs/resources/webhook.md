@@ -33,7 +33,7 @@ resource "frontegg_webhook" "example" {
 - `description` (String) A human-readable description of the webhook.
 - `enabled` (Boolean) Whether the webhook is enabled.
 - `events` (Set of String) The names of the events to subscribe to.
-- `secret` (String) A secret to include with the event.
+- `secret` (String, Sensitive) A secret to include with the event.
 - `url` (String) The URL to send events to.
 
 ### Optional
