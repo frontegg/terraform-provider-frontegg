@@ -52,7 +52,7 @@ resource "frontegg_email_template" "user_activation" {
 - `subject` (String) The subject of the email.
 - `template_type` (String) The type of email template to configure.
 
-Must be one of: "ResetPassword", "ActivateUser", "InviteToTenant", "PwnedPassword", "MagicLink", "OTC", "ConnectNewDevice", "UserUsedInvitation", "ResetPhoneNumber", "BulkInvitesToTenant", "MFAEnroll", "MFAUnenroll", "NewMFAMethod", "MFARecoveryCode", "RemoveMFAMethod", "EmailVerification", "BruteForceProtection", "SuspiciousIP", "MFAOTC", "ImpossibleTravel", "BotDetection", "SmsAuthenticationEnabled".
+Must be one of: "ResetPassword", "ActivateUser", "InviteToTenant", "PwnedPassword", "MagicLink", "OTC", "ConnectNewDevice", "UserUsedInvitation", "ResetPhoneNumber", "BulkInvitesToTenant", "MFAEnroll", "MFAUnenroll", "NewMFAMethod", "MFARecoveryCode", "RemoveMFAMethod", "EmailVerification", "BruteForceProtection", "SuspiciousIP", "MFAOTC", "ImpossibleTravel", "BotDetection", "SmsAuthenticationEnabled", "UnlockUser", "UnlockUserSuccess", "ActivateUserWithCode", "InviteToTenantWithCode", "VerifyNewEmail", "EmailAddressChanged", "ApprovalFlowApprove", "CountryRestriction".
 
 ### Optional
 

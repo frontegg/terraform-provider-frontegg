@@ -48,7 +48,7 @@ Each email template resource manages one specific email template type for the wo
 			"template_type": {
 				Description: `The type of email template to configure.
 
-Must be one of: "ResetPassword", "ActivateUser", "InviteToTenant", "PwnedPassword", "MagicLink", "OTC", "ConnectNewDevice", "UserUsedInvitation", "ResetPhoneNumber", "BulkInvitesToTenant", "MFAEnroll", "MFAUnenroll", "NewMFAMethod", "MFARecoveryCode", "RemoveMFAMethod", "EmailVerification", "BruteForceProtection", "SuspiciousIP", "MFAOTC", "ImpossibleTravel", "BotDetection", "SmsAuthenticationEnabled".`,
+Must be one of: "ResetPassword", "ActivateUser", "InviteToTenant", "PwnedPassword", "MagicLink", "OTC", "ConnectNewDevice", "UserUsedInvitation", "ResetPhoneNumber", "BulkInvitesToTenant", "MFAEnroll", "MFAUnenroll", "NewMFAMethod", "MFARecoveryCode", "RemoveMFAMethod", "EmailVerification", "BruteForceProtection", "SuspiciousIP", "MFAOTC", "ImpossibleTravel", "BotDetection", "SmsAuthenticationEnabled", "UnlockUser", "UnlockUserSuccess", "ActivateUserWithCode", "InviteToTenantWithCode", "VerifyNewEmail", "EmailAddressChanged", "ApprovalFlowApprove", "CountryRestriction".`,
 				Type:     schema.TypeString,
 				Required: true,
 				ForceNew: true,
@@ -58,6 +58,8 @@ Must be one of: "ResetPassword", "ActivateUser", "InviteToTenant", "PwnedPasswor
 					"MFAEnroll", "MFAUnenroll", "NewMFAMethod", "MFARecoveryCode", "RemoveMFAMethod",
 					"EmailVerification", "BruteForceProtection", "SuspiciousIP", "MFAOTC",
 					"ImpossibleTravel", "BotDetection", "SmsAuthenticationEnabled",
+					"UnlockUser", "UnlockUserSuccess", "ActivateUserWithCode", "InviteToTenantWithCode",
+					"VerifyNewEmail", "EmailAddressChanged", "ApprovalFlowApprove", "CountryRestriction",
 				}, false),
 			},
 			"active": {
