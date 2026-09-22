@@ -89,13 +89,17 @@ func resourceFronteggSocialLoginDeserialize(d *schema.ResourceData, f fronteggSS
 	if err := d.Set("provider_name", providerName); err != nil {
 		return err
 	}
-	if err := d.Set("client_id", f.ClientID); err != nil {
+	clientID, secret := f.ClientID, f.Secret
+	if !f.Cusomised {
+		clientID, secret = "", ""
+	}
+	if err := d.Set("client_id", clientID); err != nil {
 		return err
 	}
 	if err := d.Set("redirect_url", f.RedirectURL); err != nil {
 		return err
 	}
-	if err := d.Set("secret", f.Secret); err != nil {
+	if err := d.Set("secret", secret); err != nil {
 		return err
 	}
 	if err := d.Set("customised", f.Cusomised); err != nil {
@@ -107,13 +111,53 @@ func resourceFronteggSocialLoginDeserialize(d *schema.ResourceData, f fronteggSS
 	return nil
 }
 
+func socialLoginAdoptionReason(existing fronteggSSO, configuredClientID string) string {
+	if existing.Active {
+		return "it is already active"
+	}
+	if existing.Cusomised && existing.ClientID != "" && configuredClientID == "" {
+		return "it already has credentials, which this configuration does not set and would erase"
+	}
+	return ""
+}
+
 func resourceFronteggSocialLoginCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	return resourceFronteggSocialLoginUpdate(ctx, d, meta)
+	clientHolder := meta.(*restclient.ClientHolder)
+	providerName := d.Get("provider_name").(string)
+
+	var existing fronteggSSO
+	err := clientHolder.ApiClient.Get(ctx, fmt.Sprintf("%s/%s", fronteggSSOURL, providerName), &existing)
+	switch {
+	case restclient.IsNotFound(err):
+	case err != nil:
+		return diag.FromErr(err)
+	default:
+		if reason := socialLoginAdoptionReason(existing, d.Get("client_id").(string)); reason != "" {
+			return diag.Errorf(
+				"social login provider %q cannot be created because %s.\n\n"+
+					"Terraform will not take over a provider configuration it did not create, "+
+					"because applying over one overwrites its settings and can erase credentials "+
+					"that cannot be recovered. To manage the existing configuration, import it:\n\n"+
+					"    terraform import <resource address> %s\n\n"+
+					"Otherwise remove the provider configuration in Frontegg first.",
+				providerName, reason, providerName,
+			)
+		}
+	}
+
+	if diags := resourceFronteggSocialLoginWrite(ctx, d, meta); diags.HasError() {
+		return diags
+	}
+	d.SetId(providerName)
+	return resourceFronteggSocialLoginRead(ctx, d, meta)
 }
 
 func resourceFronteggSocialLoginRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	clientHolder := meta.(*restclient.ClientHolder)
 	providerName := d.Get("provider_name").(string)
+	if providerName == "" {
+		providerName = d.Id()
+	}
 
 	var out fronteggSSO
 	clientHolder.ApiClient.Ignore404()
@@ -133,7 +177,7 @@ func resourceFronteggSocialLoginRead(ctx context.Context, d *schema.ResourceData
 	return nil
 }
 
-func resourceFronteggSocialLoginUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceFronteggSocialLoginWrite(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	clientHolder := meta.(*restclient.ClientHolder)
 	providerName := d.Get("provider_name").(string)
 
@@ -146,7 +190,13 @@ func resourceFronteggSocialLoginUpdate(ctx context.Context, d *schema.ResourceDa
 	if err := clientHolder.ApiClient.Post(ctx, fmt.Sprintf("%s/%s/activate", fronteggSSOURL, providerName), nil, nil); err != nil {
 		return diag.FromErr(err)
 	}
+	return nil
+}
 
+func resourceFronteggSocialLoginUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	if diags := resourceFronteggSocialLoginWrite(ctx, d, meta); diags.HasError() {
+		return diags
+	}
 	return resourceFronteggSocialLoginRead(ctx, d, meta)
 }
 
