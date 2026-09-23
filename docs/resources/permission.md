@@ -28,6 +28,12 @@ data "frontegg_permission" "read_users" {
 - `key` (String) A human-readable identifier for the permission.
 - `name` (String) A human-readable name for the permission.
 
+### Optional
+
+- `assignment_type` (String) How the permission is assigned to roles, shown in the Frontegg portal as the classification type.
+
+Must be one of: "ASSIGNABLE", "NEVER", "ALWAYS". Defaults to "ASSIGNABLE" when unset.
+
 ### Read-Only
 
 - `created_at` (String) The timestamp at which the permission was created.
