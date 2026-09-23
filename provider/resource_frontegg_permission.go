@@ -8,17 +8,19 @@ import (
 	"github.com/frontegg/terraform-provider-frontegg/internal/restclient"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 )
 
 const fronteggPermissionPath = "/identity/resources/permissions/v1"
 
 type fronteggPermission struct {
-	ID          string `json:"id,omitempty"`
-	CategoryID  string `json:"categoryId,omitempty"`
-	Name        string `json:"name,omitempty"`
-	Key         string `json:"key,omitempty"`
-	Description string `json:"description,omitempty"`
-	CreatedAt   string `json:"createdAt,omitempty"`
+	ID             string `json:"id,omitempty"`
+	CategoryID     string `json:"categoryId,omitempty"`
+	Name           string `json:"name,omitempty"`
+	Key            string `json:"key,omitempty"`
+	Description    string `json:"description,omitempty"`
+	CreatedAt      string `json:"createdAt,omitempty"`
+	AssignmentType string `json:"assignmentType,omitempty"`
 }
 
 func resourceFronteggPermission() *schema.Resource {
@@ -54,6 +56,15 @@ func resourceFronteggPermission() *schema.Resource {
 				Type:        schema.TypeString,
 				Required:    true,
 			},
+			"assignment_type": {
+				Description: `How the permission is assigned to roles, shown in the Frontegg portal as the classification type.
+
+Must be one of: "ASSIGNABLE", "NEVER", "ALWAYS". Defaults to "ASSIGNABLE" when unset.`,
+				Type:         schema.TypeString,
+				Optional:     true,
+				Computed:     true,
+				ValidateFunc: validation.StringInSlice([]string{"ASSIGNABLE", "NEVER", "ALWAYS"}, false),
+			},
 			"created_at": {
 				Description: "The timestamp at which the permission was created.",
 				Type:        schema.TypeString,
@@ -65,10 +76,11 @@ func resourceFronteggPermission() *schema.Resource {
 
 func resourceFronteggPermissionSerialize(d *schema.ResourceData) fronteggPermission {
 	return fronteggPermission{
-		Name:        d.Get("name").(string),
-		Key:         d.Get("key").(string),
-		CategoryID:  d.Get("category_id").(string),
-		Description: d.Get("description").(string),
+		Name:           d.Get("name").(string),
+		Key:            d.Get("key").(string),
+		CategoryID:     d.Get("category_id").(string),
+		Description:    d.Get("description").(string),
+		AssignmentType: d.Get("assignment_type").(string),
 	}
 }
 
@@ -88,6 +100,11 @@ func resourceFronteggPermissionDeserialize(d *schema.ResourceData, f fronteggPer
 	}
 	if err := d.Set("created_at", f.CreatedAt); err != nil {
 		return err
+	}
+	if f.AssignmentType != "" {
+		if err := d.Set("assignment_type", f.AssignmentType); err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -131,7 +148,7 @@ func resourceFronteggPermissionCreate(ctx context.Context, d *schema.ResourceDat
 	if err := resourceFronteggPermissionDeserialize(d, out[0]); err != nil {
 		return diag.FromErr(err)
 	}
-	return nil
+	return resourceFronteggPermissionRead(ctx, d, meta)
 }
 
 func resourceFronteggPermissionRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {

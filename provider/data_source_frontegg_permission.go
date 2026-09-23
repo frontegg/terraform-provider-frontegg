@@ -12,7 +12,9 @@ func dataSourceFronteggPermission() *schema.Resource {
 	s := resourceFronteggPermission().Schema
 	for _, field := range s {
 		field.Required = false
+		field.Optional = false
 		field.Computed = true
+		field.ValidateFunc = nil
 	}
 	s["key"].Computed = false
 	s["key"].Required = true
