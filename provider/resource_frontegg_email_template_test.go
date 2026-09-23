@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -83,5 +84,28 @@ func TestAccEmailTemplateImportRead(t *testing.T) {
 	}
 	if got := d.Get("template_type").(string); got != "ResetPassword" {
 		t.Errorf("template_type = %q, want ResetPassword", got)
+	}
+}
+
+func TestEmailTemplateAcceptsDashboardTypes(t *testing.T) {
+	templateType := resourceFronteggEmailTemplate().Schema["template_type"]
+	for _, name := range []string{
+		"UnlockUser",
+		"UnlockUserSuccess",
+		"ActivateUserWithCode",
+		"InviteToTenantWithCode",
+		"VerifyNewEmail",
+		"EmailAddressChanged",
+		"ApprovalFlowApprove",
+		"CountryRestriction",
+	} {
+		t.Run(name, func(t *testing.T) {
+			if _, errs := templateType.ValidateFunc(name, "template_type"); len(errs) > 0 {
+				t.Errorf("template_type %q rejected: %v", name, errs)
+			}
+			if !strings.Contains(templateType.Description, `"`+name+`"`) {
+				t.Errorf("template_type description does not list %q", name)
+			}
+		})
 	}
 }
