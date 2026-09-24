@@ -31,9 +31,7 @@ output "permission_id" {
 
 ### Read-Only
 
-- `assignment_type` (String) How the permission is assigned to roles, shown in the Frontegg portal as the classification type.
-
-Must be one of: "ASSIGNABLE", "NEVER", "ALWAYS". Defaults to "ASSIGNABLE" when unset.
+- `assignment_type` (String) How the permission is assigned to roles, shown in the Frontegg portal as the classification type: "ASSIGNABLE", "NEVER" or "ALWAYS".
 - `category_id` (String) The identifier of the category to which this permission belongs.
 - `created_at` (String) The timestamp at which the permission was created.
 - `description` (String) A human-readable description of the permission.

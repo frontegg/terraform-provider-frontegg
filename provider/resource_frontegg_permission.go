@@ -59,7 +59,7 @@ func resourceFronteggPermission() *schema.Resource {
 			"assignment_type": {
 				Description: `How the permission is assigned to roles, shown in the Frontegg portal as the classification type.
 
-Must be one of: "ASSIGNABLE", "NEVER", "ALWAYS". Defaults to "ASSIGNABLE" when unset.`,
+Must be one of: "ASSIGNABLE", "NEVER", "ALWAYS". When unset, Frontegg uses "ASSIGNABLE" for a new permission. Removing the attribute from the configuration keeps the current value; set "ASSIGNABLE" explicitly to reset it.`,
 				Type:         schema.TypeString,
 				Optional:     true,
 				Computed:     true,
@@ -75,13 +75,16 @@ Must be one of: "ASSIGNABLE", "NEVER", "ALWAYS". Defaults to "ASSIGNABLE" when u
 }
 
 func resourceFronteggPermissionSerialize(d *schema.ResourceData) fronteggPermission {
-	return fronteggPermission{
-		Name:           d.Get("name").(string),
-		Key:            d.Get("key").(string),
-		CategoryID:     d.Get("category_id").(string),
-		Description:    d.Get("description").(string),
-		AssignmentType: d.Get("assignment_type").(string),
+	permission := fronteggPermission{
+		Name:        d.Get("name").(string),
+		Key:         d.Get("key").(string),
+		CategoryID:  d.Get("category_id").(string),
+		Description: d.Get("description").(string),
 	}
+	if d.HasChange("assignment_type") {
+		permission.AssignmentType = d.Get("assignment_type").(string)
+	}
+	return permission
 }
 
 func resourceFronteggPermissionDeserialize(d *schema.ResourceData, f fronteggPermission) error {
@@ -101,10 +104,8 @@ func resourceFronteggPermissionDeserialize(d *schema.ResourceData, f fronteggPer
 	if err := d.Set("created_at", f.CreatedAt); err != nil {
 		return err
 	}
-	if f.AssignmentType != "" {
-		if err := d.Set("assignment_type", f.AssignmentType); err != nil {
-			return err
-		}
+	if err := d.Set("assignment_type", f.AssignmentType); err != nil {
+		return err
 	}
 	return nil
 }
@@ -145,10 +146,36 @@ func resourceFronteggPermissionCreate(ctx context.Context, d *schema.ResourceDat
 	if len(out) != 1 {
 		return diag.Errorf("server returned unexpected number of results when creating permission: %d", len(out))
 	}
-	if err := resourceFronteggPermissionDeserialize(d, out[0]); err != nil {
-		return diag.FromErr(err)
+	created := out[0]
+	d.SetId(created.ID)
+
+	var diags diag.Diagnostics
+	if created.AssignmentType == "" {
+		created.AssignmentType = d.Get("assignment_type").(string)
 	}
-	return resourceFronteggPermissionRead(ctx, d, meta)
+	if created.AssignmentType == "" {
+		var permissions []fronteggPermission
+		if err := clientHolder.ApiClient.Get(ctx, fronteggPermissionPath, &permissions); err != nil {
+			return diag.FromErr(err)
+		}
+		for _, permission := range permissions {
+			if permission.ID == created.ID {
+				created.AssignmentType = permission.AssignmentType
+				break
+			}
+		}
+		if created.AssignmentType == "" {
+			diags = append(diags, diag.Diagnostic{
+				Severity: diag.Warning,
+				Summary:  "Permission created, but its assignment type could not be read yet",
+				Detail:   fmt.Sprintf("Permission %q was created but is not in the permissions list yet. Its assignment_type will be filled in on the next refresh.", created.ID),
+			})
+		}
+	}
+	if err := resourceFronteggPermissionDeserialize(d, created); err != nil {
+		return append(diags, diag.FromErr(err)...)
+	}
+	return diags
 }
 
 func resourceFronteggPermissionRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
