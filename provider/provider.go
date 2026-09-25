@@ -2,6 +2,8 @@ package provider
 
 import (
 	"context"
+	"fmt"
+	"time"
 
 	"github.com/frontegg/terraform-provider-frontegg/internal/restclient"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -104,29 +106,40 @@ func New(version string) func() *schema.Provider {
 			ConfigureContextFunc: func(ctx context.Context, d *schema.ResourceData) (interface{}, diag.Diagnostics) {
 				environmentId := d.Get("environment_id").(string)
 				applicationId := d.Get("application_id").(string)
-				apiClient := restclient.MakeRestClient(d.Get("api_base_url").(string), environmentId, applicationId)
+				apiBaseURL := d.Get("api_base_url").(string)
+				apiClient := restclient.MakeRestClient(apiBaseURL, environmentId, applicationId)
 				portalClient := restclient.MakeRestClient(d.Get("portal_base_url").(string), environmentId, applicationId)
+				authClient := restclient.MakeRestClient(apiBaseURL, environmentId, applicationId)
 				vendorId := environmentId
-				{
-					in := struct {
-						ClientId  string `json:"clientId"`
-						SecretKey string `json:"secret"`
-					}{
-						ClientId:  d.Get("client_id").(string),
-						SecretKey: d.Get("secret_key").(string),
-					}
+				in := struct {
+					ClientId  string `json:"clientId"`
+					SecretKey string `json:"secret"`
+				}{
+					ClientId:  d.Get("client_id").(string),
+					SecretKey: d.Get("secret_key").(string),
+				}
+				tokenSource := restclient.NewTokenSource(func(ctx context.Context) (string, time.Duration, error) {
 					var out struct {
-						AccessToken string `json:"token"`
+						AccessToken string  `json:"token"`
+						ExpiresIn   float64 `json:"expiresIn"`
 					}
-					err := apiClient.Post(ctx, "/auth/vendor", in, &out)
+					err := authClient.Post(ctx, "/auth/vendor", in, &out)
 					if err != nil {
-						return nil, diag.Errorf("unable to authenticate with frontegg: %s", err)
+						return "", 0, err
 					}
-					portalClient.Authenticate(out.AccessToken)
-					apiClient.Authenticate(out.AccessToken)
-					if id, err := vendorIDFromToken(out.AccessToken); err == nil && id != "" {
-						vendorId = id
+					if out.ExpiresIn < 0 {
+						return "", 0, fmt.Errorf("vendor authentication returned a negative token lifetime")
 					}
+					return out.AccessToken, time.Duration(out.ExpiresIn * float64(time.Second)), nil
+				})
+				initialToken, err := tokenSource.Token(ctx)
+				if err != nil {
+					return nil, diag.Errorf("unable to authenticate with frontegg: %s", err)
+				}
+				apiClient.UseTokenSource(tokenSource)
+				portalClient.UseTokenSource(tokenSource)
+				if id, err := vendorIDFromToken(initialToken); err == nil && id != "" {
+					vendorId = id
 				}
 				return &restclient.ClientHolder{
 					ApiClient:    apiClient,
