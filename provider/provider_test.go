@@ -1,9 +1,15 @@
 package provider
 
 import (
+	"context"
+	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"testing"
+	"time"
 
+	"github.com/frontegg/terraform-provider-frontegg/internal/restclient"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
@@ -85,5 +91,51 @@ func TestBaseURLsFallBackToEU(t *testing.T) {
 	}
 	if got := d.Get("portal_base_url"); got != "https://frontegg-prod.frontegg.com" {
 		t.Errorf("portal_base_url = %q, want https://frontegg-prod.frontegg.com", got)
+	}
+}
+
+func TestProviderRefreshesTokenForBothClients(t *testing.T) {
+	var issued int
+	api := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/auth/vendor" {
+			issued++
+			_, _ = fmt.Fprintf(w, `{"token":"token-%d","expiresIn":0.001}`, issued)
+			return
+		}
+		if got := r.Header.Get("Authorization"); got != "Bearer token-2" {
+			t.Errorf("API Authorization = %q, want refreshed token", got)
+		}
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer api.Close()
+	portal := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if got := r.Header.Get("Authorization"); got != "Bearer token-2" {
+			t.Errorf("portal Authorization = %q, want refreshed token", got)
+		}
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer portal.Close()
+
+	provider := New("test")()
+	d := schema.TestResourceDataRaw(t, provider.Schema, map[string]interface{}{
+		"api_base_url": api.URL, "portal_base_url": portal.URL,
+		"client_id": "client", "secret_key": "secret",
+	})
+	meta, diags := provider.ConfigureContextFunc(context.Background(), d)
+	if diags.HasError() {
+		t.Fatalf("ConfigureContextFunc: %v", diags)
+	}
+	// The auth response's short lifetime should expire before these calls.
+	// Both clients must then use the same refreshed token.
+	<-time.After(5 * time.Millisecond)
+	holder := meta.(*restclient.ClientHolder)
+	if err := holder.ApiClient.Get(context.Background(), "/api", nil); err != nil {
+		t.Fatal(err)
+	}
+	if err := holder.PortalClient.Get(context.Background(), "/portal", nil); err != nil {
+		t.Fatal(err)
+	}
+	if issued != 2 {
+		t.Fatalf("vendor tokens issued = %d, want 2", issued)
 	}
 }

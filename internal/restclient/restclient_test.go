@@ -21,6 +21,137 @@ func newTestClient(baseURL string) Client {
 	return c
 }
 
+func TestSharedTokenSourceRefreshesBeforeExpiry(t *testing.T) {
+	var issued int
+	source := NewTokenSource(func(context.Context) (string, time.Duration, error) {
+		issued++
+		return fmt.Sprintf("token-%d", issued), 5 * time.Minute, nil
+	})
+
+	var received []string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		received = append(received, r.Header.Get("Authorization"))
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer srv.Close()
+
+	apiClient := MakeRestClient(srv.URL, "", "")
+	portalClient := MakeRestClient(srv.URL, "", "")
+	apiClient.UseTokenSource(source)
+	portalClient.UseTokenSource(source)
+	if err := apiClient.Get(context.Background(), "/api", nil); err != nil {
+		t.Fatal(err)
+	}
+	if err := portalClient.Get(context.Background(), "/portal", nil); err != nil {
+		t.Fatal(err)
+	}
+
+	// Simulate a long-running apply without waiting for the real token lifetime.
+	source.mu.Lock()
+	source.refreshAt = time.Now().Add(-time.Second)
+	source.mu.Unlock()
+	if err := portalClient.Get(context.Background(), "/portal", nil); err != nil {
+		t.Fatal(err)
+	}
+	if err := apiClient.Get(context.Background(), "/api", nil); err != nil {
+		t.Fatal(err)
+	}
+
+	if issued != 2 {
+		t.Fatalf("vendor tokens issued = %d, want 2", issued)
+	}
+	want := []string{"Bearer token-1", "Bearer token-1", "Bearer token-2", "Bearer token-2"}
+	if len(received) != len(want) {
+		t.Fatalf("Authorization headers = %v, want %v", received, want)
+	}
+	for i := range want {
+		if received[i] != want[i] {
+			t.Fatalf("Authorization header %d = %q, want %q", i, received[i], want[i])
+		}
+	}
+}
+
+func TestUnauthorizedRefreshesAndReplaysBodyOnce(t *testing.T) {
+	var issued, calls int
+	source := NewTokenSource(func(context.Context) (string, time.Duration, error) {
+		issued++
+		return fmt.Sprintf("token-%d", issued), 0, nil
+	})
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		calls++
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			t.Errorf("read body: %v", err)
+		}
+		if r.Method != http.MethodPatch || string(body) != `{"name":"widget"}` {
+			t.Errorf("request %d = %s %q", calls, r.Method, body)
+		}
+		if r.Header.Get("Authorization") == "Bearer token-1" {
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+		if r.Header.Get("Authorization") != "Bearer token-2" {
+			t.Errorf("unexpected Authorization header: %q", r.Header.Get("Authorization"))
+		}
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer srv.Close()
+
+	c := MakeRestClient(srv.URL, "", "")
+	c.UseTokenSource(source)
+	if err := c.Patch(context.Background(), "/thing", map[string]string{"name": "widget"}, nil); err != nil {
+		t.Fatal(err)
+	}
+	if issued != 2 || calls != 2 {
+		t.Fatalf("issued %d tokens for %d requests, want 2 each", issued, calls)
+	}
+}
+
+func TestUnauthorizedRetryIsBounded(t *testing.T) {
+	var issued, calls int
+	source := NewTokenSource(func(context.Context) (string, time.Duration, error) {
+		issued++
+		return fmt.Sprintf("token-%d", issued), 0, nil
+	})
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		calls++
+		w.WriteHeader(http.StatusUnauthorized)
+	}))
+	defer srv.Close()
+
+	c := MakeRestClient(srv.URL, "", "")
+	c.UseTokenSource(source)
+	err := c.Get(context.Background(), "/thing", nil)
+	if err == nil || !strings.Contains(err.Error(), "401 Unauthorized") {
+		t.Fatalf("expected 401 after one refresh, got %v", err)
+	}
+	if issued != 2 || calls != 2 {
+		t.Fatalf("issued %d tokens for %d requests, want 2 each", issued, calls)
+	}
+}
+
+func TestConcurrentRequestsShareRefresh(t *testing.T) {
+	var issued atomic.Int32
+	source := NewTokenSource(func(context.Context) (string, time.Duration, error) {
+		issued.Add(1)
+		return "shared-token", time.Hour, nil
+	})
+	var wg sync.WaitGroup
+	for range 20 {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			if token, err := source.Token(context.Background()); err != nil || token != "shared-token" {
+				t.Errorf("Token() = %q, %v", token, err)
+			}
+		}()
+	}
+	wg.Wait()
+	if got := issued.Load(); got != 1 {
+		t.Fatalf("issued %d tokens, want 1", got)
+	}
+}
+
 func TestParseRateLimitReset(t *testing.T) {
 	now := time.Date(2026, 6, 7, 12, 0, 0, 0, time.UTC)
 	tests := []struct {
