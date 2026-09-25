@@ -22,6 +22,9 @@ func NewTokenSource(refresh func(context.Context) (string, time.Duration, error)
 }
 
 func (s *TokenSource) Token(ctx context.Context) (string, error) {
+	// The lock is held across the refresh on purpose: concurrent callers wait
+	// for one vendor authentication instead of each starting their own. A
+	// rate-limited refresh therefore blocks every request until it completes.
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
