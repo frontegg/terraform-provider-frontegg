@@ -14,6 +14,7 @@ import (
 
 type Client struct {
 	token               string
+	tokenSource         *TokenSource
 	client              http.Client
 	baseURL             string
 	conflictRetryMethod string
@@ -35,6 +36,12 @@ func MakeRestClient(baseURL string, environmentId string, applicationId string) 
 
 func (c *Client) Authenticate(token string) {
 	c.token = token
+	c.tokenSource = nil
+}
+
+func (c *Client) UseTokenSource(source *TokenSource) {
+	c.token = ""
+	c.tokenSource = source
 }
 
 func (c *Client) ConflictRetryMethod(method string) {
@@ -117,8 +124,15 @@ func (c *Client) buildRequest(ctx context.Context, method string, url string, he
 		}
 	}
 	req.Header.Set("Content-Type", "application/json")
-	if c.token != "" {
-		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", c.token))
+	token := c.token
+	if c.tokenSource != nil {
+		token, err = c.tokenSource.Token(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("restclient: failed to authenticate: %w", err)
+		}
+	}
+	if token != "" {
+		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
 	}
 	if c.environmentId != "" {
 		req.Header.Set("frontegg-environment-id", c.environmentId)
@@ -152,6 +166,7 @@ func (c *Client) RequestWithHeaders(ctx context.Context, method string, url stri
 	var (
 		attempts  int
 		totalWait time.Duration
+		authRetry bool
 	)
 	for {
 		// Pre-send wait: if this route is known to be rate-limited, wait until
@@ -199,6 +214,10 @@ func (c *Client) RequestWithHeaders(ctx context.Context, method string, url stri
 		switch {
 		case res.StatusCode == 404 && ignore404:
 			return nil
+		case res.StatusCode == http.StatusUnauthorized && c.tokenSource != nil && !authRetry:
+			c.tokenSource.Invalidate(strings.TrimPrefix(req.Header.Get("Authorization"), "Bearer "))
+			authRetry = true
+			continue
 		case res.StatusCode == 409 && conflictRetryMethod != "":
 			// Preserve existing behavior exactly: recurse with the swapped method.
 			return c.RequestWithHeaders(ctx, conflictRetryMethod, url, headers, in, out)
