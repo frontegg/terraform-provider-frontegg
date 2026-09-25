@@ -110,6 +110,7 @@ func New(version string) func() *schema.Provider {
 				apiClient := restclient.MakeRestClient(apiBaseURL, environmentId, applicationId)
 				portalClient := restclient.MakeRestClient(d.Get("portal_base_url").(string), environmentId, applicationId)
 				authClient := restclient.MakeRestClient(apiBaseURL, environmentId, applicationId)
+				authClient.RedactResponses()
 				vendorId := environmentId
 				in := struct {
 					ClientId  string `json:"clientId"`

@@ -99,7 +99,13 @@ func TestProviderRefreshesTokenForBothClients(t *testing.T) {
 	api := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/auth/vendor" {
 			issued++
-			_, _ = fmt.Fprintf(w, `{"token":"token-%d","expiresIn":0.001}`, issued)
+			// Only the first token expires quickly, so the refreshed token
+			// cannot also expire between the API and portal requests.
+			expiresIn := 3600.0
+			if issued == 1 {
+				expiresIn = 0.001
+			}
+			_, _ = fmt.Fprintf(w, `{"token":"token-%d","expiresIn":%g}`, issued, expiresIn)
 			return
 		}
 		if got := r.Header.Get("Authorization"); got != "Bearer token-2" {
@@ -125,7 +131,7 @@ func TestProviderRefreshesTokenForBothClients(t *testing.T) {
 	if diags.HasError() {
 		t.Fatalf("ConfigureContextFunc: %v", diags)
 	}
-	// The auth response's short lifetime should expire before these calls.
+	// The first token's short lifetime should expire before these calls.
 	// Both clients must then use the same refreshed token.
 	<-time.After(5 * time.Millisecond)
 	holder := meta.(*restclient.ClientHolder)

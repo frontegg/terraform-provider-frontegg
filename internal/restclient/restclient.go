@@ -21,6 +21,7 @@ type Client struct {
 	ignore404           bool
 	environmentId       string
 	applicationId       string
+	redactResponses     bool
 	rl                  *rateLimiter
 }
 
@@ -42,6 +43,12 @@ func (c *Client) Authenticate(token string) {
 func (c *Client) UseTokenSource(source *TokenSource) {
 	c.token = ""
 	c.tokenSource = source
+}
+
+// RedactResponses keeps response bodies out of logs and errors, for clients
+// whose responses carry credentials.
+func (c *Client) RedactResponses() {
+	c.redactResponses = true
 }
 
 func (c *Client) ConflictRetryMethod(method string) {
@@ -246,19 +253,23 @@ func (c *Client) RequestWithHeaders(ctx context.Context, method string, url stri
 			continue
 		case res.StatusCode < 200 || res.StatusCode >= 300:
 			log.Printf("[TRACE] Response headers for failed request: %v", res.Header)
+			status := res.Status
+			if res.StatusCode == http.StatusUnauthorized && authRetry {
+				status += " (after refreshing the vendor token)"
+			}
 			return fmt.Errorf(
 				"restclient: request failed: %s %s: %s%s: %s",
-				req.Method, req.URL, res.Status, traceSuffix(res.Header), resBody,
+				req.Method, req.URL, status, traceSuffix(res.Header), resBody,
 			)
 		}
 
-		if url != "/auth/vendor" {
+		if !c.redactResponses {
 			log.Printf("[TRACE] Received response data %q", string(resBody))
 		}
 		if out != nil {
 			if err := json.Unmarshal(resBody, out); err != nil {
-				if url == "/auth/vendor" {
-					return fmt.Errorf("restclient: failed to decode vendor authentication response: %w", err)
+				if c.redactResponses {
+					return fmt.Errorf("restclient: failed to decode response: %s %s: %w", req.Method, req.URL, err)
 				}
 				return fmt.Errorf("restclient: failed to decode JSON response %#v: %w", string(resBody), err)
 			}
