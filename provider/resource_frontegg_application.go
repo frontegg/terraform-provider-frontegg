@@ -70,7 +70,7 @@ func resourceFronteggApplication() *schema.Resource {
 				Optional:    true,
 			},
 			"access_type": {
-				Description: "The access type of the application.",
+				Description: "The access type of the application. `FREE_ACCESS` makes the application visible to every tenant automatically, with no assignment needed. `MANAGED_ACCESS` requires tenants and users to be assigned explicitly, e.g. via `frontegg_application_tenant_assignment`. Defaults to `FREE_ACCESS` when omitted.",
 				Type:        schema.TypeString,
 				Optional:    true,
 				ValidateFunc: validation.StringInSlice([]string{

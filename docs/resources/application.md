@@ -43,7 +43,7 @@ resource "frontegg_application" "example" {
 
 ### Optional
 
-- `access_type` (String) The access type of the application.
+- `access_type` (String) The access type of the application. `FREE_ACCESS` makes the application visible to every tenant automatically, with no assignment needed. `MANAGED_ACCESS` requires tenants and users to be assigned explicitly, e.g. via `frontegg_application_tenant_assignment`. Defaults to `FREE_ACCESS` when omitted.
 - `allow_dcr` (Boolean) Whether to allow OAuth dynamic client registration (DCR), letting third-party applications and AI agents self-register clients.
 - `description` (String) A description of the application.
 - `frontend_stack` (String) The frontend stack used by the application.
