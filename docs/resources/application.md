@@ -18,6 +18,9 @@ resource "frontegg_application" "example" {
   app_url        = "https://app.example.com"
   login_url      = "https://app.example.com/login"
   logo_url       = "https://app.example.com/logo.png"
+  # FREE_ACCESS (the default when omitted) assigns the application to every tenant
+  # automatically. Use MANAGED_ACCESS to assign tenants explicitly instead, e.g. via
+  # frontegg_application_tenant_assignment.
   access_type    = "FREE_ACCESS"
   is_default     = false
   is_active      = true
@@ -43,7 +46,7 @@ resource "frontegg_application" "example" {
 
 ### Optional
 
-- `access_type` (String) The access type of the application.
+- `access_type` (String) The access type of the application. `FREE_ACCESS` makes the application visible to every tenant automatically, with no assignment needed. `MANAGED_ACCESS` requires tenants to be assigned explicitly, e.g. via `frontegg_application_tenant_assignment`. Defaults to `FREE_ACCESS` when omitted.
 - `allow_dcr` (Boolean) Whether to allow OAuth dynamic client registration (DCR), letting third-party applications and AI agents self-register clients.
 - `description` (String) A description of the application.
 - `frontend_stack` (String) The frontend stack used by the application.
