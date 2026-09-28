@@ -230,6 +230,69 @@ func TestResourceFronteggJWTTemplateValidateClaimsAttributes(t *testing.T) {
 	}
 }
 
+func TestResourceFronteggJWTTemplateSerialize(t *testing.T) {
+	d := schema.TestResourceDataRaw(t, resourceFronteggJWTTemplate().Schema, map[string]interface{}{
+		"key":         "enterprise-template",
+		"name":        "Enterprise",
+		"description": "An enterprise template",
+		"expiration":  3600,
+		"algorithm":   "RS256",
+		"claims": map[string]interface{}{
+			"sub":   "{{sub}}",
+			"email": "{{user.email}}",
+		},
+	})
+
+	got, err := resourceFronteggJWTTemplateSerialize(d)
+	if err != nil {
+		t.Fatalf("serialize: %v", err)
+	}
+	if got.Key != "enterprise-template" || got.Name != "Enterprise" || got.Description != "An enterprise template" {
+		t.Errorf("unexpected scalar fields: %+v", got)
+	}
+	if got.Expiration != 3600 {
+		t.Errorf("expiration = %d, want 3600", got.Expiration)
+	}
+	if got.Algorithm != "RS256" {
+		t.Errorf("algorithm = %q, want RS256", got.Algorithm)
+	}
+	if got.TemplateSchema.Claims["sub"] != "{{sub}}" || got.TemplateSchema.Claims["email"] != "{{user.email}}" {
+		t.Errorf("claims not carried into templateSchema: %+v", got.TemplateSchema.Claims)
+	}
+}
+
+func TestResourceFronteggJWTTemplateSerializeClaimsJSON(t *testing.T) {
+	d := schema.TestResourceDataRaw(t, resourceFronteggJWTTemplate().Schema, map[string]interface{}{
+		"key":         "k",
+		"name":        "n",
+		"expiration":  3600,
+		"algorithm":   "RS256",
+		"claims_json": `{"sub":"{{sub}}","accountNumber":42,"org":{"id":"{{user.tenantId}}","roles":["admin"]}}`,
+	})
+
+	got, err := resourceFronteggJWTTemplateSerialize(d)
+	if err != nil {
+		t.Fatalf("serialize: %v", err)
+	}
+	want := map[string]interface{}{
+		"sub":           "{{sub}}",
+		"accountNumber": float64(42),
+		"org":           map[string]interface{}{"id": "{{user.tenantId}}", "roles": []interface{}{"admin"}},
+	}
+	if !reflect.DeepEqual(got.TemplateSchema.Claims, want) {
+		t.Errorf("claims = %+v, want %+v", got.TemplateSchema.Claims, want)
+	}
+}
+
+func TestResourceFronteggJWTTemplateSerializeRejectsNullClaimsJSON(t *testing.T) {
+	d := schema.TestResourceDataRaw(t, resourceFronteggJWTTemplate().Schema, jwtTemplateConfig(map[string]interface{}{
+		"claims_json": "null",
+	}))
+	if _, err := resourceFronteggJWTTemplateSerialize(d); err == nil || !strings.Contains(err.Error(), "not null") {
+		t.Errorf("serialize error = %v, want a null claims_json error", err)
+	}
+}
+
 func jwtTemplateUpdateData(t *testing.T, stateAttributes map[string]string, config map[string]interface{}) *schema.ResourceData {
 	jwtTemplateResource := resourceFronteggJWTTemplate()
 	attributes := map[string]string{"id": "tpl-1", "key": "k", "name": "n", "expiration": "3600", "algorithm": "RS256"}
@@ -249,7 +312,7 @@ func jwtTemplateUpdateData(t *testing.T, stateAttributes map[string]string, conf
 }
 
 func TestResourceFronteggJWTTemplateUpdateSwitchesClaimsAttribute(t *testing.T) {
-	stringClaims := `{"aud":"{{clientId}}","exp":"{{exp}}","iat":"{{iat}}","iss":"{{iss}}","sub":"{{sub}}"}`
+	claimsJSON := `{"aud":"{{clientId}}","exp":"{{exp}}","iat":"{{iat}}","iss":"{{iss}}","sub":"{{sub}}"}`
 	claimsMap := map[string]interface{}{"aud": "{{clientId}}", "exp": "{{exp}}", "iat": "{{iat}}", "iss": "{{iss}}", "sub": "{{sub}}"}
 	claimsMapState := map[string]string{"claims.%": "5"}
 	for claim, value := range claimsMap {
@@ -258,7 +321,7 @@ func TestResourceFronteggJWTTemplateUpdateSwitchesClaimsAttribute(t *testing.T) 
 	response := fronteggJWTTemplate{ID: "tpl-1", TemplateSchema: fronteggJWTTemplateSchema{Claims: claimsMap}}
 
 	t.Run("claims to claims_json", func(t *testing.T) {
-		d := jwtTemplateUpdateData(t, claimsMapState, map[string]interface{}{"claims_json": stringClaims})
+		d := jwtTemplateUpdateData(t, claimsMapState, map[string]interface{}{"claims_json": claimsJSON})
 		request, err := resourceFronteggJWTTemplateSerialize(d)
 		if err != nil {
 			t.Fatalf("serialize: %v", err)
@@ -269,8 +332,8 @@ func TestResourceFronteggJWTTemplateUpdateSwitchesClaimsAttribute(t *testing.T) 
 		if err := resourceFronteggJWTTemplateDeserialize(d, response); err != nil {
 			t.Fatalf("deserialize: %v", err)
 		}
-		if got := d.Get("claims_json").(string); got != stringClaims {
-			t.Errorf("claims_json = %s, want %s", got, stringClaims)
+		if got := d.Get("claims_json").(string); got != claimsJSON {
+			t.Errorf("claims_json = %s, want %s", got, claimsJSON)
 		}
 		if claims := d.Get("claims").(map[string]interface{}); len(claims) != 0 {
 			t.Errorf("claims = %+v, want empty", claims)
@@ -278,7 +341,7 @@ func TestResourceFronteggJWTTemplateUpdateSwitchesClaimsAttribute(t *testing.T) 
 	})
 
 	t.Run("claims_json to claims", func(t *testing.T) {
-		d := jwtTemplateUpdateData(t, map[string]string{"claims_json": stringClaims}, map[string]interface{}{"claims": claimsMap})
+		d := jwtTemplateUpdateData(t, map[string]string{"claims_json": claimsJSON}, map[string]interface{}{"claims": claimsMap})
 		request, err := resourceFronteggJWTTemplateSerialize(d)
 		if err != nil {
 			t.Fatalf("serialize: %v", err)
@@ -548,6 +611,7 @@ func TestAccFronteggJWTTemplate_nestedObjectClaim(t *testing.T) {
 				Config: testAccJWTTemplateWithNestedClaim,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet("frontegg_jwt_template.test", "id"),
+					resource.TestCheckNoResourceAttr("frontegg_jwt_template.test", "claims.%"),
 					resource.TestCheckResourceAttr("frontegg_jwt_template.test", "claims_json",
 						`{"aud":"{{clientId}}","exp":"{{exp}}","iat":"{{iat}}","iss":"{{iss}}","org":{"id":"{{user.tenantId}}","name":"static"},"sub":"{{sub}}"}`),
 				),

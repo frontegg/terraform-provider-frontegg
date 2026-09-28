@@ -107,7 +107,6 @@ func resourceFronteggJWTTemplate() *schema.Resource {
 					"Exactly one of `claims` or `claims_json` must be set.",
 				Type:         schema.TypeString,
 				Optional:     true,
-				ExactlyOneOf: []string{"claims", "claims_json"},
 				ValidateFunc: validators.ValidateJSON,
 				StateFunc:    normalizeJSONState,
 			},
