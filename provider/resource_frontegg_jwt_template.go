@@ -167,7 +167,7 @@ func resourceFronteggJWTTemplateClaims(claimsJSON string, claims map[string]inte
 	}
 	decodedClaims, err := structure.ExpandJsonFromString(claimsJSON)
 	if err != nil {
-		return nil, fmt.Errorf("claims_json must be a valid JSON object: %w", err)
+		return nil, err
 	}
 	if decodedClaims == nil {
 		return nil, fmt.Errorf("claims_json must be a JSON object, not null")
@@ -204,10 +204,7 @@ func resourceFronteggJWTTemplateSerialize(d *schema.ResourceData) (fronteggJWTTe
 // resourceFronteggJWTTemplateClaimsDeserialize prefers claims_json when it is in use or a value is not a string.
 func resourceFronteggJWTTemplateClaimsDeserialize(d *schema.ResourceData, claims map[string]interface{}) error {
 	if d.Get("claims_json").(string) == "" && !hasNonStringClaim(claims) {
-		if err := d.Set("claims", claims); err != nil {
-			return err
-		}
-		return d.Set("claims_json", "")
+		return d.Set("claims", claims)
 	}
 	claimsJSON, err := structure.FlattenJsonToString(claims)
 	if err != nil {

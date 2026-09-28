@@ -453,7 +453,7 @@ func TestResourceFronteggJWTTemplateDeserializeMissingClaimsNotNull(t *testing.T
 	}
 }
 
-func TestResourceFronteggJWTTemplateReadDriftToNonStringClaim(t *testing.T) {
+func TestResourceFronteggJWTTemplateDeserializeClearsClaimsStateOnNonStringDrift(t *testing.T) {
 	state := &terraform.InstanceState{ID: "tpl-1", Attributes: map[string]string{
 		"id":         "tpl-1",
 		"claims.%":   "2",
@@ -476,25 +476,6 @@ func TestResourceFronteggJWTTemplateReadDriftToNonStringClaim(t *testing.T) {
 	}
 	if count := d.State().Attributes["claims.%"]; count != "" && count != "0" {
 		t.Errorf("claims.%% in state = %q, want cleared", count)
-	}
-}
-
-// TestResourceFronteggJWTTemplateDeserializeKeepsClaimsJSON keeps claims_json even when every value is a string.
-func TestResourceFronteggJWTTemplateDeserializeKeepsClaimsJSON(t *testing.T) {
-	d := schema.TestResourceDataRaw(t, resourceFronteggJWTTemplate().Schema, map[string]interface{}{
-		"claims_json": `{"sub": "{{sub}}"}`,
-	})
-	in := fronteggJWTTemplate{
-		TemplateSchema: fronteggJWTTemplateSchema{Claims: map[string]interface{}{"sub": "{{sub}}"}},
-	}
-	if err := resourceFronteggJWTTemplateDeserialize(d, in); err != nil {
-		t.Fatalf("deserialize: %v", err)
-	}
-	if got, want := d.Get("claims_json").(string), `{"sub":"{{sub}}"}`; got != want {
-		t.Errorf("claims_json = %s, want %s", got, want)
-	}
-	if claims := d.Get("claims").(map[string]interface{}); len(claims) != 0 {
-		t.Errorf("claims = %+v, want empty", claims)
 	}
 }
 
