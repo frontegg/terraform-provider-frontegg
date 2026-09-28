@@ -198,6 +198,11 @@ func TestResourceFronteggJWTTemplateValidateClaims(t *testing.T) {
 			raw:   jwtTemplateConfig(map[string]interface{}{"claims_json": unknownValuePlaceholder}),
 		},
 		{
+			name:    "claims_json array resolved at apply is rejected as a non-object",
+			raw:     jwtTemplateConfig(map[string]interface{}{"claims_json": `["sub"]`}),
+			wantErr: "claims_json must be a valid JSON object",
+		},
+		{
 			name: "claims map with an unknown value is left to apply",
 			raw: jwtTemplateConfig(map[string]interface{}{
 				"claims": map[string]interface{}{"iss": "{{iss}}", "appId": unknownValuePlaceholder},

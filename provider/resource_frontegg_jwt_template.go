@@ -179,7 +179,7 @@ func resourceFronteggJWTTemplateClaims(claimsJSON string, claims map[string]inte
 	}
 	decodedClaims, err := structure.ExpandJsonFromString(claimsJSON)
 	if err != nil {
-		return nil, fmt.Errorf("claims_json: %w", err)
+		return nil, fmt.Errorf("claims_json must be a valid JSON object: %w", err)
 	}
 	if decodedClaims == nil {
 		return nil, fmt.Errorf("claims_json must be a JSON object, not null")
