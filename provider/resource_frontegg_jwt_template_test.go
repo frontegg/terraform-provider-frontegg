@@ -15,6 +15,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 )
 
+// unknownConfigValue mirrors the SDK's internal hcl2shim.UnknownVariableValue sentinel.
+const unknownConfigValue = "74D93920-ED26-11E3-AC10-0800200C9A66"
+
 func TestMissingRequiredClaims(t *testing.T) {
 	asClaims := func(keys ...string) map[string]interface{} {
 		m := make(map[string]interface{}, len(keys))
@@ -134,6 +137,37 @@ func TestResourceFronteggJWTTemplateValidateClaims(t *testing.T) {
 			},
 			wantErr: "missing: sub, aud, exp, iat",
 		},
+		{
+			name: "claims_json null is rejected",
+			raw: map[string]interface{}{
+				"key":         "k",
+				"name":        "n",
+				"expiration":  3600,
+				"algorithm":   "RS256",
+				"claims_json": "null",
+			},
+			wantErr: "must be a JSON object, not null",
+		},
+		{
+			name: "unknown claims_json is left to apply",
+			raw: map[string]interface{}{
+				"key":         "k",
+				"name":        "n",
+				"expiration":  3600,
+				"algorithm":   "RS256",
+				"claims_json": unknownConfigValue,
+			},
+		},
+		{
+			name: "unknown claims map is left to apply",
+			raw: map[string]interface{}{
+				"key":        "k",
+				"name":       "n",
+				"expiration": 3600,
+				"algorithm":  "RS256",
+				"claims":     unknownConfigValue,
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -193,7 +227,7 @@ func TestResourceFronteggJWTTemplateSerializeClaimsJSON(t *testing.T) {
 		"name":        "n",
 		"expiration":  3600,
 		"algorithm":   "RS256",
-		"claims_json": `{"sub":"{{sub}}","org":{"id":"{{user.tenantId}}","roles":["admin"]}}`,
+		"claims_json": `{"sub":"{{sub}}","accountNumber":12345678901234567890,"org":{"id":"{{user.tenantId}}","roles":["admin"]}}`,
 	})
 
 	got, err := resourceFronteggJWTTemplateSerialize(d)
@@ -201,8 +235,9 @@ func TestResourceFronteggJWTTemplateSerializeClaimsJSON(t *testing.T) {
 		t.Fatalf("serialize: %v", err)
 	}
 	want := map[string]interface{}{
-		"sub": "{{sub}}",
-		"org": map[string]interface{}{"id": "{{user.tenantId}}", "roles": []interface{}{"admin"}},
+		"sub":           "{{sub}}",
+		"accountNumber": json.Number("12345678901234567890"),
+		"org":           map[string]interface{}{"id": "{{user.tenantId}}", "roles": []interface{}{"admin"}},
 	}
 	if !reflect.DeepEqual(got.TemplateSchema.Claims, want) {
 		t.Errorf("claims = %+v, want %+v", got.TemplateSchema.Claims, want)
@@ -283,21 +318,21 @@ func TestResourceFronteggJWTTemplateDeserialize(t *testing.T) {
 	}
 }
 
-// TestResourceFronteggJWTTemplateDeserializeNonStringClaim ensures a template
-// with a nested object claim, for example one saved from the portal, is read
-// into claims_json instead of failing.
+// TestResourceFronteggJWTTemplateDeserializeNonStringClaim covers object claims saved from the portal.
 func TestResourceFronteggJWTTemplateDeserializeNonStringClaim(t *testing.T) {
 	d := schema.TestResourceDataRaw(t, resourceFronteggJWTTemplate().Schema, map[string]interface{}{})
 	in := fronteggJWTTemplate{
 		TemplateSchema: fronteggJWTTemplateSchema{Claims: map[string]interface{}{
-			"sub": "{{sub}}",
-			"org": map[string]interface{}{"id": "{{user.tenantId}}"},
+			"sub":      "{{sub}}",
+			"org":      map[string]interface{}{"id": "{{user.tenantId}}"},
+			"level":    float64(3),
+			"verified": true,
 		}},
 	}
 	if err := resourceFronteggJWTTemplateDeserialize(d, in); err != nil {
 		t.Fatalf("deserialize: %v", err)
 	}
-	if got, want := d.Get("claims_json").(string), `{"org":{"id":"{{user.tenantId}}"},"sub":"{{sub}}"}`; got != want {
+	if got, want := d.Get("claims_json").(string), `{"level":3,"org":{"id":"{{user.tenantId}}"},"sub":"{{sub}}","verified":true}`; got != want {
 		t.Errorf("claims_json = %s, want %s", got, want)
 	}
 	if claims := d.Get("claims").(map[string]interface{}); len(claims) != 0 {
@@ -305,8 +340,7 @@ func TestResourceFronteggJWTTemplateDeserializeNonStringClaim(t *testing.T) {
 	}
 }
 
-// TestResourceFronteggJWTTemplateDeserializeKeepsClaimsJSON ensures a template
-// managed through claims_json stays there even when every value is a string.
+// TestResourceFronteggJWTTemplateDeserializeKeepsClaimsJSON keeps claims_json even when every value is a string.
 func TestResourceFronteggJWTTemplateDeserializeKeepsClaimsJSON(t *testing.T) {
 	d := schema.TestResourceDataRaw(t, resourceFronteggJWTTemplate().Schema, map[string]interface{}{
 		"claims_json": `{"sub": "{{sub}}"}`,

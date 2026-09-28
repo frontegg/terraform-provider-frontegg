@@ -130,12 +130,9 @@ func resourceFronteggJWTTemplate() *schema.Resource {
 	}
 }
 
-// resourceFronteggJWTTemplateValidateClaims enforces that the claims include
-// every claim Frontegg requires. The keys of the claims map are always known at
-// plan time (only their values may reference computed attributes), whereas
-// claims_json may be unknown until apply, in which case validation is skipped.
+// resourceFronteggJWTTemplateValidateClaims rejects claims missing a required claim, skipping claims unknown until apply.
 func resourceFronteggJWTTemplateValidateClaims(_ context.Context, d *schema.ResourceDiff, _ interface{}) error {
-	if !d.NewValueKnown("claims_json") {
+	if !d.NewValueKnown("claims.%") || !d.NewValueKnown("claims_json") {
 		return nil
 	}
 	claims, err := resourceFronteggJWTTemplateClaims(d)
@@ -168,16 +165,20 @@ type attributeGetter interface {
 	Get(key string) interface{}
 }
 
-// resourceFronteggJWTTemplateClaims returns the configured claims from
-// whichever of claims or claims_json is set.
 func resourceFronteggJWTTemplateClaims(d attributeGetter) (map[string]interface{}, error) {
 	claimsJSON := d.Get("claims_json").(string)
 	if claimsJSON == "" {
 		return d.Get("claims").(map[string]interface{}), nil
 	}
+	decoder := json.NewDecoder(strings.NewReader(claimsJSON))
+	// UseNumber keeps large integer claims exact instead of rounding them through float64.
+	decoder.UseNumber()
 	var claims map[string]interface{}
-	if err := json.Unmarshal([]byte(claimsJSON), &claims); err != nil {
+	if err := decoder.Decode(&claims); err != nil {
 		return nil, fmt.Errorf("claims_json must be a valid JSON object: %w", err)
+	}
+	if claims == nil {
+		return nil, fmt.Errorf("claims_json must be a JSON object, not null")
 	}
 	return claims, nil
 }
@@ -208,9 +209,7 @@ func resourceFronteggJWTTemplateSerialize(d *schema.ResourceData) (fronteggJWTTe
 	}, nil
 }
 
-// resourceFronteggJWTTemplateClaimsDeserialize stores the claims in claims_json
-// when it is already in use or when any value cannot be expressed as a string,
-// and in claims otherwise.
+// resourceFronteggJWTTemplateClaimsDeserialize prefers claims_json when it is in use or a value is not a string.
 func resourceFronteggJWTTemplateClaimsDeserialize(d *schema.ResourceData, claims map[string]interface{}) error {
 	if d.Get("claims_json").(string) == "" && !hasNonStringClaim(claims) {
 		if err := d.Set("claims", claims); err != nil {
@@ -218,11 +217,11 @@ func resourceFronteggJWTTemplateClaimsDeserialize(d *schema.ResourceData, claims
 		}
 		return d.Set("claims_json", "")
 	}
-	claimsJSON, err := json.Marshal(claims)
+	claimsJSON, err := structure.FlattenJsonToString(claims)
 	if err != nil {
 		return err
 	}
-	if err := d.Set("claims_json", string(claimsJSON)); err != nil {
+	if err := d.Set("claims_json", claimsJSON); err != nil {
 		return err
 	}
 	return d.Set("claims", nil)
