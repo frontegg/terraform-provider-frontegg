@@ -110,6 +110,7 @@ func resourceFronteggJWTTemplate() *schema.Resource {
 				ExactlyOneOf:     []string{"claims", "claims_json"},
 				ValidateFunc:     validators.ValidateJSON,
 				DiffSuppressFunc: structure.SuppressJsonDiff,
+				StateFunc:        normalizeJSONState,
 			},
 			"vendor_id": {
 				Description: "The ID of the vendor that owns the JWT template.",
@@ -167,12 +168,17 @@ func resourceFronteggJWTTemplateClaims(claimsJSON string, claims map[string]inte
 	}
 	decodedClaims, err := structure.ExpandJsonFromString(claimsJSON)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("claims_json: %w", err)
 	}
 	if decodedClaims == nil {
 		return nil, fmt.Errorf("claims_json must be a JSON object, not null")
 	}
 	return decodedClaims, nil
+}
+
+func normalizeJSONState(value interface{}) string {
+	normalized, _ := structure.NormalizeJsonString(value)
+	return normalized
 }
 
 func hasNonStringClaim(claims map[string]interface{}) bool {

@@ -342,6 +342,20 @@ func TestResourceFronteggJWTTemplateUpdateSwitchesClaimsAttribute(t *testing.T) 
 	})
 }
 
+func TestResourceFronteggJWTTemplateClaimsJSONPlannedValueIsNormalized(t *testing.T) {
+	config := jwtTemplateConfig(map[string]interface{}{
+		"claims_json": `{ "sub": "{{sub}}", "iss": "{{iss}}", "aud": "{{clientId}}", "exp": "{{exp}}", "iat": "{{iat}}" }`,
+	})
+	diff, err := resourceFronteggJWTTemplate().Diff(context.Background(), nil, terraform.NewResourceConfigRaw(config), nil)
+	if err != nil {
+		t.Fatalf("diff: %v", err)
+	}
+	want := `{"aud":"{{clientId}}","exp":"{{exp}}","iat":"{{iat}}","iss":"{{iss}}","sub":"{{sub}}"}`
+	if got := diff.Attributes["claims_json"].New; got != want {
+		t.Errorf("planned claims_json = %s, want %s", got, want)
+	}
+}
+
 // TestFronteggJWTTemplateClaimsWireFormat asserts the on-the-wire JSON nests
 // claims under templateSchema.claims, which is what the Frontegg API expects.
 func TestFronteggJWTTemplateClaimsWireFormat(t *testing.T) {
