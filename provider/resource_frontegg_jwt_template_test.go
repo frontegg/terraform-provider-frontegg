@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"maps"
 	"net/http"
 	"os"
 	"reflect"
@@ -22,9 +23,7 @@ func jwtTemplateConfig(claimsAttributes map[string]interface{}) map[string]inter
 		"expiration": 3600,
 		"algorithm":  "RS256",
 	}
-	for attribute, value := range claimsAttributes {
-		config[attribute] = value
-	}
+	maps.Copy(config, claimsAttributes)
 	return config
 }
 
@@ -296,9 +295,7 @@ func TestResourceFronteggJWTTemplateSerializeRejectsNullClaimsJSON(t *testing.T)
 func jwtTemplateUpdateData(t *testing.T, stateAttributes map[string]string, config map[string]interface{}) *schema.ResourceData {
 	jwtTemplateResource := resourceFronteggJWTTemplate()
 	attributes := map[string]string{"id": "tpl-1", "key": "k", "name": "n", "expiration": "3600", "algorithm": "RS256"}
-	for attribute, value := range stateAttributes {
-		attributes[attribute] = value
-	}
+	maps.Copy(attributes, stateAttributes)
 	state := &terraform.InstanceState{ID: "tpl-1", Attributes: attributes}
 	diff, err := jwtTemplateResource.Diff(context.Background(), state, terraform.NewResourceConfigRaw(jwtTemplateConfig(config)), nil)
 	if err != nil {
@@ -320,45 +317,49 @@ func TestResourceFronteggJWTTemplateUpdateSwitchesClaimsAttribute(t *testing.T) 
 	}
 	response := fronteggJWTTemplate{ID: "tpl-1", TemplateSchema: fronteggJWTTemplateSchema{Claims: claimsMap}}
 
-	t.Run("claims to claims_json", func(t *testing.T) {
-		d := jwtTemplateUpdateData(t, claimsMapState, map[string]interface{}{"claims_json": claimsJSON})
-		request, err := resourceFronteggJWTTemplateSerialize(d)
-		if err != nil {
-			t.Fatalf("serialize: %v", err)
-		}
-		if !reflect.DeepEqual(request.TemplateSchema.Claims, claimsMap) {
-			t.Errorf("claims sent = %+v, want %+v", request.TemplateSchema.Claims, claimsMap)
-		}
-		if err := resourceFronteggJWTTemplateDeserialize(d, response); err != nil {
-			t.Fatalf("deserialize: %v", err)
-		}
-		if got := d.Get("claims_json").(string); got != claimsJSON {
-			t.Errorf("claims_json = %s, want %s", got, claimsJSON)
-		}
-		if claims := d.Get("claims").(map[string]interface{}); len(claims) != 0 {
-			t.Errorf("claims = %+v, want empty", claims)
-		}
-	})
-
-	t.Run("claims_json to claims", func(t *testing.T) {
-		d := jwtTemplateUpdateData(t, map[string]string{"claims_json": claimsJSON}, map[string]interface{}{"claims": claimsMap})
-		request, err := resourceFronteggJWTTemplateSerialize(d)
-		if err != nil {
-			t.Fatalf("serialize: %v", err)
-		}
-		if !reflect.DeepEqual(request.TemplateSchema.Claims, claimsMap) {
-			t.Errorf("claims sent = %+v, want %+v", request.TemplateSchema.Claims, claimsMap)
-		}
-		if err := resourceFronteggJWTTemplateDeserialize(d, response); err != nil {
-			t.Fatalf("deserialize: %v", err)
-		}
-		if got := d.Get("claims_json").(string); got != "" {
-			t.Errorf("claims_json = %q, want empty", got)
-		}
-		if claims := d.Get("claims").(map[string]interface{}); !reflect.DeepEqual(claims, claimsMap) {
-			t.Errorf("claims = %+v, want %+v", claims, claimsMap)
-		}
-	})
+	tests := []struct {
+		name           string
+		state          map[string]string
+		config         map[string]interface{}
+		wantClaimsJSON string
+		wantClaims     map[string]interface{}
+	}{
+		{
+			name:           "claims to claims_json",
+			state:          claimsMapState,
+			config:         map[string]interface{}{"claims_json": claimsJSON},
+			wantClaimsJSON: claimsJSON,
+			wantClaims:     map[string]interface{}{},
+		},
+		{
+			name:           "claims_json to claims",
+			state:          map[string]string{"claims_json": claimsJSON},
+			config:         map[string]interface{}{"claims": claimsMap},
+			wantClaimsJSON: "",
+			wantClaims:     claimsMap,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			d := jwtTemplateUpdateData(t, tt.state, tt.config)
+			request, err := resourceFronteggJWTTemplateSerialize(d)
+			if err != nil {
+				t.Fatalf("serialize: %v", err)
+			}
+			if !reflect.DeepEqual(request.TemplateSchema.Claims, claimsMap) {
+				t.Errorf("claims sent = %+v, want %+v", request.TemplateSchema.Claims, claimsMap)
+			}
+			if err := resourceFronteggJWTTemplateDeserialize(d, response); err != nil {
+				t.Fatalf("deserialize: %v", err)
+			}
+			if got := d.Get("claims_json").(string); got != tt.wantClaimsJSON {
+				t.Errorf("claims_json = %q, want %q", got, tt.wantClaimsJSON)
+			}
+			if claims := d.Get("claims").(map[string]interface{}); !reflect.DeepEqual(claims, tt.wantClaims) {
+				t.Errorf("claims = %+v, want %+v", claims, tt.wantClaims)
+			}
+		})
+	}
 }
 
 func TestResourceFronteggJWTTemplateClaimsJSONPlannedValueIsNormalized(t *testing.T) {
