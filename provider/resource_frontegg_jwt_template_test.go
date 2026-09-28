@@ -13,6 +13,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/structure"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 )
 
@@ -126,7 +127,7 @@ func TestResourceFronteggJWTTemplateValidateClaims(t *testing.T) {
 			raw: jwtTemplateConfig(map[string]interface{}{
 				"claims_json": `{"iss":"{{iss}}","org":{"id":"{{user.tenantId}}"}}`,
 			}),
-			wantErr: "missing: sub, aud, exp, iat",
+			wantErr: "claims_json must include the required OIDC claims (iss, sub, aud, exp, iat); missing: sub, aud, exp, iat",
 		},
 		{
 			name: "claims_json null is rejected",
@@ -373,6 +374,30 @@ func TestResourceFronteggJWTTemplateClaimsJSONPlannedValueIsNormalized(t *testin
 	want := `{"aud":"{{clientId}}","exp":"{{exp}}","iat":"{{iat}}","iss":"{{iss}}","sub":"{{sub}}"}`
 	if got := diff.Attributes["claims_json"].New; got != want {
 		t.Errorf("planned claims_json = %s, want %s", got, want)
+	}
+}
+
+func TestResourceFronteggJWTTemplateReformattedClaimsJSONHasNoDiff(t *testing.T) {
+	jwtTemplateResource := resourceFronteggJWTTemplate()
+	storedClaims, err := structure.FlattenJsonToString(map[string]interface{}{
+		"iss": "{{iss}}", "sub": "{{sub}}", "aud": "{{clientId}}", "exp": "{{exp}}", "iat": "{{iat}}",
+		"org": map[string]interface{}{"id": "{{user.tenantId}}"},
+	})
+	if err != nil {
+		t.Fatalf("flatten: %v", err)
+	}
+	state := &terraform.InstanceState{ID: "tpl-1", Attributes: map[string]string{
+		"id": "tpl-1", "key": "k", "name": "n", "expiration": "3600", "algorithm": "RS256", "claims_json": storedClaims,
+	}}
+	config := jwtTemplateConfig(map[string]interface{}{
+		"claims_json": "{\n  \"org\": {\"id\": \"{{user.tenantId}}\"},\n  \"sub\": \"{{sub}}\", \"iss\": \"{{iss}}\",\n  \"aud\": \"{{clientId}}\", \"iat\": \"{{iat}}\", \"exp\": \"{{exp}}\"\n}",
+	})
+	diff, err := jwtTemplateResource.Diff(context.Background(), state, terraform.NewResourceConfigRaw(config), nil)
+	if err != nil {
+		t.Fatalf("diff: %v", err)
+	}
+	if diff != nil && len(diff.Attributes) > 0 {
+		t.Errorf("unexpected diff: %+v", diff.Attributes)
 	}
 }
 

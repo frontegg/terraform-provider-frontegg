@@ -134,13 +134,19 @@ func resourceFronteggJWTTemplateValidateClaims(_ context.Context, d *schema.Reso
 	if !d.NewValueKnown("claims.%") || !d.NewValueKnown("claims_json") {
 		return nil
 	}
-	claims, err := resourceFronteggJWTTemplateClaims(d.Get("claims_json").(string), d.Get("claims").(map[string]interface{}))
+	claimsJSON := d.Get("claims_json").(string)
+	claims, err := resourceFronteggJWTTemplateClaims(claimsJSON, d.Get("claims").(map[string]interface{}))
 	if err != nil {
 		return err
 	}
+	claimsAttribute := "claims"
+	if claimsJSON != "" {
+		claimsAttribute = "claims_json"
+	}
 	if missing := missingRequiredClaims(claims); len(missing) > 0 {
 		return fmt.Errorf(
-			"jwt template claims must include the required OIDC claims (%s); missing: %s",
+			"jwt template %s must include the required OIDC claims (%s); missing: %s",
+			claimsAttribute,
 			strings.Join(fronteggJWTTemplateRequiredClaims, ", "),
 			strings.Join(missing, ", "),
 		)
