@@ -15,9 +15,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 )
 
-// unknownConfigValue mirrors the SDK's internal hcl2shim.UnknownVariableValue sentinel.
-const unknownConfigValue = "74D93920-ED26-11E3-AC10-0800200C9A66"
-
 func TestMissingRequiredClaims(t *testing.T) {
 	asClaims := func(keys ...string) map[string]interface{} {
 		m := make(map[string]interface{}, len(keys))
@@ -155,7 +152,7 @@ func TestResourceFronteggJWTTemplateValidateClaims(t *testing.T) {
 				"name":        "n",
 				"expiration":  3600,
 				"algorithm":   "RS256",
-				"claims_json": unknownConfigValue,
+				"claims_json": unknownValuePlaceholder,
 			},
 		},
 		{
@@ -165,7 +162,7 @@ func TestResourceFronteggJWTTemplateValidateClaims(t *testing.T) {
 				"name":       "n",
 				"expiration": 3600,
 				"algorithm":  "RS256",
-				"claims":     unknownConfigValue,
+				"claims":     unknownValuePlaceholder,
 			},
 		},
 	}
@@ -185,6 +182,35 @@ func TestResourceFronteggJWTTemplateValidateClaims(t *testing.T) {
 			}
 			if !strings.Contains(err.Error(), tt.wantErr) {
 				t.Errorf("Diff() error = %q, want it to contain %q", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestResourceFronteggJWTTemplateValidateClaimsAttributes(t *testing.T) {
+	base := func(extra map[string]interface{}) map[string]interface{} {
+		raw := map[string]interface{}{"key": "k", "name": "n", "expiration": 3600, "algorithm": "RS256"}
+		for k, v := range extra {
+			raw[k] = v
+		}
+		return raw
+	}
+	tests := []struct {
+		name    string
+		raw     map[string]interface{}
+		wantErr bool
+	}{
+		{name: "claims only", raw: base(map[string]interface{}{"claims": map[string]interface{}{"sub": "{{sub}}"}})},
+		{name: "claims_json only", raw: base(map[string]interface{}{"claims_json": `{"sub":"{{sub}}"}`})},
+		{name: "neither", raw: base(nil), wantErr: true},
+		{name: "both", raw: base(map[string]interface{}{"claims": map[string]interface{}{"sub": "{{sub}}"}, "claims_json": `{"sub":"{{sub}}"}`}), wantErr: true},
+		{name: "claims_json array", raw: base(map[string]interface{}{"claims_json": `["sub"]`}), wantErr: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			diags := resourceFronteggJWTTemplate().Validate(terraform.NewResourceConfigRaw(tt.raw))
+			if diags.HasError() != tt.wantErr {
+				t.Errorf("Validate() errors = %v, wantErr %v", diags, tt.wantErr)
 			}
 		})
 	}
@@ -227,7 +253,7 @@ func TestResourceFronteggJWTTemplateSerializeClaimsJSON(t *testing.T) {
 		"name":        "n",
 		"expiration":  3600,
 		"algorithm":   "RS256",
-		"claims_json": `{"sub":"{{sub}}","accountNumber":12345678901234567890,"org":{"id":"{{user.tenantId}}","roles":["admin"]}}`,
+		"claims_json": `{"sub":"{{sub}}","accountNumber":42,"org":{"id":"{{user.tenantId}}","roles":["admin"]}}`,
 	})
 
 	got, err := resourceFronteggJWTTemplateSerialize(d)
@@ -236,7 +262,7 @@ func TestResourceFronteggJWTTemplateSerializeClaimsJSON(t *testing.T) {
 	}
 	want := map[string]interface{}{
 		"sub":           "{{sub}}",
-		"accountNumber": json.Number("12345678901234567890"),
+		"accountNumber": float64(42),
 		"org":           map[string]interface{}{"id": "{{user.tenantId}}", "roles": []interface{}{"admin"}},
 	}
 	if !reflect.DeepEqual(got.TemplateSchema.Claims, want) {

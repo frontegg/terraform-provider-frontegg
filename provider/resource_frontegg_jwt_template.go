@@ -2,7 +2,6 @@ package provider
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -104,6 +103,7 @@ func resourceFronteggJWTTemplate() *schema.Resource {
 				Description: "The JWT claims included in the template, as a JSON object (typically built " +
 					"with `jsonencode`). Use this instead of `claims` when any claim value is not a string, " +
 					"such as a nested object. The same required and reserved claims apply as for `claims`. " +
+					"Numbers are handled as 64-bit floats, so encode integers larger than 2^53 as strings. " +
 					"Exactly one of `claims` or `claims_json` must be set.",
 				Type:             schema.TypeString,
 				Optional:         true,
@@ -170,11 +170,8 @@ func resourceFronteggJWTTemplateClaims(d attributeGetter) (map[string]interface{
 	if claimsJSON == "" {
 		return d.Get("claims").(map[string]interface{}), nil
 	}
-	decoder := json.NewDecoder(strings.NewReader(claimsJSON))
-	// UseNumber keeps large integer claims exact instead of rounding them through float64.
-	decoder.UseNumber()
-	var claims map[string]interface{}
-	if err := decoder.Decode(&claims); err != nil {
+	claims, err := structure.ExpandJsonFromString(claimsJSON)
+	if err != nil {
 		return nil, fmt.Errorf("claims_json must be a valid JSON object: %w", err)
 	}
 	if claims == nil {

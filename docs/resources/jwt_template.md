@@ -42,7 +42,7 @@ resource "frontegg_jwt_template" "example" {
 }
 
 # Use claims_json instead of claims when a claim value is not a string, such as
-# a nested object. Exactly one of claims or claims_json may be set.
+# a nested object. Exactly one of claims or claims_json must be set.
 resource "frontegg_jwt_template" "nested_claims" {
   key        = "nested-claims-template"
   name       = "Nested Claims JWT Template"
@@ -77,7 +77,7 @@ resource "frontegg_jwt_template" "nested_claims" {
 ### Optional
 
 - `claims` (Map of String) Key-value pairs representing the JWT claims included in the template. Claims are not auto-populated: the token carries exactly what is set here, so include `tenantId` if your application or the Frontegg frontend SDK expects it. The standard OIDC claims (`iss`, `sub`, `aud`, `exp`, `iat`) are required, where `aud` must be `{{clientId}}` or `{{applicationId}}`. A small set of claims is reserved for internal use and rejected by the API (for example `type`, `userId`, `superUser`, `act`, `amr`, `acr`, `auth_time`, `nonce`). Only string values are supported; use `claims_json` for claims with nested object, array, number or boolean values. Exactly one of `claims` or `claims_json` must be set.
-- `claims_json` (String) The JWT claims included in the template, as a JSON object (typically built with `jsonencode`). Use this instead of `claims` when any claim value is not a string, such as a nested object. The same required and reserved claims apply as for `claims`. Exactly one of `claims` or `claims_json` must be set.
+- `claims_json` (String) The JWT claims included in the template, as a JSON object (typically built with `jsonencode`). Use this instead of `claims` when any claim value is not a string, such as a nested object. The same required and reserved claims apply as for `claims`. Numbers are handled as 64-bit floats, so encode integers larger than 2^53 as strings. Exactly one of `claims` or `claims_json` must be set.
 - `description` (String) A human-readable description of the JWT template.
 
 ### Read-Only
