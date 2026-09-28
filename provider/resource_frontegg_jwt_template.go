@@ -131,14 +131,15 @@ func resourceFronteggJWTTemplate() *schema.Resource {
 
 // resourceFronteggJWTTemplateValidateClaims rejects claims missing a required claim, skipping claims unknown until apply.
 func resourceFronteggJWTTemplateValidateClaims(_ context.Context, d *schema.ResourceDiff, _ interface{}) error {
-	if !d.NewValueKnown("claims_json") {
+	claimsJSON := d.Get("claims_json").(string)
+	configuredClaims := d.Get("claims").(map[string]interface{})
+	if !d.NewValueKnown("claims_json") && len(configuredClaims) == 0 {
 		return nil
 	}
-	claimsJSON := d.Get("claims_json").(string)
 	if claimsJSON == "" && !d.NewValueKnown("claims.%") {
 		return nil
 	}
-	claims, err := resourceFronteggJWTTemplateClaims(claimsJSON, d.Get("claims").(map[string]interface{}))
+	claims, err := resourceFronteggJWTTemplateClaims(claimsJSON, configuredClaims)
 	if err != nil {
 		return err
 	}
