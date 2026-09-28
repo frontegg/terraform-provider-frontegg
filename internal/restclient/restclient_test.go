@@ -58,7 +58,7 @@ func TestSharedTokenSourceRefreshesBeforeExpiry(t *testing.T) {
 	}
 
 	if issued != 2 {
-		t.Fatalf("vendor tokens issued = %d, want 2", issued)
+		t.Fatalf("management tokens issued = %d, want 2", issued)
 	}
 	want := []string{"Bearer token-1", "Bearer token-1", "Bearer token-2", "Bearer token-2"}
 	if len(received) != len(want) {

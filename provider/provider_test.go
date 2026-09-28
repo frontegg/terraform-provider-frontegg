@@ -1,11 +1,14 @@
 package provider
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -142,6 +145,33 @@ func TestProviderRefreshesTokenForBothClients(t *testing.T) {
 		t.Fatal(err)
 	}
 	if issued != 2 {
-		t.Fatalf("vendor tokens issued = %d, want 2", issued)
+		t.Fatalf("management tokens issued = %d, want 2", issued)
+	}
+}
+
+func TestProviderWarnsWithoutTokenLifetime(t *testing.T) {
+	for _, body := range []string{`{"token":"token"}`, `{"token":"token","expiresIn":0}`} {
+		t.Run(body, func(t *testing.T) {
+			var logs bytes.Buffer
+			previous := log.Writer()
+			log.SetOutput(&logs)
+			defer log.SetOutput(previous)
+			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				_, _ = fmt.Fprint(w, body)
+			}))
+			defer srv.Close()
+			p := New("test")()
+			d := schema.TestResourceDataRaw(t, p.Schema, map[string]interface{}{
+				"api_base_url": srv.URL, "portal_base_url": srv.URL,
+				"client_id": "client", "secret_key": "secret",
+			})
+			_, diags := p.ConfigureContextFunc(context.Background(), d)
+			if diags.HasError() {
+				t.Fatalf("configure: %v", diags)
+			}
+			if !strings.Contains(logs.String(), "[WARN] Frontegg authentication response has no positive expiresIn") {
+				t.Fatalf("missing lifetime warning: %s", logs.String())
+			}
+		})
 	}
 }

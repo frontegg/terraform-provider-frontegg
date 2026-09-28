@@ -45,7 +45,7 @@ func (c *Client) UseTokenSource(source *TokenSource) {
 	c.tokenSource = source
 }
 
-// RedactResponses keeps response bodies out of logs and errors, for clients
+// RedactResponses keeps response bodies and headers out of logs and errors, for clients
 // whose responses carry credentials.
 func (c *Client) RedactResponses() {
 	c.redactResponses = true
@@ -207,7 +207,13 @@ func (c *Client) RequestWithHeaders(ctx context.Context, method string, url stri
 			return err
 		}
 
-		log.Printf("[TRACE] Sending request %s %s", req.Method, req.URL)
+		requestHeaders := req.Header.Clone()
+		for _, name := range []string{"Authorization", "Proxy-Authorization", "Cookie"} {
+			if _, exists := requestHeaders[http.CanonicalHeaderKey(name)]; exists {
+				requestHeaders.Set(name, "[REDACTED]")
+			}
+		}
+		log.Printf("[TRACE] Sending request %s %s headers: %v", req.Method, req.URL, requestHeaders)
 		res, err := c.client.Do(req)
 		if err != nil {
 			return fmt.Errorf("restclient: failed sending request: %w", err)
@@ -216,6 +222,13 @@ func (c *Client) RequestWithHeaders(ctx context.Context, method string, url stri
 		res.Body.Close()
 		if err != nil {
 			return fmt.Errorf("restclient: failed to read response: %w", err)
+		}
+
+		// Keep authentication response bodies and headers out of every error
+		// path as well as successful trace output.
+		errorBody := string(resBody)
+		if c.redactResponses {
+			errorBody = "[REDACTED]"
 		}
 
 		switch {
@@ -236,10 +249,12 @@ func (c *Client) RequestWithHeaders(ctx context.Context, method string, url stri
 			// because this single wait would cross it. A lone reset window (even
 			// a long one) is always honored; the ceiling bounds repeated cycles.
 			if c.rl.exceeded(attempts, totalWait) {
-				log.Printf("[TRACE] Response headers for failed request: %v", res.Header)
+				if !c.redactResponses {
+					log.Printf("[TRACE] Response headers for failed request: %v", res.Header)
+				}
 				return fmt.Errorf(
 					"restclient: rate limited and gave up after %d attempts (%s total): %s %s: %s%s: %s",
-					attempts, totalWait, req.Method, req.URL, res.Status, traceSuffix(res.Header), resBody,
+					attempts, totalWait, req.Method, req.URL, res.Status, traceSuffix(res.Header), errorBody,
 				)
 			}
 			log.Printf(
@@ -252,14 +267,16 @@ func (c *Client) RequestWithHeaders(ctx context.Context, method string, url stri
 			totalWait += wait
 			continue
 		case res.StatusCode < 200 || res.StatusCode >= 300:
-			log.Printf("[TRACE] Response headers for failed request: %v", res.Header)
+			if !c.redactResponses {
+				log.Printf("[TRACE] Response headers for failed request: %v", res.Header)
+			}
 			status := res.Status
 			if res.StatusCode == http.StatusUnauthorized && authRetry {
-				status += " (after refreshing the vendor token)"
+				status += " (after refreshing the management token)"
 			}
 			return fmt.Errorf(
 				"restclient: request failed: %s %s: %s%s: %s",
-				req.Method, req.URL, status, traceSuffix(res.Header), resBody,
+				req.Method, req.URL, status, traceSuffix(res.Header), errorBody,
 			)
 		}
 
@@ -269,7 +286,7 @@ func (c *Client) RequestWithHeaders(ctx context.Context, method string, url stri
 		if out != nil {
 			if err := json.Unmarshal(resBody, out); err != nil {
 				if c.redactResponses {
-					return fmt.Errorf("restclient: failed to decode response: %s %s: %w", req.Method, req.URL, err)
+					return fmt.Errorf("restclient: failed to decode response: %s %s (response redacted)", req.Method, req.URL)
 				}
 				return fmt.Errorf("restclient: failed to decode JSON response %#v: %w", string(resBody), err)
 			}
