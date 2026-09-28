@@ -149,6 +149,14 @@ func TestResourceFronteggJWTTemplateValidateClaims(t *testing.T) {
 			}),
 		},
 		{
+			name: "known claims_json is checked even when claims is unknown",
+			raw: jwtTemplateConfig(map[string]interface{}{
+				"claims":      unknownValuePlaceholder,
+				"claims_json": `{"iss":"{{iss}}"}`,
+			}),
+			wantErr: "claims_json must include the required OIDC claims (iss, sub, aud, exp, iat); missing: sub, aud, exp, iat",
+		},
+		{
 			name: "claims map with an unknown value is left to apply",
 			raw: jwtTemplateConfig(map[string]interface{}{
 				"claims": map[string]interface{}{"iss": "{{iss}}", "appId": unknownValuePlaceholder},
