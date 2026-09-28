@@ -175,9 +175,9 @@ func TestResourceFronteggJWTTemplateValidateClaims(t *testing.T) {
 			wantErr: "only one of `claims,claims_json` can be specified",
 		},
 		{
-			name:    "neither claims nor claims_json set is rejected",
-			raw:     jwtTemplateConfig(nil),
-			wantErr: "one of `claims,claims_json` must be specified",
+			name:    "empty claims map reports the missing required claims",
+			raw:     jwtTemplateConfig(map[string]interface{}{"claims": map[string]interface{}{}}),
+			wantErr: "claims must include the required OIDC claims (iss, sub, aud, exp, iat); missing: iss, sub, aud, exp, iat",
 		},
 		{
 			name:  "update with known claims_json and unknown claims over claims state",

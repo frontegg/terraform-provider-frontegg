@@ -142,9 +142,6 @@ func resourceFronteggJWTTemplateValidateClaims(_ context.Context, d *schema.Reso
 	if claimsJSON != "" && len(configuredClaims) > 0 {
 		return fmt.Errorf("only one of `claims,claims_json` can be specified")
 	}
-	if claimsJSON == "" && len(configuredClaims) == 0 {
-		return fmt.Errorf("one of `claims,claims_json` must be specified")
-	}
 	claims, err := resourceFronteggJWTTemplateClaims(claimsJSON, configuredClaims)
 	if err != nil {
 		return err
