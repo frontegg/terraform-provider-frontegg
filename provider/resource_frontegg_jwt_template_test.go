@@ -623,6 +623,9 @@ resource "frontegg_jwt_template" "test" {
       id   = "{{user.tenantId}}"
       name = "static"
     }
+    level    = 3
+    verified = true
+    roles    = ["admin", "viewer"]
   })
 }
 `
@@ -643,7 +646,7 @@ func TestAccFronteggJWTTemplate_nestedObjectClaim(t *testing.T) {
 					resource.TestCheckResourceAttrSet("frontegg_jwt_template.test", "id"),
 					resource.TestCheckNoResourceAttr("frontegg_jwt_template.test", "claims.%"),
 					resource.TestCheckResourceAttr("frontegg_jwt_template.test", "claims_json",
-						`{"aud":"{{clientId}}","exp":"{{exp}}","iat":"{{iat}}","iss":"{{iss}}","org":{"id":"{{user.tenantId}}","name":"static"},"sub":"{{sub}}"}`),
+						`{"aud":"{{clientId}}","exp":"{{exp}}","iat":"{{iat}}","iss":"{{iss}}","level":3,"org":{"id":"{{user.tenantId}}","name":"static"},"roles":["admin","viewer"],"sub":"{{sub}}","verified":true}`),
 				),
 			},
 			{
@@ -654,6 +657,13 @@ func TestAccFronteggJWTTemplate_nestedObjectClaim(t *testing.T) {
 				ResourceName:      "frontegg_jwt_template.test",
 				ImportState:       true,
 				ImportStateVerify: true,
+			},
+			{
+				Config: testAccJWTTemplateWithStringClaimsBeforeNesting,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("frontegg_jwt_template.test", "claims.aud", "{{clientId}}"),
+					resource.TestCheckResourceAttr("frontegg_jwt_template.test", "claims_json", ""),
+				),
 			},
 		},
 	})
