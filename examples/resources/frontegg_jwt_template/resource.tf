@@ -25,3 +25,24 @@ resource "frontegg_jwt_template" "example" {
     email    = "{{user.email}}"
   }
 }
+
+# Use claims_json instead of claims when a claim value is not a string, such as a nested object.
+resource "frontegg_jwt_template" "nested_claims" {
+  key        = "nested-claims-template"
+  name       = "Nested Claims JWT Template"
+  expiration = 3600
+  algorithm  = "RS256"
+
+  claims_json = jsonencode({
+    iss      = "{{iss}}"
+    sub      = "{{sub}}"
+    aud      = "{{clientId}}"
+    exp      = "{{exp}}"
+    iat      = "{{iat}}"
+    tenantId = "{{user.tenantId}}"
+    organization = {
+      id    = "{{user.tenantId}}"
+      email = "{{user.email}}"
+    }
+  })
+}
