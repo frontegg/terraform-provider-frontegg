@@ -92,8 +92,10 @@ func TestResourceFronteggJWTTemplateValidateClaims(t *testing.T) {
 		return jwtTemplateConfig(map[string]interface{}{"claims": claims})
 	}
 
+	claimsState := jwtTemplateState(map[string]string{"claims.%": "1", "claims.sub": "{{sub}}"})
 	tests := []struct {
 		name    string
+		state   *terraform.InstanceState
 		raw     map[string]interface{}
 		wantErr string
 	}{
@@ -165,7 +167,7 @@ func TestResourceFronteggJWTTemplateValidateClaims(t *testing.T) {
 			wantErr: "claims must include the required OIDC claims (iss, sub, aud, exp, iat); missing: iss, sub, aud, exp, iat",
 		},
 		{
-			name: "both claims and claims_json resolved at apply are rejected",
+			name: "both claims and claims_json known are rejected",
 			raw: jwtTemplateConfig(map[string]interface{}{
 				"claims":      map[string]interface{}{"sub": "{{sub}}"},
 				"claims_json": `{"sub":"{{sub}}"}`,
@@ -173,9 +175,27 @@ func TestResourceFronteggJWTTemplateValidateClaims(t *testing.T) {
 			wantErr: "only one of `claims,claims_json` can be specified",
 		},
 		{
-			name:    "neither claims nor claims_json resolved at apply is rejected",
+			name:    "neither claims nor claims_json set is rejected",
 			raw:     jwtTemplateConfig(nil),
 			wantErr: "one of `claims,claims_json` must be specified",
+		},
+		{
+			name:  "update with known claims_json and unknown claims over claims state",
+			state: claimsState,
+			raw: jwtTemplateConfig(map[string]interface{}{
+				"claims":      unknownValuePlaceholder,
+				"claims_json": `{"iss":"{{iss}}","sub":"{{sub}}","aud":"{{clientId}}","exp":"{{exp}}","iat":"{{iat}}"}`,
+			}),
+		},
+		{
+			name:  "update with unknown claims over claims state",
+			state: claimsState,
+			raw:   jwtTemplateConfig(map[string]interface{}{"claims": unknownValuePlaceholder}),
+		},
+		{
+			name:  "update with unknown claims_json over claims state",
+			state: claimsState,
+			raw:   jwtTemplateConfig(map[string]interface{}{"claims_json": unknownValuePlaceholder}),
 		},
 		{
 			name: "claims map with an unknown value is left to apply",
@@ -188,7 +208,7 @@ func TestResourceFronteggJWTTemplateValidateClaims(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			r := resourceFronteggJWTTemplate()
-			_, err := r.Diff(context.Background(), nil, terraform.NewResourceConfigRaw(tt.raw), nil)
+			_, err := r.Diff(context.Background(), tt.state, terraform.NewResourceConfigRaw(tt.raw), nil)
 			if tt.wantErr == "" {
 				if err != nil {
 					t.Fatalf("Diff() returned an unexpected error: %v", err)
