@@ -41,8 +41,7 @@ resource "frontegg_jwt_template" "example" {
   }
 }
 
-# Use claims_json instead of claims when a claim value is not a string, such as
-# a nested object. Exactly one of claims or claims_json must be set.
+# Use claims_json instead of claims when a claim value is not a string, such as a nested object.
 resource "frontegg_jwt_template" "nested_claims" {
   key        = "nested-claims-template"
   name       = "Nested Claims JWT Template"
