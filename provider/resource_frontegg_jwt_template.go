@@ -105,12 +105,11 @@ func resourceFronteggJWTTemplate() *schema.Resource {
 					"such as a nested object. The same required and reserved claims apply as for `claims`. " +
 					"Numbers are handled as 64-bit floats, so encode integers larger than 2^53 as strings. " +
 					"Exactly one of `claims` or `claims_json` must be set.",
-				Type:             schema.TypeString,
-				Optional:         true,
-				ExactlyOneOf:     []string{"claims", "claims_json"},
-				ValidateFunc:     validators.ValidateJSON,
-				DiffSuppressFunc: structure.SuppressJsonDiff,
-				StateFunc:        normalizeJSONState,
+				Type:         schema.TypeString,
+				Optional:     true,
+				ExactlyOneOf: []string{"claims", "claims_json"},
+				ValidateFunc: validators.ValidateJSON,
+				StateFunc:    normalizeJSONState,
 			},
 			"vendor_id": {
 				Description: "The ID of the vendor that owns the JWT template.",

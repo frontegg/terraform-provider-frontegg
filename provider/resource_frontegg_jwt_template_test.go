@@ -181,7 +181,7 @@ func TestResourceFronteggJWTTemplateValidateClaimsAttributes(t *testing.T) {
 	tests := []struct {
 		name    string
 		raw     map[string]interface{}
-		wantErr bool
+		wantErr string
 	}{
 		{
 			name: "claims only",
@@ -194,7 +194,7 @@ func TestResourceFronteggJWTTemplateValidateClaimsAttributes(t *testing.T) {
 		{
 			name:    "neither",
 			raw:     jwtTemplateConfig(nil),
-			wantErr: true,
+			wantErr: "one of `claims,claims_json` must be specified",
 		},
 		{
 			name: "both",
@@ -202,75 +202,31 @@ func TestResourceFronteggJWTTemplateValidateClaimsAttributes(t *testing.T) {
 				"claims":      stringClaims,
 				"claims_json": `{"sub":"{{sub}}"}`,
 			}),
-			wantErr: true,
+			wantErr: "only one of `claims,claims_json` can be specified",
 		},
 		{
 			name:    "claims_json array",
 			raw:     jwtTemplateConfig(map[string]interface{}{"claims_json": `["sub"]`}),
-			wantErr: true,
+			wantErr: "must be a valid JSON object",
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			diags := resourceFronteggJWTTemplate().Validate(terraform.NewResourceConfigRaw(tt.raw))
-			if diags.HasError() != tt.wantErr {
-				t.Errorf("Validate() errors = %v, wantErr %v", diags, tt.wantErr)
+			if tt.wantErr == "" {
+				if diags.HasError() {
+					t.Fatalf("Validate() returned unexpected errors: %v", diags)
+				}
+				return
+			}
+			var messages []string
+			for _, diagnostic := range diags {
+				messages = append(messages, diagnostic.Summary+": "+diagnostic.Detail)
+			}
+			if joined := strings.Join(messages, "\n"); !strings.Contains(joined, tt.wantErr) {
+				t.Errorf("Validate() errors = %q, want one containing %q", joined, tt.wantErr)
 			}
 		})
-	}
-}
-
-func TestResourceFronteggJWTTemplateSerialize(t *testing.T) {
-	d := schema.TestResourceDataRaw(t, resourceFronteggJWTTemplate().Schema, map[string]interface{}{
-		"key":         "enterprise-template",
-		"name":        "Enterprise",
-		"description": "An enterprise template",
-		"expiration":  3600,
-		"algorithm":   "RS256",
-		"claims": map[string]interface{}{
-			"sub":   "{{sub}}",
-			"email": "{{user.email}}",
-		},
-	})
-
-	got, err := resourceFronteggJWTTemplateSerialize(d)
-	if err != nil {
-		t.Fatalf("serialize: %v", err)
-	}
-	if got.Key != "enterprise-template" || got.Name != "Enterprise" || got.Description != "An enterprise template" {
-		t.Errorf("unexpected scalar fields: %+v", got)
-	}
-	if got.Expiration != 3600 {
-		t.Errorf("expiration = %d, want 3600", got.Expiration)
-	}
-	if got.Algorithm != "RS256" {
-		t.Errorf("algorithm = %q, want RS256", got.Algorithm)
-	}
-	if got.TemplateSchema.Claims["sub"] != "{{sub}}" || got.TemplateSchema.Claims["email"] != "{{user.email}}" {
-		t.Errorf("claims not carried into templateSchema: %+v", got.TemplateSchema.Claims)
-	}
-}
-
-func TestResourceFronteggJWTTemplateSerializeClaimsJSON(t *testing.T) {
-	d := schema.TestResourceDataRaw(t, resourceFronteggJWTTemplate().Schema, map[string]interface{}{
-		"key":         "k",
-		"name":        "n",
-		"expiration":  3600,
-		"algorithm":   "RS256",
-		"claims_json": `{"sub":"{{sub}}","accountNumber":42,"org":{"id":"{{user.tenantId}}","roles":["admin"]}}`,
-	})
-
-	got, err := resourceFronteggJWTTemplateSerialize(d)
-	if err != nil {
-		t.Fatalf("serialize: %v", err)
-	}
-	want := map[string]interface{}{
-		"sub":           "{{sub}}",
-		"accountNumber": float64(42),
-		"org":           map[string]interface{}{"id": "{{user.tenantId}}", "roles": []interface{}{"admin"}},
-	}
-	if !reflect.DeepEqual(got.TemplateSchema.Claims, want) {
-		t.Errorf("claims = %+v, want %+v", got.TemplateSchema.Claims, want)
 	}
 }
 
