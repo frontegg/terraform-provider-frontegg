@@ -170,12 +170,12 @@ func TestResourceFronteggJWTTemplateValidateClaims(t *testing.T) {
 				"claims":      map[string]interface{}{"sub": "{{sub}}"},
 				"claims_json": `{"sub":"{{sub}}"}`,
 			}),
-			wantErr: "only one of claims or claims_json can be set",
+			wantErr: "only one of `claims,claims_json` can be specified",
 		},
 		{
 			name:    "neither claims nor claims_json resolved at apply is rejected",
 			raw:     jwtTemplateConfig(nil),
-			wantErr: "one of claims or claims_json must be set",
+			wantErr: "one of `claims,claims_json` must be specified",
 		},
 		{
 			name: "claims map with an unknown value is left to apply",

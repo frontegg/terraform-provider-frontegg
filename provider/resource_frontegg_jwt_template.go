@@ -129,7 +129,7 @@ func resourceFronteggJWTTemplate() *schema.Resource {
 	}
 }
 
-// resourceFronteggJWTTemplateValidateClaims rejects claims missing a required claim, skipping claims unknown until apply.
+// resourceFronteggJWTTemplateValidateClaims enforces exactly one claims attribute and the required claims once values are known.
 func resourceFronteggJWTTemplateValidateClaims(_ context.Context, d *schema.ResourceDiff, _ interface{}) error {
 	claimsJSON := d.Get("claims_json").(string)
 	configuredClaims := d.Get("claims").(map[string]interface{})
@@ -140,10 +140,10 @@ func resourceFronteggJWTTemplateValidateClaims(_ context.Context, d *schema.Reso
 		return nil
 	}
 	if claimsJSON != "" && len(configuredClaims) > 0 {
-		return fmt.Errorf("only one of claims or claims_json can be set")
+		return fmt.Errorf("only one of `claims,claims_json` can be specified")
 	}
 	if claimsJSON == "" && len(configuredClaims) == 0 {
-		return fmt.Errorf("one of claims or claims_json must be set")
+		return fmt.Errorf("one of `claims,claims_json` must be specified")
 	}
 	claims, err := resourceFronteggJWTTemplateClaims(claimsJSON, configuredClaims)
 	if err != nil {
