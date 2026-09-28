@@ -165,6 +165,19 @@ func TestResourceFronteggJWTTemplateValidateClaims(t *testing.T) {
 			wantErr: "claims must include the required OIDC claims (iss, sub, aud, exp, iat); missing: iss, sub, aud, exp, iat",
 		},
 		{
+			name: "both claims and claims_json resolved at apply are rejected",
+			raw: jwtTemplateConfig(map[string]interface{}{
+				"claims":      map[string]interface{}{"sub": "{{sub}}"},
+				"claims_json": `{"sub":"{{sub}}"}`,
+			}),
+			wantErr: "only one of claims or claims_json can be set",
+		},
+		{
+			name:    "neither claims nor claims_json resolved at apply is rejected",
+			raw:     jwtTemplateConfig(nil),
+			wantErr: "one of claims or claims_json must be set",
+		},
+		{
 			name: "claims map with an unknown value is left to apply",
 			raw: jwtTemplateConfig(map[string]interface{}{
 				"claims": map[string]interface{}{"iss": "{{iss}}", "appId": unknownValuePlaceholder},
