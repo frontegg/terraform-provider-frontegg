@@ -262,13 +262,9 @@ func TestResourceFronteggJWTTemplateSerialize(t *testing.T) {
 }
 
 func TestResourceFronteggJWTTemplateSerializeClaimsJSON(t *testing.T) {
-	d := schema.TestResourceDataRaw(t, resourceFronteggJWTTemplate().Schema, map[string]interface{}{
-		"key":         "k",
-		"name":        "n",
-		"expiration":  3600,
-		"algorithm":   "RS256",
+	d := schema.TestResourceDataRaw(t, resourceFronteggJWTTemplate().Schema, jwtTemplateConfig(map[string]interface{}{
 		"claims_json": `{"sub":"{{sub}}","accountNumber":42,"org":{"id":"{{user.tenantId}}","roles":["admin"]}}`,
-	})
+	}))
 
 	got, err := resourceFronteggJWTTemplateSerialize(d)
 	if err != nil {
@@ -589,7 +585,7 @@ func TestAccFronteggJWTTemplate_tenantIDClaimIsAccepted(t *testing.T) {
 	})
 }
 
-const testAccJWTTemplateWithStringClaimsBeforeNesting = `
+const testAccJWTTemplateWithStringClaims = `
 resource "frontegg_jwt_template" "test" {
   key        = "tf-acc-nested-claim"
   name       = "TF acceptance nested claim"
@@ -637,7 +633,7 @@ func TestAccFronteggJWTTemplate_nestedObjectClaim(t *testing.T) {
 		CheckDestroy:      testAccCheckJWTTemplateDestroyed(t),
 		Steps: []resource.TestStep{
 			{
-				Config: testAccJWTTemplateWithStringClaimsBeforeNesting,
+				Config: testAccJWTTemplateWithStringClaims,
 				Check:  resource.TestCheckResourceAttr("frontegg_jwt_template.test", "claims.aud", "{{clientId}}"),
 			},
 			{
@@ -659,7 +655,7 @@ func TestAccFronteggJWTTemplate_nestedObjectClaim(t *testing.T) {
 				ImportStateVerify: true,
 			},
 			{
-				Config: testAccJWTTemplateWithStringClaimsBeforeNesting,
+				Config: testAccJWTTemplateWithStringClaims,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("frontegg_jwt_template.test", "claims.aud", "{{clientId}}"),
 					resource.TestCheckResourceAttr("frontegg_jwt_template.test", "claims_json", ""),
