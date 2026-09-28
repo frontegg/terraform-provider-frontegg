@@ -15,6 +15,19 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 )
 
+func jwtTemplateConfig(claimsAttributes map[string]interface{}) map[string]interface{} {
+	config := map[string]interface{}{
+		"key":        "k",
+		"name":       "n",
+		"expiration": 3600,
+		"algorithm":  "RS256",
+	}
+	for attribute, value := range claimsAttributes {
+		config[attribute] = value
+	}
+	return config
+}
+
 func TestMissingRequiredClaims(t *testing.T) {
 	asClaims := func(keys ...string) map[string]interface{} {
 		m := make(map[string]interface{}, len(keys))
@@ -76,13 +89,7 @@ func TestResourceFronteggJWTTemplateValidateClaims(t *testing.T) {
 		for k, v := range extra {
 			claims[k] = v
 		}
-		return map[string]interface{}{
-			"key":        "k",
-			"name":       "n",
-			"expiration": 3600,
-			"algorithm":  "RS256",
-			"claims":     claims,
-		}
+		return jwtTemplateConfig(map[string]interface{}{"claims": claims})
 	}
 
 	tests := []struct {
@@ -104,66 +111,42 @@ func TestResourceFronteggJWTTemplateValidateClaims(t *testing.T) {
 		},
 		{
 			name: "missing required claims are rejected at plan time",
-			raw: map[string]interface{}{
-				"key":        "k",
-				"name":       "n",
-				"expiration": 3600,
-				"algorithm":  "RS256",
-				"claims":     map[string]interface{}{"email": "{{user.email}}"},
-			},
+			raw: jwtTemplateConfig(map[string]interface{}{
+				"claims": map[string]interface{}{"email": "{{user.email}}"},
+			}),
 			wantErr: "missing: iss, sub, aud, exp, iat",
 		},
 		{
 			name: "claims_json with required claims and a nested object is accepted",
-			raw: map[string]interface{}{
-				"key":         "k",
-				"name":        "n",
-				"expiration":  3600,
-				"algorithm":   "RS256",
+			raw: jwtTemplateConfig(map[string]interface{}{
 				"claims_json": `{"iss":"{{iss}}","sub":"{{sub}}","aud":"{{clientId}}","exp":"{{exp}}","iat":"{{iat}}","org":{"id":"{{user.tenantId}}"}}`,
-			},
+			}),
 		},
 		{
 			name: "claims_json missing required claims is rejected at plan time",
-			raw: map[string]interface{}{
-				"key":         "k",
-				"name":        "n",
-				"expiration":  3600,
-				"algorithm":   "RS256",
+			raw: jwtTemplateConfig(map[string]interface{}{
 				"claims_json": `{"iss":"{{iss}}","org":{"id":"{{user.tenantId}}"}}`,
-			},
+			}),
 			wantErr: "missing: sub, aud, exp, iat",
 		},
 		{
 			name: "claims_json null is rejected",
-			raw: map[string]interface{}{
-				"key":         "k",
-				"name":        "n",
-				"expiration":  3600,
-				"algorithm":   "RS256",
+			raw: jwtTemplateConfig(map[string]interface{}{
 				"claims_json": "null",
-			},
+			}),
 			wantErr: "must be a JSON object, not null",
 		},
 		{
 			name: "unknown claims_json is left to apply",
-			raw: map[string]interface{}{
-				"key":         "k",
-				"name":        "n",
-				"expiration":  3600,
-				"algorithm":   "RS256",
+			raw: jwtTemplateConfig(map[string]interface{}{
 				"claims_json": unknownValuePlaceholder,
-			},
+			}),
 		},
 		{
 			name: "unknown claims map is left to apply",
-			raw: map[string]interface{}{
-				"key":        "k",
-				"name":       "n",
-				"expiration": 3600,
-				"algorithm":  "RS256",
-				"claims":     unknownValuePlaceholder,
-			},
+			raw: jwtTemplateConfig(map[string]interface{}{
+				"claims": unknownValuePlaceholder,
+			}),
 		},
 	}
 
@@ -188,23 +171,38 @@ func TestResourceFronteggJWTTemplateValidateClaims(t *testing.T) {
 }
 
 func TestResourceFronteggJWTTemplateValidateClaimsAttributes(t *testing.T) {
-	base := func(extra map[string]interface{}) map[string]interface{} {
-		raw := map[string]interface{}{"key": "k", "name": "n", "expiration": 3600, "algorithm": "RS256"}
-		for k, v := range extra {
-			raw[k] = v
-		}
-		return raw
-	}
+	stringClaims := map[string]interface{}{"sub": "{{sub}}"}
 	tests := []struct {
 		name    string
 		raw     map[string]interface{}
 		wantErr bool
 	}{
-		{name: "claims only", raw: base(map[string]interface{}{"claims": map[string]interface{}{"sub": "{{sub}}"}})},
-		{name: "claims_json only", raw: base(map[string]interface{}{"claims_json": `{"sub":"{{sub}}"}`})},
-		{name: "neither", raw: base(nil), wantErr: true},
-		{name: "both", raw: base(map[string]interface{}{"claims": map[string]interface{}{"sub": "{{sub}}"}, "claims_json": `{"sub":"{{sub}}"}`}), wantErr: true},
-		{name: "claims_json array", raw: base(map[string]interface{}{"claims_json": `["sub"]`}), wantErr: true},
+		{
+			name: "claims only",
+			raw:  jwtTemplateConfig(map[string]interface{}{"claims": stringClaims}),
+		},
+		{
+			name: "claims_json only",
+			raw:  jwtTemplateConfig(map[string]interface{}{"claims_json": `{"sub":"{{sub}}"}`}),
+		},
+		{
+			name:    "neither",
+			raw:     jwtTemplateConfig(nil),
+			wantErr: true,
+		},
+		{
+			name: "both",
+			raw: jwtTemplateConfig(map[string]interface{}{
+				"claims":      stringClaims,
+				"claims_json": `{"sub":"{{sub}}"}`,
+			}),
+			wantErr: true,
+		},
+		{
+			name:    "claims_json array",
+			raw:     jwtTemplateConfig(map[string]interface{}{"claims_json": `["sub"]`}),
+			wantErr: true,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -342,6 +340,9 @@ func TestResourceFronteggJWTTemplateDeserialize(t *testing.T) {
 	if claims["sub"] != "{{sub}}" || claims["email"] != "{{user.email}}" {
 		t.Errorf("claims round-trip mismatch: %+v", claims)
 	}
+	if claimsJSON := d.Get("claims_json").(string); claimsJSON != "" {
+		t.Errorf("claims_json = %q, want empty", claimsJSON)
+	}
 }
 
 // TestResourceFronteggJWTTemplateDeserializeNonStringClaim covers object claims saved from the portal.
@@ -363,6 +364,18 @@ func TestResourceFronteggJWTTemplateDeserializeNonStringClaim(t *testing.T) {
 	}
 	if claims := d.Get("claims").(map[string]interface{}); len(claims) != 0 {
 		t.Errorf("claims = %+v, want empty", claims)
+	}
+}
+
+func TestResourceFronteggJWTTemplateDeserializeMissingClaimsNotNull(t *testing.T) {
+	d := schema.TestResourceDataRaw(t, resourceFronteggJWTTemplate().Schema, map[string]interface{}{
+		"claims_json": `{"sub":"{{sub}}"}`,
+	})
+	if err := resourceFronteggJWTTemplateDeserialize(d, fronteggJWTTemplate{}); err != nil {
+		t.Fatalf("deserialize: %v", err)
+	}
+	if got := d.Get("claims_json").(string); got != "" {
+		t.Errorf("claims_json = %q, want empty", got)
 	}
 }
 
@@ -463,7 +476,8 @@ func TestAccFronteggJWTTemplate_nestedObjectClaim(t *testing.T) {
 				Config: testAccJWTTemplateWithNestedClaim,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet("frontegg_jwt_template.test", "id"),
-					resource.TestCheckResourceAttrSet("frontegg_jwt_template.test", "claims_json"),
+					resource.TestCheckResourceAttr("frontegg_jwt_template.test", "claims_json",
+						`{"aud":"{{clientId}}","exp":"{{exp}}","iat":"{{iat}}","iss":"{{iss}}","org":{"id":"{{user.tenantId}}","name":"static"},"sub":"{{sub}}"}`),
 				),
 			},
 			{

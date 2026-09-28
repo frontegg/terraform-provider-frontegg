@@ -135,7 +135,7 @@ func resourceFronteggJWTTemplateValidateClaims(_ context.Context, d *schema.Reso
 	if !d.NewValueKnown("claims.%") || !d.NewValueKnown("claims_json") {
 		return nil
 	}
-	claims, err := resourceFronteggJWTTemplateClaims(d)
+	claims, err := resourceFronteggJWTTemplateClaims(d.Get("claims_json").(string), d.Get("claims").(map[string]interface{}))
 	if err != nil {
 		return err
 	}
@@ -161,23 +161,18 @@ func missingRequiredClaims(claims map[string]interface{}) []string {
 	return missing
 }
 
-type attributeGetter interface {
-	Get(key string) interface{}
-}
-
-func resourceFronteggJWTTemplateClaims(d attributeGetter) (map[string]interface{}, error) {
-	claimsJSON := d.Get("claims_json").(string)
+func resourceFronteggJWTTemplateClaims(claimsJSON string, claims map[string]interface{}) (map[string]interface{}, error) {
 	if claimsJSON == "" {
-		return d.Get("claims").(map[string]interface{}), nil
+		return claims, nil
 	}
-	claims, err := structure.ExpandJsonFromString(claimsJSON)
+	decodedClaims, err := structure.ExpandJsonFromString(claimsJSON)
 	if err != nil {
 		return nil, fmt.Errorf("claims_json must be a valid JSON object: %w", err)
 	}
-	if claims == nil {
+	if decodedClaims == nil {
 		return nil, fmt.Errorf("claims_json must be a JSON object, not null")
 	}
-	return claims, nil
+	return decodedClaims, nil
 }
 
 func hasNonStringClaim(claims map[string]interface{}) bool {
@@ -190,7 +185,7 @@ func hasNonStringClaim(claims map[string]interface{}) bool {
 }
 
 func resourceFronteggJWTTemplateSerialize(d *schema.ResourceData) (fronteggJWTTemplate, error) {
-	claims, err := resourceFronteggJWTTemplateClaims(d)
+	claims, err := resourceFronteggJWTTemplateClaims(d.Get("claims_json").(string), d.Get("claims").(map[string]interface{}))
 	if err != nil {
 		return fronteggJWTTemplate{}, err
 	}
