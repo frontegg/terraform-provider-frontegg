@@ -310,8 +310,11 @@ func jwtTemplateUpdateData(t *testing.T, stateAttributes map[string]string, conf
 }
 
 func TestResourceFronteggJWTTemplateUpdateSwitchesClaimsAttribute(t *testing.T) {
-	claimsJSON := `{"aud":"{{clientId}}","exp":"{{exp}}","iat":"{{iat}}","iss":"{{iss}}","sub":"{{sub}}"}`
 	claimsMap := map[string]interface{}{"aud": "{{clientId}}", "exp": "{{exp}}", "iat": "{{iat}}", "iss": "{{iss}}", "sub": "{{sub}}"}
+	claimsJSON, err := structure.FlattenJsonToString(claimsMap)
+	if err != nil {
+		t.Fatalf("flatten: %v", err)
+	}
 	claimsMapState := map[string]string{"claims.%": "5"}
 	for claim, value := range claimsMap {
 		claimsMapState["claims."+claim] = value.(string)
@@ -500,7 +503,7 @@ func TestResourceFronteggJWTTemplateDeserializeNonStringClaim(t *testing.T) {
 	}
 }
 
-func TestResourceFronteggJWTTemplateDeserializeMissingClaimsNotNull(t *testing.T) {
+func TestResourceFronteggJWTTemplateDeserializeMissingClaimsClearsClaimsJSON(t *testing.T) {
 	d := schema.TestResourceDataRaw(t, resourceFronteggJWTTemplate().Schema, map[string]interface{}{
 		"claims_json": `{"sub":"{{sub}}"}`,
 	})
