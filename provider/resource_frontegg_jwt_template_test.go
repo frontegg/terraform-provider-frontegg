@@ -453,6 +453,32 @@ func TestResourceFronteggJWTTemplateDeserializeMissingClaimsNotNull(t *testing.T
 	}
 }
 
+func TestResourceFronteggJWTTemplateReadDriftToNonStringClaim(t *testing.T) {
+	state := &terraform.InstanceState{ID: "tpl-1", Attributes: map[string]string{
+		"id":         "tpl-1",
+		"claims.%":   "2",
+		"claims.sub": "{{sub}}",
+		"claims.iss": "{{iss}}",
+	}}
+	d := resourceFronteggJWTTemplate().Data(state)
+	response := fronteggJWTTemplate{ID: "tpl-1", TemplateSchema: fronteggJWTTemplateSchema{Claims: map[string]interface{}{
+		"sub": "{{sub}}",
+		"org": map[string]interface{}{"id": "{{user.tenantId}}"},
+	}}}
+	if err := resourceFronteggJWTTemplateDeserialize(d, response); err != nil {
+		t.Fatalf("deserialize: %v", err)
+	}
+	if got, want := d.Get("claims_json").(string), `{"org":{"id":"{{user.tenantId}}"},"sub":"{{sub}}"}`; got != want {
+		t.Errorf("claims_json = %s, want %s", got, want)
+	}
+	if claims := d.Get("claims").(map[string]interface{}); len(claims) != 0 {
+		t.Errorf("claims = %+v, want cleared", claims)
+	}
+	if count := d.State().Attributes["claims.%"]; count != "" && count != "0" {
+		t.Errorf("claims.%% in state = %q, want cleared", count)
+	}
+}
+
 // TestResourceFronteggJWTTemplateDeserializeKeepsClaimsJSON keeps claims_json even when every value is a string.
 func TestResourceFronteggJWTTemplateDeserializeKeepsClaimsJSON(t *testing.T) {
 	d := schema.TestResourceDataRaw(t, resourceFronteggJWTTemplate().Schema, map[string]interface{}{
@@ -519,12 +545,29 @@ func TestAccFronteggJWTTemplate_tenantIDClaimIsAccepted(t *testing.T) {
 	})
 }
 
+const testAccJWTTemplateWithStringClaimsBeforeNesting = `
+resource "frontegg_jwt_template" "test" {
+  key        = "tf-acc-nested-claim"
+  name       = "TF acceptance nested claim"
+  expiration = 3600
+  algorithm  = "RS256"
+
+  claims = {
+    iss = "{{iss}}"
+    sub = "{{sub}}"
+    aud = "{{clientId}}"
+    exp = "{{exp}}"
+    iat = "{{iat}}"
+  }
+}
+`
+
 const testAccJWTTemplateWithNestedClaim = `
 resource "frontegg_jwt_template" "test" {
-  key         = "tf-acc-nested-claim"
-  name        = "TF acceptance nested claim"
-  expiration  = 3600
-  algorithm   = "RS256"
+  key        = "tf-acc-nested-claim"
+  name       = "TF acceptance nested claim"
+  expiration = 3600
+  algorithm  = "RS256"
 
   claims_json = jsonencode({
     iss = "{{iss}}"
@@ -546,6 +589,10 @@ func TestAccFronteggJWTTemplate_nestedObjectClaim(t *testing.T) {
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckJWTTemplateDestroyed(t),
 		Steps: []resource.TestStep{
+			{
+				Config: testAccJWTTemplateWithStringClaimsBeforeNesting,
+				Check:  resource.TestCheckResourceAttr("frontegg_jwt_template.test", "claims.aud", "{{clientId}}"),
+			},
 			{
 				Config: testAccJWTTemplateWithNestedClaim,
 				Check: resource.ComposeAggregateTestCheckFunc(
