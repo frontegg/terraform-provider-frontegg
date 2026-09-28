@@ -113,6 +113,27 @@ func TestResourceFronteggJWTTemplateValidateClaims(t *testing.T) {
 			},
 			wantErr: "missing: iss, sub, aud, exp, iat",
 		},
+		{
+			name: "claims_json with required claims and a nested object is accepted",
+			raw: map[string]interface{}{
+				"key":         "k",
+				"name":        "n",
+				"expiration":  3600,
+				"algorithm":   "RS256",
+				"claims_json": `{"iss":"{{iss}}","sub":"{{sub}}","aud":"{{clientId}}","exp":"{{exp}}","iat":"{{iat}}","org":{"id":"{{user.tenantId}}"}}`,
+			},
+		},
+		{
+			name: "claims_json missing required claims is rejected at plan time",
+			raw: map[string]interface{}{
+				"key":         "k",
+				"name":        "n",
+				"expiration":  3600,
+				"algorithm":   "RS256",
+				"claims_json": `{"iss":"{{iss}}","org":{"id":"{{user.tenantId}}"}}`,
+			},
+			wantErr: "missing: sub, aud, exp, iat",
+		},
 	}
 
 	for _, tt := range tests {
@@ -148,7 +169,10 @@ func TestResourceFronteggJWTTemplateSerialize(t *testing.T) {
 		},
 	})
 
-	got := resourceFronteggJWTTemplateSerialize(d)
+	got, err := resourceFronteggJWTTemplateSerialize(d)
+	if err != nil {
+		t.Fatalf("serialize: %v", err)
+	}
 	if got.Key != "enterprise-template" || got.Name != "Enterprise" || got.Description != "An enterprise template" {
 		t.Errorf("unexpected scalar fields: %+v", got)
 	}
@@ -160,6 +184,28 @@ func TestResourceFronteggJWTTemplateSerialize(t *testing.T) {
 	}
 	if got.TemplateSchema.Claims["sub"] != "{{sub}}" || got.TemplateSchema.Claims["email"] != "{{user.email}}" {
 		t.Errorf("claims not carried into templateSchema: %+v", got.TemplateSchema.Claims)
+	}
+}
+
+func TestResourceFronteggJWTTemplateSerializeClaimsJSON(t *testing.T) {
+	d := schema.TestResourceDataRaw(t, resourceFronteggJWTTemplate().Schema, map[string]interface{}{
+		"key":         "k",
+		"name":        "n",
+		"expiration":  3600,
+		"algorithm":   "RS256",
+		"claims_json": `{"sub":"{{sub}}","org":{"id":"{{user.tenantId}}","roles":["admin"]}}`,
+	})
+
+	got, err := resourceFronteggJWTTemplateSerialize(d)
+	if err != nil {
+		t.Fatalf("serialize: %v", err)
+	}
+	want := map[string]interface{}{
+		"sub": "{{sub}}",
+		"org": map[string]interface{}{"id": "{{user.tenantId}}", "roles": []interface{}{"admin"}},
+	}
+	if !reflect.DeepEqual(got.TemplateSchema.Claims, want) {
+		t.Errorf("claims = %+v, want %+v", got.TemplateSchema.Claims, want)
 	}
 }
 
@@ -237,16 +283,45 @@ func TestResourceFronteggJWTTemplateDeserialize(t *testing.T) {
 	}
 }
 
-// TestResourceFronteggJWTTemplateDeserializeRejectsNonStringClaim ensures the
-// deserializer fails loudly rather than silently dropping a non-string claim
-// value returned by the API.
-func TestResourceFronteggJWTTemplateDeserializeRejectsNonStringClaim(t *testing.T) {
+// TestResourceFronteggJWTTemplateDeserializeNonStringClaim ensures a template
+// with a nested object claim, for example one saved from the portal, is read
+// into claims_json instead of failing.
+func TestResourceFronteggJWTTemplateDeserializeNonStringClaim(t *testing.T) {
 	d := schema.TestResourceDataRaw(t, resourceFronteggJWTTemplate().Schema, map[string]interface{}{})
 	in := fronteggJWTTemplate{
-		TemplateSchema: fronteggJWTTemplateSchema{Claims: map[string]interface{}{"exp": float64(123)}},
+		TemplateSchema: fronteggJWTTemplateSchema{Claims: map[string]interface{}{
+			"sub": "{{sub}}",
+			"org": map[string]interface{}{"id": "{{user.tenantId}}"},
+		}},
 	}
-	if err := resourceFronteggJWTTemplateDeserialize(d, in); err == nil {
-		t.Fatal("expected an error for a non-string claim value, got nil")
+	if err := resourceFronteggJWTTemplateDeserialize(d, in); err != nil {
+		t.Fatalf("deserialize: %v", err)
+	}
+	if got, want := d.Get("claims_json").(string), `{"org":{"id":"{{user.tenantId}}"},"sub":"{{sub}}"}`; got != want {
+		t.Errorf("claims_json = %s, want %s", got, want)
+	}
+	if claims := d.Get("claims").(map[string]interface{}); len(claims) != 0 {
+		t.Errorf("claims = %+v, want empty", claims)
+	}
+}
+
+// TestResourceFronteggJWTTemplateDeserializeKeepsClaimsJSON ensures a template
+// managed through claims_json stays there even when every value is a string.
+func TestResourceFronteggJWTTemplateDeserializeKeepsClaimsJSON(t *testing.T) {
+	d := schema.TestResourceDataRaw(t, resourceFronteggJWTTemplate().Schema, map[string]interface{}{
+		"claims_json": `{"sub": "{{sub}}"}`,
+	})
+	in := fronteggJWTTemplate{
+		TemplateSchema: fronteggJWTTemplateSchema{Claims: map[string]interface{}{"sub": "{{sub}}"}},
+	}
+	if err := resourceFronteggJWTTemplateDeserialize(d, in); err != nil {
+		t.Fatalf("deserialize: %v", err)
+	}
+	if got, want := d.Get("claims_json").(string), `{"sub":"{{sub}}"}`; got != want {
+		t.Errorf("claims_json = %s, want %s", got, want)
+	}
+	if claims := d.Get("claims").(map[string]interface{}); len(claims) != 0 {
+		t.Errorf("claims = %+v, want empty", claims)
 	}
 }
 
@@ -286,6 +361,53 @@ func TestAccFronteggJWTTemplate_tenantIDClaimIsAccepted(t *testing.T) {
 			},
 			{
 				Config:   testAccJWTTemplateWithTenantID,
+				PlanOnly: true,
+			},
+			{
+				ResourceName:      "frontegg_jwt_template.test",
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+		},
+	})
+}
+
+const testAccJWTTemplateWithNestedClaim = `
+resource "frontegg_jwt_template" "test" {
+  key         = "tf-acc-nested-claim"
+  name        = "TF acceptance nested claim"
+  expiration  = 3600
+  algorithm   = "RS256"
+
+  claims_json = jsonencode({
+    iss = "{{iss}}"
+    sub = "{{sub}}"
+    aud = "{{clientId}}"
+    exp = "{{exp}}"
+    iat = "{{iat}}"
+    org = {
+      id   = "{{user.tenantId}}"
+      name = "static"
+    }
+  })
+}
+`
+
+func TestAccFronteggJWTTemplate_nestedObjectClaim(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckJWTTemplateDestroyed(t),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccJWTTemplateWithNestedClaim,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttrSet("frontegg_jwt_template.test", "id"),
+					resource.TestCheckResourceAttrSet("frontegg_jwt_template.test", "claims_json"),
+				),
+			},
+			{
+				Config:   testAccJWTTemplateWithNestedClaim,
 				PlanOnly: true,
 			},
 			{

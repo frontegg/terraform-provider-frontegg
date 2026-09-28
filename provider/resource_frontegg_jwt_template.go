@@ -2,12 +2,15 @@ package provider
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 
 	"github.com/frontegg/terraform-provider-frontegg/internal/restclient"
+	"github.com/frontegg/terraform-provider-frontegg/provider/validators"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/structure"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 )
 
@@ -87,12 +90,26 @@ func resourceFronteggJWTTemplate() *schema.Resource {
 					"The standard OIDC claims (`iss`, `sub`, `aud`, `exp`, `iat`) are required, where " +
 					"`aud` must be `{{clientId}}` or `{{applicationId}}`. A small set of claims is " +
 					"reserved for internal use and rejected by the API (for example `type`, `userId`, " +
-					"`superUser`, `act`, `amr`, `acr`, `auth_time`, `nonce`).",
-				Type:     schema.TypeMap,
-				Required: true,
+					"`superUser`, `act`, `amr`, `acr`, `auth_time`, `nonce`). Only string values are " +
+					"supported; use `claims_json` for claims with nested object, array, number or boolean " +
+					"values. Exactly one of `claims` or `claims_json` must be set.",
+				Type:         schema.TypeMap,
+				Optional:     true,
+				ExactlyOneOf: []string{"claims", "claims_json"},
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
+			},
+			"claims_json": {
+				Description: "The JWT claims included in the template, as a JSON object (typically built " +
+					"with `jsonencode`). Use this instead of `claims` when any claim value is not a string, " +
+					"such as a nested object. The same required and reserved claims apply as for `claims`. " +
+					"Exactly one of `claims` or `claims_json` must be set.",
+				Type:             schema.TypeString,
+				Optional:         true,
+				ExactlyOneOf:     []string{"claims", "claims_json"},
+				ValidateFunc:     validators.ValidateJSON,
+				DiffSuppressFunc: structure.SuppressJsonDiff,
 			},
 			"vendor_id": {
 				Description: "The ID of the vendor that owns the JWT template.",
@@ -113,14 +130,17 @@ func resourceFronteggJWTTemplate() *schema.Resource {
 	}
 }
 
-// resourceFronteggJWTTemplateValidateClaims enforces that the claims map
-// includes every claim Frontegg requires. The claim keys are always known at
-// plan time (only their values may reference computed attributes), so this is
-// safe to evaluate during CustomizeDiff.
+// resourceFronteggJWTTemplateValidateClaims enforces that the claims include
+// every claim Frontegg requires. The keys of the claims map are always known at
+// plan time (only their values may reference computed attributes), whereas
+// claims_json may be unknown until apply, in which case validation is skipped.
 func resourceFronteggJWTTemplateValidateClaims(_ context.Context, d *schema.ResourceDiff, _ interface{}) error {
-	claims, ok := d.Get("claims").(map[string]interface{})
-	if !ok {
+	if !d.NewValueKnown("claims_json") {
 		return nil
+	}
+	claims, err := resourceFronteggJWTTemplateClaims(d)
+	if err != nil {
+		return err
 	}
 	if missing := missingRequiredClaims(claims); len(missing) > 0 {
 		return fmt.Errorf(
@@ -144,7 +164,38 @@ func missingRequiredClaims(claims map[string]interface{}) []string {
 	return missing
 }
 
-func resourceFronteggJWTTemplateSerialize(d *schema.ResourceData) fronteggJWTTemplate {
+type attributeGetter interface {
+	Get(key string) interface{}
+}
+
+// resourceFronteggJWTTemplateClaims returns the configured claims from
+// whichever of claims or claims_json is set.
+func resourceFronteggJWTTemplateClaims(d attributeGetter) (map[string]interface{}, error) {
+	claimsJSON := d.Get("claims_json").(string)
+	if claimsJSON == "" {
+		return d.Get("claims").(map[string]interface{}), nil
+	}
+	var claims map[string]interface{}
+	if err := json.Unmarshal([]byte(claimsJSON), &claims); err != nil {
+		return nil, fmt.Errorf("claims_json must be a valid JSON object: %w", err)
+	}
+	return claims, nil
+}
+
+func hasNonStringClaim(claims map[string]interface{}) bool {
+	for _, value := range claims {
+		if _, isString := value.(string); !isString {
+			return true
+		}
+	}
+	return false
+}
+
+func resourceFronteggJWTTemplateSerialize(d *schema.ResourceData) (fronteggJWTTemplate, error) {
+	claims, err := resourceFronteggJWTTemplateClaims(d)
+	if err != nil {
+		return fronteggJWTTemplate{}, err
+	}
 	return fronteggJWTTemplate{
 		Key:         d.Get("key").(string),
 		Name:        d.Get("name").(string),
@@ -152,9 +203,29 @@ func resourceFronteggJWTTemplateSerialize(d *schema.ResourceData) fronteggJWTTem
 		Expiration:  d.Get("expiration").(int),
 		Algorithm:   d.Get("algorithm").(string),
 		TemplateSchema: fronteggJWTTemplateSchema{
-			Claims: d.Get("claims").(map[string]interface{}),
+			Claims: claims,
 		},
+	}, nil
+}
+
+// resourceFronteggJWTTemplateClaimsDeserialize stores the claims in claims_json
+// when it is already in use or when any value cannot be expressed as a string,
+// and in claims otherwise.
+func resourceFronteggJWTTemplateClaimsDeserialize(d *schema.ResourceData, claims map[string]interface{}) error {
+	if d.Get("claims_json").(string) == "" && !hasNonStringClaim(claims) {
+		if err := d.Set("claims", claims); err != nil {
+			return err
+		}
+		return d.Set("claims_json", "")
 	}
+	claimsJSON, err := json.Marshal(claims)
+	if err != nil {
+		return err
+	}
+	if err := d.Set("claims_json", string(claimsJSON)); err != nil {
+		return err
+	}
+	return d.Set("claims", nil)
 }
 
 func resourceFronteggJWTTemplateDeserialize(d *schema.ResourceData, t fronteggJWTTemplate) error {
@@ -183,23 +254,15 @@ func resourceFronteggJWTTemplateDeserialize(d *schema.ResourceData, t fronteggJW
 	if err := d.Set("updated_at", t.UpdatedAt); err != nil {
 		return err
 	}
-	stringClaims := make(map[string]string, len(t.TemplateSchema.Claims))
-	for k, v := range t.TemplateSchema.Claims {
-		sv, ok := v.(string)
-		if !ok {
-			return fmt.Errorf("jwt template claim %q has unexpected non-string value of type %T; only string claim values are supported", k, v)
-		}
-		stringClaims[k] = sv
-	}
-	if err := d.Set("claims", stringClaims); err != nil {
-		return err
-	}
-	return nil
+	return resourceFronteggJWTTemplateClaimsDeserialize(d, t.TemplateSchema.Claims)
 }
 
 func resourceFronteggJWTTemplateCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	clientHolder := m.(*restclient.ClientHolder)
-	in := resourceFronteggJWTTemplateSerialize(d)
+	in, err := resourceFronteggJWTTemplateSerialize(d)
+	if err != nil {
+		return diag.FromErr(err)
+	}
 	var out fronteggJWTTemplate
 	if err := clientHolder.ApiClient.Post(ctx, fronteggJWTTemplatePath, in, &out); err != nil {
 		return diag.FromErr(err)
@@ -229,7 +292,10 @@ func resourceFronteggJWTTemplateRead(ctx context.Context, d *schema.ResourceData
 
 func resourceFronteggJWTTemplateUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	clientHolder := m.(*restclient.ClientHolder)
-	in := resourceFronteggJWTTemplateSerialize(d)
+	in, err := resourceFronteggJWTTemplateSerialize(d)
+	if err != nil {
+		return diag.FromErr(err)
+	}
 	var out fronteggJWTTemplate
 	if err := clientHolder.ApiClient.Put(ctx, fmt.Sprintf("%s/%s", fronteggJWTTemplatePath, d.Id()), in, &out); err != nil {
 		return diag.FromErr(err)
