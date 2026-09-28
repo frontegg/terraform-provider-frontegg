@@ -293,11 +293,15 @@ func TestResourceFronteggJWTTemplateSerializeRejectsNullClaimsJSON(t *testing.T)
 	}
 }
 
-func jwtTemplateUpdateData(t *testing.T, stateAttributes map[string]string, config map[string]interface{}) *schema.ResourceData {
-	jwtTemplateResource := resourceFronteggJWTTemplate()
+func jwtTemplateState(stateAttributes map[string]string) *terraform.InstanceState {
 	attributes := map[string]string{"id": "tpl-1", "key": "k", "name": "n", "expiration": "3600", "algorithm": "RS256"}
 	maps.Copy(attributes, stateAttributes)
-	state := &terraform.InstanceState{ID: "tpl-1", Attributes: attributes}
+	return &terraform.InstanceState{ID: "tpl-1", Attributes: attributes}
+}
+
+func jwtTemplateUpdateData(t *testing.T, stateAttributes map[string]string, config map[string]interface{}) *schema.ResourceData {
+	jwtTemplateResource := resourceFronteggJWTTemplate()
+	state := jwtTemplateState(stateAttributes)
 	diff, err := jwtTemplateResource.Diff(context.Background(), state, terraform.NewResourceConfigRaw(jwtTemplateConfig(config)), nil)
 	if err != nil {
 		t.Fatalf("diff: %v", err)
@@ -389,9 +393,7 @@ func TestResourceFronteggJWTTemplateReformattedClaimsJSONHasNoDiff(t *testing.T)
 	if err != nil {
 		t.Fatalf("flatten: %v", err)
 	}
-	state := &terraform.InstanceState{ID: "tpl-1", Attributes: map[string]string{
-		"id": "tpl-1", "key": "k", "name": "n", "expiration": "3600", "algorithm": "RS256", "claims_json": storedClaims,
-	}}
+	state := jwtTemplateState(map[string]string{"claims_json": storedClaims})
 	config := jwtTemplateConfig(map[string]interface{}{
 		"claims_json": "{\n  \"org\": {\"id\": \"{{user.tenantId}}\"},\n  \"sub\": \"{{sub}}\", \"iss\": \"{{iss}}\",\n  \"aud\": \"{{clientId}}\", \"iat\": \"{{iat}}\", \"exp\": \"{{exp}}\"\n}",
 	})
@@ -516,12 +518,11 @@ func TestResourceFronteggJWTTemplateDeserializeMissingClaimsClearsClaimsJSON(t *
 }
 
 func TestResourceFronteggJWTTemplateDeserializeClearsClaimsStateOnNonStringDrift(t *testing.T) {
-	state := &terraform.InstanceState{ID: "tpl-1", Attributes: map[string]string{
-		"id":         "tpl-1",
+	state := jwtTemplateState(map[string]string{
 		"claims.%":   "2",
 		"claims.sub": "{{sub}}",
 		"claims.iss": "{{iss}}",
-	}}
+	})
 	d := resourceFronteggJWTTemplate().Data(state)
 	response := fronteggJWTTemplate{ID: "tpl-1", TemplateSchema: fronteggJWTTemplateSchema{Claims: map[string]interface{}{
 		"sub": "{{sub}}",
