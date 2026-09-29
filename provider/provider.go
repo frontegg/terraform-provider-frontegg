@@ -106,7 +106,6 @@ func New(version string) func() *schema.Provider {
 				applicationId := d.Get("application_id").(string)
 				apiClient := restclient.MakeRestClient(d.Get("api_base_url").(string), environmentId, applicationId)
 				portalClient := restclient.MakeRestClient(d.Get("portal_base_url").(string), environmentId, applicationId)
-				vendorId := environmentId
 				{
 					in := struct {
 						ClientId  string `json:"clientId"`
@@ -124,14 +123,10 @@ func New(version string) func() *schema.Provider {
 					}
 					portalClient.Authenticate(out.AccessToken)
 					apiClient.Authenticate(out.AccessToken)
-					if id, err := vendorIDFromToken(out.AccessToken); err == nil && id != "" {
-						vendorId = id
-					}
 				}
 				return &restclient.ClientHolder{
 					ApiClient:    apiClient,
 					PortalClient: portalClient,
-					VendorID:     vendorId,
 				}, nil
 			},
 		}
