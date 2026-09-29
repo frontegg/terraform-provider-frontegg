@@ -12,8 +12,11 @@ func dataSourceFronteggPermission() *schema.Resource {
 	s := resourceFronteggPermission().Schema
 	for _, field := range s {
 		field.Required = false
+		field.Optional = false
 		field.Computed = true
+		field.ValidateFunc = nil
 	}
+	s["assignment_type"].Description = `How the permission is assigned to roles, shown in the Frontegg portal as the classification type: "ASSIGNABLE", "NEVER" or "ALWAYS".`
 	s["key"].Computed = false
 	s["key"].Required = true
 	return &schema.Resource{
