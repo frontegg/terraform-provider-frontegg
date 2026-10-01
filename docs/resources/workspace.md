@@ -75,6 +75,7 @@ resource "frontegg_workspace" "example" {
     site_key   = "fake-site-key"
     secret_key = "fake-secret-key"
     min_score  = 0.5
+    action     = "CHALLENGE"
   }
 
   hosted_login {
@@ -201,6 +202,7 @@ Required:
 
 Optional:
 
+- `action` (String) The Bot detection action taken when the reCAPTCHA score is below `min_score`. Must be one of `ALLOW`, `BLOCK`, `CHALLENGE`, or `LOCK`. If omitted, the action currently configured in the environment is kept.
 - `ignored_emails` (Set of String) Email addresses that should be exempt from CAPTCHA checks.
 
 

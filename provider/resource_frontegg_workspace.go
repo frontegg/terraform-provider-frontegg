@@ -22,7 +22,7 @@ const fronteggMFAURL = "/identity/resources/configurations/v1/mfa"
 const fronteggLockoutPolicyURL = "/identity/resources/configurations/v1/lockout-policy"
 const fronteggPasswordPolicyURL = "/identity/resources/configurations/v1/password"
 const fronteggPasswordHistoryPolicyURL = "/identity/resources/configurations/v1/password-history-policy"
-const fronteggCaptchaPolicyURL = "/identity/resources/configurations/v1/captcha-policy"
+const fronteggBotDetectionPolicyURL = "/security-engines/resources/policies/v1/bot-detection"
 const fronteggOAuthURL = "/oauth/resources/configurations/v1"
 const fronteggOAuthRedirectURIsURL = "/oauth/resources/configurations/v1/redirect-uri"
 const fronteggSSOURL = "/identity/resources/sso/v2"
@@ -194,12 +194,16 @@ type fronteggPasswordHistoryPolicy struct {
 	HistorySize int  `json:"historySize"`
 }
 
-type fronteggCaptchaPolicy struct {
-	Enabled       bool     `json:"enabled"`
-	SiteKey       string   `json:"siteKey"`
-	SecretKey     string   `json:"secretKey"`
-	MinScore      float64  `json:"minScore"`
-	IgnoredEmails []string `json:"ignoredEmails"`
+type fronteggBotDetectionPolicy struct {
+	Enabled               bool     `json:"enabled"`
+	Type                  string   `json:"type,omitempty"`
+	Action                string   `json:"action,omitempty"`
+	FailStrategy          string   `json:"failStrategy,omitempty"`
+	SiteKey               *string  `json:"siteKey"`
+	SecretKey             *string  `json:"secretKey"`
+	MinScore              *float64 `json:"minScore"`
+	IgnoredEmails         []string `json:"ignoredEmails"`
+	ShouldSendUnlockEmail bool     `json:"shouldSendUnlockEmail"`
 }
 
 type fronteggOAuth struct {
@@ -473,6 +477,13 @@ Must be one of "off", "on", or "unless-saml".`,
 							Optional:    true,
 							Elem:        &schema.Schema{Type: schema.TypeString},
 						},
+						"action": {
+							Description:  "The Bot detection action taken when the reCAPTCHA score is below `min_score`. Must be one of `ALLOW`, `BLOCK`, `CHALLENGE`, or `LOCK`. If omitted, the action currently configured in the environment is kept.",
+							Type:         schema.TypeString,
+							Optional:     true,
+							Computed:     true,
+							ValidateFunc: validation.StringInSlice([]string{"ALLOW", "BLOCK", "CHALLENGE", "LOCK"}, false),
+						},
 					},
 				},
 			},
@@ -684,24 +695,8 @@ func resourceFronteggWorkspaceRead(ctx context.Context, d *schema.ResourceData, 
 			return diag.FromErr(err)
 		}
 	}
-	{
-		var out fronteggCaptchaPolicy
-		clientHolder.ApiClient.Ignore404()
-		if err := clientHolder.ApiClient.Get(ctx, fronteggCaptchaPolicyURL, &out); err != nil {
-			return diag.FromErr(err)
-		}
-		items := []interface{}{}
-		if out.Enabled {
-			items = append(items, map[string]interface{}{
-				"site_key":       out.SiteKey,
-				"secret_key":     out.SecretKey,
-				"min_score":      out.MinScore,
-				"ignored_emails": out.IgnoredEmails,
-			})
-		}
-		if err := d.Set("captcha_policy", items); err != nil {
-			return diag.FromErr(err)
-		}
+	if err := readFronteggCaptchaPolicy(ctx, &clientHolder.ApiClient, d); err != nil {
+		return diag.FromErr(err)
 	}
 
 	{
@@ -924,40 +919,9 @@ func resourceFronteggWorkspaceUpdate(ctx context.Context, d *schema.ResourceData
 			return diag.FromErr(err)
 		}
 	}
-	{
-		captcha_policy := d.Get("captcha_policy").([]interface{})
-		in := fronteggCaptchaPolicy{
-			Enabled:   false,
-			SiteKey:   "not-specified",
-			SecretKey: "not-specified",
-			MinScore:  0.5,
-		}
-		if len(captcha_policy) > 0 {
-			in.Enabled = true
-			in.SiteKey = d.Get("captcha_policy.0.site_key").(string)
-			in.SecretKey = d.Get("captcha_policy.0.secret_key").(string)
-			in.MinScore = d.Get("captcha_policy.0.min_score").(float64)
-			in.IgnoredEmails = stringSetToList(d.Get("captcha_policy.0.ignored_emails").(*schema.Set))
-
-			clientHolder.ApiClient.ConflictRetryMethod("PUT")
-			if err := clientHolder.ApiClient.Post(ctx, fronteggCaptchaPolicyURL, in, nil); err != nil {
-				return diag.FromErr(err)
-			}
-		} else {
-			var currentCaptchaPolicy fronteggCaptchaPolicy
-			clientHolder.ApiClient.Ignore404()
-			if err := clientHolder.ApiClient.Get(ctx, fronteggCaptchaPolicyURL, &currentCaptchaPolicy); err != nil {
-				return diag.FromErr(err)
-			}
-
-			// If current configuration is applied and was removed from the provider - we are turning it off
-			if currentCaptchaPolicy.Enabled {
-				currentCaptchaPolicy.Enabled = false
-				clientHolder.ApiClient.ConflictRetryMethod("PUT")
-				if err := clientHolder.ApiClient.Put(ctx, fronteggCaptchaPolicyURL, currentCaptchaPolicy, nil); err != nil {
-					return diag.FromErr(err)
-				}
-			}
+	if d.IsNewResource() || d.HasChange("captcha_policy") {
+		if err := updateFronteggCaptchaPolicy(ctx, &clientHolder.ApiClient, d); err != nil {
+			return diag.FromErr(err)
 		}
 	}
 	{
@@ -1078,4 +1042,64 @@ func resourceFronteggWorkspaceDelete(ctx context.Context, d *schema.ResourceData
 	log.Printf("[WARN] Cannot destroy workspace. Terraform will remove this resource from the " +
 		"state file, but the workspace will remain in its last-applied state.")
 	return nil
+}
+
+func readFronteggCaptchaPolicy(ctx context.Context, client *restclient.Client, d *schema.ResourceData) error {
+	var out fronteggBotDetectionPolicy
+	client.Ignore404()
+	if err := client.Get(ctx, fronteggBotDetectionPolicyURL, &out); err != nil {
+		return err
+	}
+	items := []interface{}{}
+	if out.Enabled {
+		item := map[string]interface{}{
+			"site_key":       "",
+			"secret_key":     "",
+			"min_score":      0.0,
+			"ignored_emails": out.IgnoredEmails,
+			"action":         out.Action,
+		}
+		if out.SiteKey != nil {
+			item["site_key"] = *out.SiteKey
+		}
+		if out.SecretKey != nil {
+			item["secret_key"] = *out.SecretKey
+		}
+		if out.MinScore != nil {
+			item["min_score"] = *out.MinScore
+		}
+		items = append(items, item)
+	}
+	return d.Set("captcha_policy", items)
+}
+
+func updateFronteggCaptchaPolicy(ctx context.Context, client *restclient.Client, d *schema.ResourceData) error {
+	var current fronteggBotDetectionPolicy
+	client.Ignore404()
+	if err := client.Get(ctx, fronteggBotDetectionPolicyURL, &current); err != nil {
+		return err
+	}
+	if len(d.Get("captcha_policy").([]interface{})) == 0 {
+		if !current.Enabled {
+			return nil
+		}
+		current.Enabled = false
+	} else {
+		siteKey := d.Get("captcha_policy.0.site_key").(string)
+		secretKey := d.Get("captcha_policy.0.secret_key").(string)
+		minScore := d.Get("captcha_policy.0.min_score").(float64)
+		current.Enabled = true
+		current.Type = "Recaptcha"
+		current.SiteKey = &siteKey
+		current.SecretKey = &secretKey
+		current.MinScore = &minScore
+		current.IgnoredEmails = stringSetToList(d.Get("captcha_policy.0.ignored_emails").(*schema.Set))
+		if action, ok := d.GetOk("captcha_policy.0.action"); ok {
+			current.Action = action.(string)
+		}
+	}
+	if current.IgnoredEmails == nil {
+		current.IgnoredEmails = []string{}
+	}
+	return client.Post(ctx, fronteggBotDetectionPolicyURL, current, nil)
 }
