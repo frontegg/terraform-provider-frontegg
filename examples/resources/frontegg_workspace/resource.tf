@@ -52,6 +52,7 @@ resource "frontegg_workspace" "example" {
     site_key   = "fake-site-key"
     secret_key = "fake-secret-key"
     min_score  = 0.5
+    action     = "CHALLENGE"
   }
 
   hosted_login {
