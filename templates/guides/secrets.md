@@ -77,6 +77,12 @@ increase `secret_wo_version` in the same apply:
 ## Moving an existing secret to a write-only argument
 
 Replace the secret argument with its write-only pair and apply. The provider sends the
-write-only value and removes the old value from state. Imported resources follow the same
-path: an import can read the secret back into state, and the first apply with the
-write-only pair clears it.
+write-only value and removes the old value from state.
+
+## Importing resources with secrets
+
+An import never reads a secret into state, because `terraform import` has no configuration
+to tell whether the secret is supplied write-only. Either way, the first plan after import
+shows a one-time update. With a write-only pair, it records `*_wo_version` and sends the
+write-only value. With a plain secret argument, it sends the configured secret, and after
+that apply, refresh tracks the secret as before.
