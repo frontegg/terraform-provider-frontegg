@@ -152,6 +152,36 @@ func TestWebhookWriteOnlySecret(t *testing.T) {
 	})
 }
 
+func TestWebhookImportKeepsSecretOutOfState(t *testing.T) {
+	skipBelowWriteOnlyTerraform(t)
+	fakeWebhookAPI(t)
+
+	resource.UnitTest(t, resource.TestCase{
+		ProviderFactories: testAccProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: webhookSecretConfig(`
+  secret_wo         = var.webhook_secret
+  secret_wo_version = 1`),
+			},
+			{
+				ResourceName: "frontegg_webhook.test",
+				ImportState:  true,
+				ImportStateCheck: func(states []*terraform.InstanceState) error {
+					for _, state := range states {
+						for key, value := range state.Attributes {
+							if value == "ephemeral-secret" {
+								return fmt.Errorf("imported state attribute %s holds the secret", key)
+							}
+						}
+					}
+					return nil
+				},
+			},
+		},
+	})
+}
+
 func TestWebhookWriteOnlySecretValidation(t *testing.T) {
 	skipBelowWriteOnlyTerraform(t)
 	fakeWebhookAPI(t)

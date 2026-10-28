@@ -66,10 +66,11 @@ func secretValue(d *schema.ResourceData, name string) string {
 	return d.Get(name).(string)
 }
 
-// setSecretUnlessWriteOnly refreshes `name` from the API unless the secret is
-// supplied write-only, in which case the API value must stay out of state.
+// setSecretUnlessWriteOnly refreshes `name` from the API only when state
+// already holds it in plain text. Import has no configuration to tell whether
+// the secret is write-only, so a secret that isn't in state is never read in.
 func setSecretUnlessWriteOnly(d *schema.ResourceData, name, value string) error {
-	if usesWriteOnlySecret(d, name) {
+	if usesWriteOnlySecret(d, name) || d.Get(name).(string) == "" {
 		return nil
 	}
 	return d.Set(name, value)
