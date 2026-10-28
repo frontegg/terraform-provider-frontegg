@@ -54,6 +54,7 @@ variable "webhook_secret" {
 
 resource "frontegg_webhook" "example" {
   enabled     = true
+  name        = "Example webhook"
   description = "Signed with a secret that never reaches state"
   url         = "https://example.com/webhook"
   events      = ["frontegg.user.authenticated"]
@@ -74,10 +75,15 @@ increase `secret_wo_version` in the same apply:
   secret_wo_version = 2
 ```
 
+When an apply updates the resource for another reason, the provider also sends the current
+write-only value, whether or not the version changed.
+
 ## Moving an existing secret to a write-only argument
 
 Replace the secret argument with its write-only pair and apply. The provider sends the
-write-only value and removes the old value from state.
+write-only value and removes the old value from state. Earlier state snapshots, such as
+`terraform.tfstate.backup` or your backend's state history, still hold the old value, so
+rotate the secret if those snapshots are a concern.
 
 ## Importing resources with secrets
 
