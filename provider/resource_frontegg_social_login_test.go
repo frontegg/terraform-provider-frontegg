@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"regexp"
@@ -224,4 +225,80 @@ func TestSocialLoginCreateLeavesNoIDWhenConfigWriteFails(t *testing.T) {
 	if d.Id() != "" {
 		t.Errorf("id = %q, want empty because nothing was activated", d.Id())
 	}
+}
+
+type socialLoginOptionsAPI struct {
+	existing string
+	posted   map[string]interface{}
+}
+
+func (a *socialLoginOptionsAPI) serve(t *testing.T) *httptest.Server {
+	t.Helper()
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.Method == http.MethodGet && r.URL.Path == fronteggSSOURL+"/google":
+			_, _ = w.Write([]byte(a.existing))
+		case r.Method == http.MethodPost && r.URL.Path == fronteggSSOURL:
+			_ = json.NewDecoder(r.Body).Decode(&a.posted)
+			w.WriteHeader(http.StatusOK)
+		case r.Method == http.MethodPost && r.URL.Path == fronteggSSOURL+"/google/activate":
+			w.WriteHeader(http.StatusOK)
+		default:
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	t.Cleanup(srv.Close)
+	return srv
+}
+
+func socialLoginGoogleData(t *testing.T) *schema.ResourceData {
+	t.Helper()
+	return socialLoginResourceData(t, map[string]interface{}{
+		"provider_name": "google",
+		"client_id":     "google-client",
+		"redirect_url":  "https://example.com/oauth/callback",
+		"secret":        "google-secret",
+		"customised":    true,
+	})
+}
+
+func socialLoginHolder(srv *httptest.Server) *restclient.ClientHolder {
+	holder := &restclient.ClientHolder{ApiClient: restclient.MakeRestClient(srv.URL, "", "")}
+	holder.ApiClient.Authenticate("test-token")
+	return holder
+}
+
+func wantPostedOptions(t *testing.T, posted map[string]interface{}) {
+	t.Helper()
+	options, ok := posted["options"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("posted options = %#v, want the provider's existing options", posted["options"])
+	}
+	if options["verifyHostedDomain"] != true || options["verifyEmail"] != false {
+		t.Errorf("posted options = %#v, want verifyHostedDomain=true verifyEmail=false", options)
+	}
+}
+
+func TestSocialLoginUpdateKeepsOptions(t *testing.T) {
+	api := &socialLoginOptionsAPI{existing: `{"type":"google","active":true,"customised":true,"clientId":"google-client","secret":"google-secret","options":{"verifyEmail":false,"verifyHostedDomain":true}}`}
+	srv := api.serve(t)
+	d := socialLoginGoogleData(t)
+	d.SetId("google")
+
+	if diags := resourceFronteggSocialLoginUpdate(context.Background(), d, socialLoginHolder(srv)); diags.HasError() {
+		t.Fatalf("update: %v", diags)
+	}
+
+	wantPostedOptions(t, api.posted)
+}
+
+func TestSocialLoginCreateKeepsOptions(t *testing.T) {
+	api := &socialLoginOptionsAPI{existing: `{"type":"google","active":false,"customised":false,"options":{"verifyEmail":false,"verifyHostedDomain":true}}`}
+	srv := api.serve(t)
+
+	if diags := resourceFronteggSocialLoginCreate(context.Background(), socialLoginGoogleData(t), socialLoginHolder(srv)); diags.HasError() {
+		t.Fatalf("create: %v", diags)
+	}
+
+	wantPostedOptions(t, api.posted)
 }

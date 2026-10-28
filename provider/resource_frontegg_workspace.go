@@ -220,13 +220,14 @@ type fronteggOAuthRedirectURI struct {
 }
 
 type fronteggSSO struct {
-	Active           bool     `json:"active"`
-	ClientID         string   `json:"clientId"`
-	RedirectURL      string   `json:"redirectUrl"`
-	Secret           string   `json:"secret"`
-	Type             string   `json:"type"`
-	Cusomised        bool     `json:"customised"`
-	AdditionalScopes []string `json:"additionalScopes,omitempty"`
+	Active           bool                   `json:"active"`
+	ClientID         string                 `json:"clientId"`
+	RedirectURL      string                 `json:"redirectUrl"`
+	Secret           string                 `json:"secret"`
+	Type             string                 `json:"type"`
+	Cusomised        bool                   `json:"customised"`
+	AdditionalScopes []string               `json:"additionalScopes,omitempty"`
+	Options          map[string]interface{} `json:"options,omitempty"`
 }
 
 type fronteggSSOSAML struct {
