@@ -29,5 +29,5 @@ jobs:
         env:
           TF_ACC: "1"
           TF_ACC_TERRAFORM_VERSION: ${{ matrix.terraform }}
-          FRONTEGG_API_KEY: ${{ secrets.FRONTEGG_API_KEY }}
+          FRONTEGG_SECRET_KEY: ${{ secrets.FRONTEGG_API_KEY }}
           FRONTEGG_CLIENT_ID: ${{ secrets.FRONTEGG_CLIENT_ID }}
