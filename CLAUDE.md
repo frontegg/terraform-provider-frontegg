@@ -8,7 +8,7 @@ Terraform provider for the Frontegg user management platform, written in Go. Use
 
 ## Requirements
 
-- **Terraform** >= 1.0.3
+- **Terraform** >= 1.0.3 (>= 1.11 for write-only `*_wo` secret arguments)
 - **Go** >= 1.20 (install platform-compatible version)
 - `FRONTEGG_CLIENT_ID` and `FRONTEGG_SECRET_KEY` env vars for authentication
 
@@ -62,6 +62,8 @@ Both authenticate via `/auth/vendor` using the same credentials.
 **Shared structs in `resource_frontegg_workspace.go`**: The `fronteggSSODomain` struct and `fronteggSSODomainURL` constant are defined in `resource_frontegg_workspace.go` but reused in `resource_frontegg_sso_domain_policy.go`. Don't define duplicates — import from workspace.
 
 **Tenant-scoped resources**: SSO resources (tenant_sso_domain, tenant_saml_config, tenant_oidc_config, tenant_mfa_policy, etc.) send a `frontegg-tenant-id` header on each request. See `resource_frontegg_tenant_sso_domain.go` for the pattern.
+
+**Write-only secrets**: Practitioner-supplied secrets get a `<name>_wo` + `<name>_wo_version` pair via `addWriteOnlySecret` in `write_only_secret.go`. Serialize with `secretValue(d, name)` and refresh with `setSecretUnlessWriteOnly(d, name, value)`, which only refreshes a secret already in state, so a write-only or imported secret never lands in state. Write-only tests need Terraform >= 1.11 and skip below it.
 
 **Compound import IDs**: Some resources use colon-delimited IDs for import. Example: `tenant_sso_domain` uses `tenant_id:sso_config_id:domain_id`. Document import format in resource `Importer` block.
 
