@@ -21,9 +21,13 @@ Configures an OIDC SSO configuration for a Frontegg tenant. Users whose email do
 
 ### Optional
 
+> **NOTE**: [Write-only arguments](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments) are supported in Terraform 1.11 and later.
+
 - `enabled` (Boolean) Whether the SSO configuration is enabled.
 - `oidc_client_id` (String) The client ID of the OIDC application registered on the external IdP (e.g. Okta, Azure AD).
-- `oidc_secret` (String, Sensitive) The client secret for the OIDC application. Used with `oidc_client_id` to authenticate token exchange requests with the IdP.
+- `oidc_secret` (String, Sensitive) The client secret for the OIDC application. Used with `oidc_client_id` to authenticate token exchange requests with the IdP. Stored in state; use `oidc_secret_wo` to keep it out of state.
+- `oidc_secret_wo` (String, Sensitive, [Write-only](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments)) Write-only alternative to `oidc_secret` that is never stored in the plan or state. Accepts ephemeral values. Requires Terraform 1.11 or later and must be set together with `oidc_secret_wo_version`.
+- `oidc_secret_wo_version` (Number) Version of `oidc_secret_wo`. Terraform cannot detect changes to a write-only value, so change this number whenever `oidc_secret_wo` changes to send the new value.
 - `override_active_tenant` (Boolean) Whether to override the active tenant for users matched by this SSO configuration.
 - `skip_email_domain_validation` (Boolean) When true, users can authenticate via this SSO configuration even if the associated email domain has not been validated through DNS TXT record verification.
 - `sso_endpoint` (String) The IdP's login or authorization endpoint URL.
