@@ -169,6 +169,11 @@ func TestPrehookCustomizeDiffRequiredFields(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name:    "api secret supplied write-only",
+			raw:     map[string]interface{}{"type": fronteggPrehookTypeAPI, "url": "https://x", "secret_wo_version": 1},
+			wantErr: false,
+		},
+		{
 			name:    "custom code missing code",
 			raw:     map[string]interface{}{"type": fronteggPrehookTypeCustomCode},
 			wantErr: true,
