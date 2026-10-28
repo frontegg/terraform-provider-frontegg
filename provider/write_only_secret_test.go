@@ -210,3 +210,27 @@ func TestWebhookWriteOnlySecretValidation(t *testing.T) {
 		},
 	})
 }
+
+func TestWebhookWriteOnlySecretLifecycle(t *testing.T) {
+	api := newFakeAPI(t,
+		fakeAPIRoute{http.MethodPost, fronteggWebhookPath + "/custom", fakeCreate("_id")},
+		fakeAPIRoute{http.MethodGet, fronteggWebhookPath, fakeList},
+		fakeAPIRoute{http.MethodPatch, fronteggWebhookPath + "/{id}", fakeUpdate},
+		fakeAPIRoute{http.MethodDelete, fronteggWebhookPath + "/{id}", fakeDelete},
+	)
+	testWriteOnlySecretLifecycle(t, api, writeOnlySecretCase{
+		address: "frontegg_webhook.test",
+		secrets: map[string][]string{"secret": {"secret"}},
+		config: func(arguments string) string {
+			return `
+resource "frontegg_webhook" "test" {
+  enabled     = true
+  name        = "lifecycle"
+  description = "write-only lifecycle"
+  url         = "https://example.com/hook"
+  events      = ["frontegg.user.created"]
+` + arguments + `}
+`
+		},
+	})
+}
