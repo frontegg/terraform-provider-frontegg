@@ -21,9 +21,13 @@ Configures a SAML SSO configuration for a Frontegg tenant. Users whose email dom
 
 ### Optional
 
+> **NOTE**: [Write-only arguments](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments) are supported in Terraform 1.11 and later.
+
 - `enabled` (Boolean) Whether the SSO configuration is enabled.
 - `idp_client_id` (String) The SSO application client ID used to authenticate group-fetch requests from the IdP (for SAML group-to-role mappings).
-- `idp_client_secret` (String, Sensitive) The client secret paired with `idp_client_id` for authenticating group-fetch requests.
+- `idp_client_secret` (String, Sensitive) The client secret paired with `idp_client_id` for authenticating group-fetch requests. Stored in state; use `idp_client_secret_wo` to keep it out of state.
+- `idp_client_secret_wo` (String, Sensitive, [Write-only](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments)) Write-only alternative to `idp_client_secret` that is never stored in the plan or state. Accepts ephemeral values. Requires Terraform 1.11 or later and must be set together with `idp_client_secret_wo_version`.
+- `idp_client_secret_wo_version` (Number) Version of `idp_client_secret_wo`. Terraform cannot detect changes to a write-only value, so change this number whenever `idp_client_secret_wo` changes to send the new value.
 - `override_active_tenant` (Boolean) Whether to override the active tenant for users matched by this SSO configuration.
 - `public_certificate` (String, Sensitive) The IdP's X.509 public certificate (PEM or Base64-encoded). Used by Frontegg to verify the signature on incoming SAML assertions.
 - `sign_request` (Boolean) Whether Frontegg should cryptographically sign outgoing SAML authentication requests sent to the IdP.
