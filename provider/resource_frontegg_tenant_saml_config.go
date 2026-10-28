@@ -120,11 +120,18 @@ func samlConfigDeserialize(d *schema.ResourceData, f fronteggTenantSSOConfig) er
 		"sign_request":       f.SignRequest,
 		"acs_url":            f.ACSUrl,
 		"sp_entity_id":       f.SPEntityID,
-		"idp_client_id":      f.IDPClientID,
 	} {
 		if err := d.Set(k, v); err != nil {
 			return err
 		}
+	}
+	if f.IDPClientID != "" {
+		if err := d.Set("idp_client_id", f.IDPClientID); err != nil {
+			return err
+		}
+	}
+	if f.IDPClientSecret == "" {
+		return nil
 	}
 	return setSecretUnlessWriteOnly(d, "idp_client_secret", f.IDPClientSecret)
 }
