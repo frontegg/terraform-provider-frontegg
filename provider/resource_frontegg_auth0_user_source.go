@@ -49,6 +49,8 @@ func resourceFronteggAuth0UserSource() *schema.Resource {
 		Sensitive:   true,
 	}
 
+	addWriteOnlySecret(baseSchema, "secret")
+
 	return &schema.Resource{
 		Description: `Configures a Frontegg Auth0 user source.`,
 
@@ -76,7 +78,7 @@ func resourceFronteggAuth0UserSourceSerialize(d *schema.ResourceData) (fronteggA
 		IsMigrated:   d.Get("is_migrated").(bool),
 		Domain:       d.Get("domain").(string),
 		ClientID:     d.Get("client_id").(string),
-		Secret:       d.Get("secret").(string),
+		Secret:       secretValue(d, "secret"),
 		TenantConfig: tenantConfig,
 	}
 

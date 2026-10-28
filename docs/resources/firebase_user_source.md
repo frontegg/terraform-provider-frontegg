@@ -51,7 +51,6 @@ resource "frontegg_firebase_user_source" "example" {
 - `client_id` (String) Firebase service account client ID.
 - `index` (Number) The user source index.
 - `name` (String) The user source name.
-- `private_key` (String, Sensitive) Firebase service account private key.
 - `private_key_id` (String) Firebase service account private key ID.
 - `project_id` (String) Firebase project ID.
 - `service_account_type` (String) Firebase service account type.
@@ -60,12 +59,17 @@ resource "frontegg_firebase_user_source" "example" {
 
 ### Optional
 
+> **NOTE**: [Write-only arguments](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments) are supported in Terraform 1.11 and later.
+
 - `app_ids` (Set of String) The application IDs to assign to this user source.
 - `auth_provider_x509_cert_url` (String) Firebase service account auth provider x509 cert URL.
 - `auth_uri` (String) Firebase service account auth URI.
 - `client_x509_cert_url` (String) Firebase service account client x509 cert URL.
 - `description` (String) The user source description.
 - `is_migrated` (Boolean) Whether to migrate the users.
+- `private_key` (String, Sensitive) Firebase service account private key. Exactly one of `private_key` or `private_key_wo` is required. Stored in state; use `private_key_wo` to keep it out of state.
+- `private_key_wo` (String, Sensitive, [Write-only](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments)) Write-only alternative to `private_key` that is never stored in the plan or state. Accepts ephemeral values. Requires Terraform 1.11 or later and must be set together with `private_key_wo_version`.
+- `private_key_wo_version` (Number) Version of `private_key_wo`. Terraform cannot detect changes to a write-only value, so change this number whenever `private_key_wo` changes to send the new value.
 - `sync_on_login` (Boolean) Whether to sync user profile attributes on each login.
 - `tenant_id` (String) The tenant ID for static tenant resolver type.
 - `tenant_id_field_name` (String) The attribute name from which the tenant ID would be taken for dynamic tenant resolver type.
