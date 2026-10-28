@@ -12,6 +12,17 @@ on:
   schedule:
     - cron: "0 13 * * *"
 jobs:
+  unit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: "go.mod"
+      - run: go mod download
+      - run: go test -v ./provider/
+        env:
+          TF_ACC_TERRAFORM_VERSION: "1.13.4"
   test:
     runs-on: ubuntu-latest
     strategy:

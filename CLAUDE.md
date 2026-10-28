@@ -63,6 +63,8 @@ Both authenticate via `/auth/vendor` using the same credentials.
 
 **Tenant-scoped resources**: SSO resources (tenant_sso_domain, tenant_saml_config, tenant_oidc_config, tenant_mfa_policy, etc.) send a `frontegg-tenant-id` header on each request. See `resource_frontegg_tenant_sso_domain.go` for the pattern.
 
+**Write-only secrets**: Practitioner-supplied secrets get a `<name>_wo` + `<name>_wo_version` pair via `addWriteOnlySecret` in `write_only_secret.go`. Serialize with `secretValue(d, name)` and refresh with `setSecretUnlessWriteOnly(d, name, value)` so a write-only secret never lands in state. Write-only tests need Terraform >= 1.11 and skip below it.
+
 **Compound import IDs**: Some resources use colon-delimited IDs for import. Example: `tenant_sso_domain` uses `tenant_id:sso_config_id:domain_id`. Document import format in resource `Importer` block.
 
 ### Available Resources

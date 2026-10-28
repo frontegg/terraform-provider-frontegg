@@ -33,12 +33,16 @@ resource "frontegg_webhook" "example" {
 - `description` (String) A human-readable description of the webhook.
 - `enabled` (Boolean) Whether the webhook is enabled.
 - `events` (Set of String) The names of the events to subscribe to.
-- `secret` (String, Sensitive) A secret to include with the event.
 - `url` (String) The URL to send events to.
 
 ### Optional
 
+> **NOTE**: [Write-only arguments](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments) are supported in Terraform 1.11 and later.
+
 - `name` (String) A human-readable name for the webhook.
+- `secret` (String, Sensitive) A secret to include with the event. Exactly one of `secret` or `secret_wo` is required. Stored in state; use `secret_wo` to keep it out of state.
+- `secret_wo` (String, Sensitive, [Write-only](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments)) Write-only alternative to `secret` that is never stored in the plan or state. Accepts ephemeral values. Requires Terraform 1.11 or later and must be set together with `secret_wo_version`.
+- `secret_wo_version` (Number) Version of `secret_wo`. Terraform cannot detect changes to a write-only value, so change this number whenever `secret_wo` changes to send the new value.
 
 ### Read-Only
 
