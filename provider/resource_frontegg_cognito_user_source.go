@@ -68,6 +68,9 @@ func resourceFronteggCognitoUserSource() *schema.Resource {
 		Sensitive:   true,
 	}
 
+	addWriteOnlySecret(baseSchema, "secret_access_key")
+	addWriteOnlySecret(baseSchema, "client_secret")
+
 	return &schema.Resource{
 		Description: `Configures a Frontegg Cognito user source.`,
 
@@ -97,8 +100,8 @@ func resourceFronteggCognitoUserSourceSerialize(d *schema.ResourceData) (fronteg
 		ClientID:        d.Get("client_id").(string),
 		UserPoolID:      d.Get("user_pool_id").(string),
 		AccessKeyID:     d.Get("access_key_id").(string),
-		SecretAccessKey: d.Get("secret_access_key").(string),
-		ClientSecret:    d.Get("client_secret").(string),
+		SecretAccessKey: secretValue(d, "secret_access_key"),
+		ClientSecret:    secretValue(d, "client_secret"),
 		TenantConfig:    tenantConfig,
 	}
 

@@ -111,6 +111,8 @@ func resourceFronteggFederationUserSource() *schema.Resource {
 		Default:     false,
 	}
 
+	addWriteOnlySecret(baseSchema, "secret")
+
 	return &schema.Resource{
 		Description: `Configures a Frontegg federation (OIDC/OAuth2) user source.`,
 
@@ -168,7 +170,7 @@ func resourceFronteggFederationUserSourceSerialize(d *schema.ResourceData) (fron
 	}
 
 	usePkce := d.Get("use_pkce").(bool)
-	secret := d.Get("secret").(string)
+	secret := secretValue(d, "secret")
 	if !usePkce && secret == "" {
 		return fronteggFederationUserSourceRequest{}, fmt.Errorf("secret is required when use_pkce is not enabled")
 	}

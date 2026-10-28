@@ -62,11 +62,15 @@ resource "frontegg_federation_user_source" "oauth2_example" {
 
 ### Optional
 
+> **NOTE**: [Write-only arguments](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments) are supported in Terraform 1.11 and later.
+
 - `app_ids` (Set of String) The application IDs to assign to this user source.
 - `description` (String) The user source description.
 - `index` (Number) The user source index.
 - `oauth2_config` (Block List, Max: 1) OAuth2 configuration. Required if wellknown_url is not provided. (see [below for nested schema](#nestedblock--oauth2_config))
-- `secret` (String, Sensitive) The secret from the identity provider. Required if use_pkce is not enabled.
+- `secret` (String, Sensitive) The secret from the identity provider. Required if use_pkce is not enabled. Stored in state; use `secret_wo` to keep it out of state.
+- `secret_wo` (String, Sensitive, [Write-only](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments)) Write-only alternative to `secret` that is never stored in the plan or state. Accepts ephemeral values. Requires Terraform 1.11 or later and must be set together with `secret_wo_version`.
+- `secret_wo_version` (Number) Version of `secret_wo`. Terraform cannot detect changes to a write-only value, so change this number whenever `secret_wo` changes to send the new value.
 - `sync_on_login` (Boolean) Whether to sync user profile attributes on each login.
 - `tenant_id` (String) The tenant ID for static tenant resolver type.
 - `tenant_id_field_name` (String) The attribute name from which the tenant ID would be taken for dynamic tenant resolver type.
