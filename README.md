@@ -5,7 +5,8 @@ platform.
 
 ## Requirements
 
-- [Terraform](https://www.terraform.io/downloads.html) >= 1.0.3
+- [Terraform](https://www.terraform.io/downloads.html) >= 1.0.3, or >= 1.11 to use
+  the write-only secret arguments (`*_wo`)
 - [Go](https://golang.org/doc/install) >= 1.20
   **pay attention to install platform compatible version**
 

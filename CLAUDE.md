@@ -8,7 +8,7 @@ Terraform provider for the Frontegg user management platform, written in Go. Use
 
 ## Requirements
 
-- **Terraform** >= 1.0.3
+- **Terraform** >= 1.0.3 (>= 1.11 for write-only `*_wo` secret arguments)
 - **Go** >= 1.20 (install platform-compatible version)
 - `FRONTEGG_CLIENT_ID` and `FRONTEGG_SECRET_KEY` env vars for authentication
 
