@@ -108,6 +108,17 @@ func (a *fakeAPI) remove(id string) {
 	delete(a.docs, id)
 }
 
+func fakeCollection(createPath, collectionPath, idField string) []fakeAPIRoute {
+	return []fakeAPIRoute{
+		{http.MethodPost, createPath, fakeCreate(idField)},
+		{http.MethodGet, collectionPath, fakeList},
+		{http.MethodGet, collectionPath + "/{id}", fakeGet},
+		{http.MethodPatch, collectionPath + "/{id}", fakeUpdate},
+		{http.MethodPut, collectionPath + "/{id}", fakeUpdate},
+		{http.MethodDelete, collectionPath + "/{id}", fakeDelete},
+	}
+}
+
 func fakeCreate(idField string) func(*fakeAPI, string, fakeDoc) (int, interface{}) {
 	return func(a *fakeAPI, _ string, body fakeDoc) (int, interface{}) {
 		a.nextID++
