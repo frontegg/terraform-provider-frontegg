@@ -12,7 +12,7 @@ import (
 )
 
 func resourceFronteggSocialLogin() *schema.Resource {
-	return &schema.Resource{
+	resource := &schema.Resource{
 		Description: `Configures social login for a specific provider.
 
 Supported providers are: facebook, github, google, microsoft.`,
@@ -65,13 +65,15 @@ Supported providers are: facebook, github, google, microsoft.`,
 			},
 		},
 	}
+	addWriteOnlySecret(resource.Schema, "secret")
+	return resource
 }
 
 func resourceFronteggSocialLoginSerialize(d *schema.ResourceData) fronteggSSO {
 	sso := fronteggSSO{
 		ClientID:    d.Get("client_id").(string),
 		RedirectURL: d.Get("redirect_url").(string),
-		Secret:      d.Get("secret").(string),
+		Secret:      secretValue(d, "secret"),
 		Cusomised:   d.Get("customised").(bool),
 		Type:        d.Get("provider_name").(string),
 	}
@@ -99,7 +101,7 @@ func resourceFronteggSocialLoginDeserialize(d *schema.ResourceData, f fronteggSS
 	if err := d.Set("redirect_url", f.RedirectURL); err != nil {
 		return err
 	}
-	if err := d.Set("secret", secret); err != nil {
+	if err := setSecretUnlessWriteOnly(d, "secret", secret); err != nil {
 		return err
 	}
 	if err := d.Set("customised", f.Cusomised); err != nil {
