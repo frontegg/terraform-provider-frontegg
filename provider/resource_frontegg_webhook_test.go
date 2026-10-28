@@ -236,6 +236,15 @@ func TestAccFronteggWebhook_importPortalCreated(t *testing.T) {
 				ImportStatePersist: true,
 			},
 			{
+				Config:             config,
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: true,
+			},
+			{
+				Config: config,
+				Check:  resource.TestCheckResourceAttr("frontegg_webhook.test", "secret", "tf-acc-webhook-secret"),
+			},
+			{
 				Config:   config,
 				PlanOnly: true,
 			},
