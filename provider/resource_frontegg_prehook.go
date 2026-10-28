@@ -54,7 +54,7 @@ type fronteggCustomCode struct {
 }
 
 func resourceFronteggPrehook() *schema.Resource {
-	return &schema.Resource{
+	resource := &schema.Resource{
 		Description: `Configures a Frontegg prehook.
 
 A prehook subscribes to an event and either sends it to an external URL (` + "`type = \"API\"`" + `) or runs
@@ -149,6 +149,8 @@ per event, regardless of type.`,
 			},
 		},
 	}
+	addWriteOnlySecret(resource.Schema, "secret")
+	return resource
 }
 
 // fronteggFieldGetter is satisfied by both *schema.ResourceData and
@@ -171,7 +173,7 @@ func validateFronteggPrehookFields(d fronteggFieldGetter) error {
 		if d.Get("url").(string) == "" {
 			return fmt.Errorf("url is required when type is %s", fronteggPrehookTypeAPI)
 		}
-		if d.Get("secret").(string) == "" {
+		if d.Get("secret").(string) == "" && !usesWriteOnlySecret(d, "secret") {
 			return fmt.Errorf("secret is required when type is %s", fronteggPrehookTypeAPI)
 		}
 	}
@@ -246,7 +248,7 @@ func resourceFronteggPrehookSerialize(d *schema.ResourceData) fronteggPrehook {
 		}
 	} else {
 		prehook.URL = d.Get("url").(string)
-		prehook.Secret = d.Get("secret").(string)
+		prehook.Secret = secretValue(d, "secret")
 	}
 
 	return prehook
@@ -305,7 +307,7 @@ func resourceFronteggPrehookDeserialize(d *schema.ResourceData, prehook frontegg
 		if err := d.Set("url", prehook.URL); err != nil {
 			return err
 		}
-		if err := d.Set("secret", prehook.Secret); err != nil {
+		if err := setSecretUnlessWriteOnly(d, "secret", prehook.Secret); err != nil {
 			return err
 		}
 	}
