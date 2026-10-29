@@ -164,6 +164,70 @@ func TestSocialLoginAdoptionReason(t *testing.T) {
 	}
 }
 
+func TestSocialLoginCustomizeDiffRequiresSecretWhenCustomised(t *testing.T) {
+	tests := []struct {
+		name    string
+		raw     map[string]interface{}
+		wantErr bool
+	}{
+		{
+			name:    "customised with secret",
+			raw:     map[string]interface{}{"customised": true, "client_id": "c", "secret": "s"},
+			wantErr: false,
+		},
+		{
+			name:    "customised with write-only secret",
+			raw:     map[string]interface{}{"customised": true, "client_id": "c", "secret_wo_version": 1},
+			wantErr: false,
+		},
+		{
+			name:    "customised without any secret",
+			raw:     map[string]interface{}{"customised": true, "client_id": "c"},
+			wantErr: true,
+		},
+		{
+			name:    "customised by default without any secret",
+			raw:     map[string]interface{}{"client_id": "c"},
+			wantErr: true,
+		},
+		{
+			name:    "not customised without a secret",
+			raw:     map[string]interface{}{"customised": false},
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			d := socialLoginResourceData(t, tt.raw)
+			err := validateFronteggSocialLoginFields(d)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("customizeDiff err = %v, wantErr = %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestSocialLoginPlanRejectsCustomisedWithoutSecret(t *testing.T) {
+	newFakeAPI(t)
+	resource.UnitTest(t, resource.TestCase{
+		ProviderFactories: testAccProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: `
+resource "frontegg_social_login" "test" {
+  provider_name = "google"
+  client_id     = "google-client"
+  redirect_url  = "https://example.com/oauth/callback"
+  customised    = true
+}
+`,
+				PlanOnly:    true,
+				ExpectError: regexp.MustCompile("secret or secret_wo is required when customised is true"),
+			},
+		},
+	})
+}
+
 const testAccSocialLoginAdopt = testAccSocialLogin + `
 resource "frontegg_social_login" "adopt" {
   provider_name = "facebook"
