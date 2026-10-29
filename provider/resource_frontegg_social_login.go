@@ -12,7 +12,7 @@ import (
 )
 
 func resourceFronteggSocialLogin() *schema.Resource {
-	return &schema.Resource{
+	resource := &schema.Resource{
 		Description: `Configures social login for a specific provider.
 
 Supported providers are: facebook, github, google, microsoft.`,
@@ -24,6 +24,7 @@ Supported providers are: facebook, github, google, microsoft.`,
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},
+		CustomizeDiff: resourceFronteggSocialLoginCustomizeDiff,
 
 		Schema: map[string]*schema.Schema{
 			"provider_name": {
@@ -65,13 +66,15 @@ Supported providers are: facebook, github, google, microsoft.`,
 			},
 		},
 	}
+	addWriteOnlySecret(resource.Schema, "secret")
+	return resource
 }
 
 func resourceFronteggSocialLoginSerialize(d *schema.ResourceData) fronteggSSO {
 	sso := fronteggSSO{
 		ClientID:    d.Get("client_id").(string),
 		RedirectURL: d.Get("redirect_url").(string),
-		Secret:      d.Get("secret").(string),
+		Secret:      secretValue(d, "secret"),
 		Cusomised:   d.Get("customised").(bool),
 		Type:        d.Get("provider_name").(string),
 	}
@@ -99,7 +102,7 @@ func resourceFronteggSocialLoginDeserialize(d *schema.ResourceData, f fronteggSS
 	if err := d.Set("redirect_url", f.RedirectURL); err != nil {
 		return err
 	}
-	if err := d.Set("secret", secret); err != nil {
+	if err := setSecretUnlessWriteOnly(d, "secret", secret); err != nil {
 		return err
 	}
 	if err := d.Set("customised", f.Cusomised); err != nil {
@@ -107,6 +110,17 @@ func resourceFronteggSocialLoginDeserialize(d *schema.ResourceData, f fronteggSS
 	}
 	if err := d.Set("additional_scopes", f.AdditionalScopes); err != nil {
 		return err
+	}
+	return nil
+}
+
+func resourceFronteggSocialLoginCustomizeDiff(ctx context.Context, d *schema.ResourceDiff, m interface{}) error {
+	return validateFronteggSocialLoginFields(d)
+}
+
+func validateFronteggSocialLoginFields(d fronteggFieldGetter) error {
+	if d.Get("customised").(bool) && d.Get("secret").(string) == "" && !usesWriteOnlySecret(d, "secret") {
+		return fmt.Errorf("secret or secret_wo is required when customised is true")
 	}
 	return nil
 }

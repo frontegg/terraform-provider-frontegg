@@ -60,10 +60,14 @@ resource "frontegg_social_login" "microsoft" {
 
 ### Optional
 
+> **NOTE**: [Write-only arguments](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments) are supported in Terraform 1.11 and later.
+
 - `additional_scopes` (Set of String) Determine whether to ask for additional scopes when authenticating with the SSO provider.
 - `client_id` (String) The client ID of the social login application to authenticate with. Required when setting **`customised`** parameter to true.
 - `customised` (Boolean) Determine whether the SSO should use customized secret and client ID. When passing true, clientId and secret are also required.
-- `secret` (String, Sensitive) The secret associated with the social login application. Required when setting **`customised`** parameter to true.
+- `secret` (String, Sensitive) The secret associated with the social login application. Required when setting **`customised`** parameter to true. Stored in state; use `secret_wo` to keep it out of state.
+- `secret_wo` (String, Sensitive, [Write-only](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments)) Write-only alternative to `secret` that is never stored in the plan or state. Accepts ephemeral values. Requires Terraform 1.11 or later and must be set together with `secret_wo_version`.
+- `secret_wo_version` (Number) Version of `secret_wo`. Terraform cannot detect changes to a write-only value, so change this number whenever `secret_wo` changes to send the new value.
 
 ### Read-Only
 

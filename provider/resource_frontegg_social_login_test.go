@@ -42,7 +42,7 @@ func TestSocialLoginDeserializeDropsCredentialsWhenNotCustomised(t *testing.T) {
 }
 
 func TestSocialLoginDeserializeKeepsCustomisedCredentials(t *testing.T) {
-	d := socialLoginResourceData(t, map[string]interface{}{})
+	d := socialLoginResourceData(t, map[string]interface{}{"secret": "old-secret"})
 	in := fronteggSSO{
 		Active:      true,
 		ClientID:    "my-client-id",
@@ -59,6 +59,27 @@ func TestSocialLoginDeserializeKeepsCustomisedCredentials(t *testing.T) {
 	}
 	if got := d.Get("secret").(string); got != "my-secret" {
 		t.Errorf("secret = %q, want my-secret", got)
+	}
+}
+
+func TestSocialLoginDeserializeDoesNotImportSecret(t *testing.T) {
+	d := socialLoginResourceData(t, map[string]interface{}{})
+	in := fronteggSSO{
+		Active:      true,
+		ClientID:    "my-client-id",
+		Secret:      "my-secret",
+		RedirectURL: "https://example.com/cb",
+		Cusomised:   true,
+	}
+
+	if err := resourceFronteggSocialLoginDeserialize(d, in, "google"); err != nil {
+		t.Fatalf("deserialize: %v", err)
+	}
+	if got := d.Get("client_id").(string); got != "my-client-id" {
+		t.Errorf("client_id = %q, want my-client-id", got)
+	}
+	if got := d.Get("secret").(string); got != "" {
+		t.Errorf("secret = %q, want it left out of state on import", got)
 	}
 }
 
@@ -141,6 +162,70 @@ func TestSocialLoginAdoptionReason(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestSocialLoginCustomizeDiffRequiresSecretWhenCustomised(t *testing.T) {
+	tests := []struct {
+		name    string
+		raw     map[string]interface{}
+		wantErr bool
+	}{
+		{
+			name:    "customised with secret",
+			raw:     map[string]interface{}{"customised": true, "client_id": "c", "secret": "s"},
+			wantErr: false,
+		},
+		{
+			name:    "customised with write-only secret",
+			raw:     map[string]interface{}{"customised": true, "client_id": "c", "secret_wo_version": 1},
+			wantErr: false,
+		},
+		{
+			name:    "customised without any secret",
+			raw:     map[string]interface{}{"customised": true, "client_id": "c"},
+			wantErr: true,
+		},
+		{
+			name:    "customised by default without any secret",
+			raw:     map[string]interface{}{"client_id": "c"},
+			wantErr: true,
+		},
+		{
+			name:    "not customised without a secret",
+			raw:     map[string]interface{}{"customised": false},
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			d := socialLoginResourceData(t, tt.raw)
+			err := validateFronteggSocialLoginFields(d)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("customizeDiff err = %v, wantErr = %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestSocialLoginPlanRejectsCustomisedWithoutSecret(t *testing.T) {
+	newFakeAPI(t)
+	resource.UnitTest(t, resource.TestCase{
+		ProviderFactories: testAccProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: `
+resource "frontegg_social_login" "test" {
+  provider_name = "google"
+  client_id     = "google-client"
+  redirect_url  = "https://example.com/oauth/callback"
+  customised    = true
+}
+`,
+				PlanOnly:    true,
+				ExpectError: regexp.MustCompile("secret or secret_wo is required when customised is true"),
+			},
+		},
+	})
 }
 
 const testAccSocialLoginAdopt = testAccSocialLogin + `
