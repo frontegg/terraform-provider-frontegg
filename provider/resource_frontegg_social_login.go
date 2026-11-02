@@ -159,7 +159,7 @@ func resourceFronteggSocialLoginCreate(ctx context.Context, d *schema.ResourceDa
 		}
 	}
 
-	if diags := resourceFronteggSocialLoginWrite(ctx, d, meta); diags.HasError() {
+	if diags := resourceFronteggSocialLoginWrite(ctx, d, meta, existing.Options); diags.HasError() {
 		return diags
 	}
 	d.SetId(providerName)
@@ -191,11 +191,12 @@ func resourceFronteggSocialLoginRead(ctx context.Context, d *schema.ResourceData
 	return nil
 }
 
-func resourceFronteggSocialLoginWrite(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceFronteggSocialLoginWrite(ctx context.Context, d *schema.ResourceData, meta interface{}, options map[string]interface{}) diag.Diagnostics {
 	clientHolder := meta.(*restclient.ClientHolder)
 	providerName := d.Get("provider_name").(string)
 
 	in := resourceFronteggSocialLoginSerialize(d)
+	in.Options = options
 	if err := clientHolder.ApiClient.Post(ctx, fronteggSSOURL, in, nil); err != nil {
 		return diag.FromErr(err)
 	}
@@ -208,7 +209,13 @@ func resourceFronteggSocialLoginWrite(ctx context.Context, d *schema.ResourceDat
 }
 
 func resourceFronteggSocialLoginUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	if diags := resourceFronteggSocialLoginWrite(ctx, d, meta); diags.HasError() {
+	clientHolder := meta.(*restclient.ClientHolder)
+	var current fronteggSSO
+	err := clientHolder.ApiClient.Get(ctx, fmt.Sprintf("%s/%s", fronteggSSOURL, d.Get("provider_name").(string)), &current)
+	if err != nil && !restclient.IsNotFound(err) {
+		return diag.FromErr(err)
+	}
+	if diags := resourceFronteggSocialLoginWrite(ctx, d, meta, current.Options); diags.HasError() {
 		return diags
 	}
 	return resourceFronteggSocialLoginRead(ctx, d, meta)
