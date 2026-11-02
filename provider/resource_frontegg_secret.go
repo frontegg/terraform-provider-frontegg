@@ -18,7 +18,7 @@ type fronteggSecret struct {
 }
 
 func resourceFronteggSecret() *schema.Resource {
-	return &schema.Resource{
+	resource := &schema.Resource{
 		Description: `Configures a Frontegg secret.`,
 
 		CreateContext: resourceFronteggSecretCreate,
@@ -43,12 +43,14 @@ func resourceFronteggSecret() *schema.Resource {
 			},
 		},
 	}
+	addWriteOnlySecret(resource.Schema, "value")
+	return resource
 }
 
 func resourceFronteggSecretSerialize(d *schema.ResourceData) fronteggSecret {
 	return fronteggSecret{
 		Key:   d.Get("key").(string),
-		Value: d.Get("value").(string),
+		Value: secretValue(d, "value"),
 	}
 }
 
@@ -97,7 +99,7 @@ func resourceFronteggSecretRead(ctx context.Context, d *schema.ResourceData, met
 func resourceFronteggSecretUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	clientHolder := meta.(*restclient.ClientHolder)
 	in := fronteggSecret{
-		Value: d.Get("value").(string),
+		Value: secretValue(d, "value"),
 	}
 	if err := clientHolder.ApiClient.Patch(ctx, fmt.Sprintf("%s/%s", fronteggSecretPath, d.Id()), in, nil); err != nil {
 		return diag.FromErr(err)

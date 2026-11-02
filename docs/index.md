@@ -36,6 +36,13 @@ application. Without it, those calls are not scoped to an application. Since the
 header applies to every request, configure one copy of the provider per
 application.
 
+## Secrets
+
+Secret attributes are sensitive, so Terraform redacts them in plan output, but they are still
+stored in state. Each secret you supply also has a write-only `*_wo` argument that is never
+stored. Write-only arguments need Terraform 1.11 or later; the rest of the provider supports
+Terraform 1.0.3 and later. See [Keeping Secrets Out of Terraform State](guides/secrets).
+
 ## Example Usage
 
 ```terraform

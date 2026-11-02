@@ -8,7 +8,7 @@ import (
 )
 
 //go:generate terraform fmt -recursive ./examples/
-//go:generate go run github.com/hashicorp/terraform-plugin-docs/cmd/tfplugindocs
+//go:generate go run github.com/hashicorp/terraform-plugin-docs/cmd/tfplugindocs generate --tf-version 1.13.4
 
 var (
 	// This value is injected by goreleaser during a release.

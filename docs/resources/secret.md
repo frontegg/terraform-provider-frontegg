@@ -18,7 +18,14 @@ Configures a Frontegg secret.
 ### Required
 
 - `key` (String) The key of the secret.
-- `value` (String, Sensitive) The value of the secret.
+
+### Optional
+
+> **NOTE**: [Write-only arguments](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments) are supported in Terraform 1.11 and later.
+
+- `value` (String, Sensitive) The value of the secret. Exactly one of `value` or `value_wo` is required. Stored in state; use `value_wo` to keep it out of state.
+- `value_wo` (String, Sensitive, [Write-only](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments)) Write-only alternative to `value` that is never stored in the plan or state. Accepts ephemeral values. Requires Terraform 1.11 or later and must be set together with `value_wo_version`.
+- `value_wo_version` (Number) Version of `value_wo`. Terraform cannot detect changes to a write-only value, so change this number whenever `value_wo` changes to send the new value.
 
 ### Read-Only
 

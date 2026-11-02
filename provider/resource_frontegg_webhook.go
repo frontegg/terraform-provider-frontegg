@@ -27,7 +27,7 @@ type fronteggWebhook struct {
 }
 
 func resourceFronteggWebhook() *schema.Resource {
-	return &schema.Resource{
+	resource := &schema.Resource{
 		Description: `Configures a Frontegg webhook.`,
 
 		CreateContext: resourceFronteggWebhookCreate,
@@ -94,6 +94,8 @@ func resourceFronteggWebhook() *schema.Resource {
 			},
 		},
 	}
+	addWriteOnlySecret(resource.Schema, "secret")
+	return resource
 }
 
 func resourceFronteggWebhookSerialize(d *schema.ResourceData) fronteggWebhook {
@@ -102,7 +104,7 @@ func resourceFronteggWebhookSerialize(d *schema.ResourceData) fronteggWebhook {
 		DisplayName: d.Get("name").(string),
 		Description: d.Get("description").(string),
 		URL:         d.Get("url").(string),
-		Secret:      d.Get("secret").(string),
+		Secret:      secretValue(d, "secret"),
 		EventKeys:   stringSetToList(d.Get("events").(*schema.Set)),
 	}
 }
@@ -121,7 +123,7 @@ func resourceFronteggWebhookDeserialize(d *schema.ResourceData, f fronteggWebhoo
 	if err := d.Set("url", f.URL); err != nil {
 		return err
 	}
-	if err := d.Set("secret", f.Secret); err != nil {
+	if err := setSecretUnlessWriteOnly(d, "secret", f.Secret); err != nil {
 		return err
 	}
 	if err := d.Set("events", f.EventKeys); err != nil {
