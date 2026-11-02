@@ -1,11 +1,14 @@
 package restclient
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -699,5 +702,60 @@ func TestIsNotFoundSurvivesTrimmedFormat(t *testing.T) {
 	c2 := newTestClient(srv2.URL)
 	if IsNotFound(c2.Get(context.Background(), "/thing", nil)) {
 		t.Error("IsNotFound must not match a 500")
+	}
+}
+
+func captureLog(t *testing.T) *bytes.Buffer {
+	t.Helper()
+	var buf bytes.Buffer
+	log.SetOutput(&buf)
+	t.Cleanup(func() { log.SetOutput(os.Stderr) })
+	return &buf
+}
+
+func TestTraceLogOmitsTokenAndResponseBody(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = io.WriteString(w, `{"token":"vendor-token-from-response"}`)
+	}))
+	defer srv.Close()
+	logs := captureLog(t)
+	c := MakeRestClient(srv.URL, "", "")
+	c.Authenticate("bearer-token-from-request")
+
+	var out map[string]string
+	if err := c.Post(context.Background(), "/auth/vendor", map[string]string{"clientId": "id"}, &out); err != nil {
+		t.Fatalf("post: %v", err)
+	}
+
+	logged := logs.String()
+	for _, secret := range []string{"bearer-token-from-request", "vendor-token-from-response"} {
+		if strings.Contains(logged, secret) {
+			t.Errorf("log contains %q:\n%s", secret, logged)
+		}
+	}
+	for _, want := range []string{"Sending request POST " + srv.URL + "/auth/vendor", "Received response 200 OK"} {
+		if !strings.Contains(logged, want) {
+			t.Errorf("log is missing %q:\n%s", want, logged)
+		}
+	}
+}
+
+func TestDecodeErrorOmitsResponseBody(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = io.WriteString(w, `{"secret": secret-in-malformed-body}`)
+	}))
+	defer srv.Close()
+	c := newTestClient(srv.URL)
+
+	var out map[string]string
+	err := c.Get(context.Background(), "/configurations", &out)
+	if err == nil {
+		t.Fatal("expected a decode error")
+	}
+	if strings.Contains(err.Error(), "secret-in-malformed-body") {
+		t.Errorf("error contains the response body: %v", err)
+	}
+	if !strings.Contains(err.Error(), "failed to decode JSON response from GET "+srv.URL+"/configurations") {
+		t.Errorf("error does not name the request: %v", err)
 	}
 }
