@@ -107,6 +107,8 @@ func resourceFronteggFirebaseUserSource() *schema.Resource {
 		Required:    true,
 	}
 
+	addWriteOnlySecret(baseSchema, "private_key")
+
 	return &schema.Resource{
 		Description: `Configures a Frontegg Firebase user source.`,
 
@@ -133,7 +135,7 @@ func resourceFronteggFirebaseUserSourceSerialize(d *schema.ResourceData) (fronte
 		Type:           d.Get("service_account_type").(string),
 		ProjectID:      d.Get("project_id").(string),
 		PrivateKeyID:   d.Get("private_key_id").(string),
-		PrivateKey:     d.Get("private_key").(string),
+		PrivateKey:     secretValue(d, "private_key"),
 		ClientEmail:    d.Get("client_email").(string),
 		ClientID:       d.Get("client_id").(string),
 		AuthURI:        d.Get("auth_uri").(string),
