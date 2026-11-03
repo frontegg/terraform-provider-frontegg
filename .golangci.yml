@@ -26,6 +26,10 @@ linters:
       - path: _test\.go
         linters:
           - unparam
+      - path: provider/write_only_secret\.go
+        text: setSecretUnlessWriteOnly
+        linters:
+          - unparam
     paths:
       - third_party$
       - builtin$
