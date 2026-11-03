@@ -1,6 +1,7 @@
 package provider
 
 import (
+	"fmt"
 	"net/http"
 	"testing"
 
@@ -13,8 +14,13 @@ func fakeTenantSSOAPI(t *testing.T) *fakeAPI {
 		fakeAPIRoute{http.MethodPost, fronteggTenantSSOConfigV2Path, fakeCreate("id")},
 		fakeAPIRoute{http.MethodGet, fronteggTenantSSOConfigPath, fakeList},
 		fakeAPIRoute{http.MethodPatch, fronteggTenantSSOConfigV2Path + "/{id}", fakeUpdate},
+		fakeAPIRoute{http.MethodGet, fmt.Sprintf(fronteggSSOGroupPath, "{id}"), fakeNoGroups},
 		fakeAPIRoute{http.MethodDelete, fronteggTenantSSOConfigPath + "/{id}", fakeDelete},
 	)
+}
+
+func fakeNoGroups(*fakeAPI, string, fakeDoc) (int, interface{}) {
+	return http.StatusOK, []fakeDoc{}
 }
 
 func tenantSSOImportID(address string) func(*terraform.State) (string, error) {

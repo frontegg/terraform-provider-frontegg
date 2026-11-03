@@ -148,16 +148,39 @@ func tenantSSORead(ctx context.Context, d *schema.ResourceData, meta interface{}
 }
 
 // tenantSSOUpdate is the shared Update handler for both SAML and OIDC resources.
-// Uses v2 API which requires tenantId in the request body (no header).
+// Uses v2 API which requires tenantId in the request body (no header). The v2 PATCH
+// replaces the group mappings with the ones in the body, so the current ones are sent back.
 func tenantSSOUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}, serialize func(*schema.ResourceData) fronteggTenantSSOConfig, read func(context.Context, *schema.ResourceData, interface{}) diag.Diagnostics) diag.Diagnostics {
 	clientHolder := meta.(*restclient.ClientHolder)
+	headers, err := tenantSSOHeaders(d.Get("tenant_id").(string))
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	groups, err := tenantSSOGroups(ctx, clientHolder.ApiClient, headers, d.Id())
+	if err != nil {
+		return diag.FromErr(err)
+	}
 
 	in := serialize(d)
 	in.TenantID = d.Get("tenant_id").(string)
-	if err := clientHolder.ApiClient.Patch(ctx, fmt.Sprintf("%s/%s", fronteggTenantSSOConfigV2Path, d.Id()), in, nil); err != nil {
+	body := fronteggTenantSSOConfigV2Update{fronteggTenantSSOConfig: in, Groups: groups}
+	if err := clientHolder.ApiClient.Patch(ctx, fmt.Sprintf("%s/%s", fronteggTenantSSOConfigV2Path, d.Id()), body, nil); err != nil {
 		return diag.FromErr(err)
 	}
 	return read(ctx, d, meta)
+}
+
+type fronteggTenantSSOConfigV2Update struct {
+	fronteggTenantSSOConfig
+	Groups []fronteggSSOGroup `json:"groups"`
+}
+
+func tenantSSOGroups(ctx context.Context, client restclient.Client, headers http.Header, configID string) ([]fronteggSSOGroup, error) {
+	groups := []fronteggSSOGroup{}
+	if err := client.GetWithHeaders(ctx, fmt.Sprintf(fronteggSSOGroupPath, configID), headers, &groups); err != nil {
+		return nil, err
+	}
+	return groups, nil
 }
 
 // tenantSSODelete is the shared Delete handler for both SAML and OIDC resources.

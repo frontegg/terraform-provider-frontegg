@@ -17,6 +17,7 @@ type fronteggSSOGroup struct {
 	ID      string   `json:"id,omitempty"`
 	Group   string   `json:"group"`
 	RoleIDs []string `json:"roleIds,omitempty"`
+	Enabled *bool    `json:"enabled,omitempty"`
 }
 
 func resourceFronteggTenantSSOGroupMapping() *schema.Resource {
@@ -125,16 +126,39 @@ func resourceFronteggTenantSSOGroupMappingRead(ctx context.Context, d *schema.Re
 	if err := clientHolder.ApiClient.GetWithHeaders(ctx, path, headers, &out); err != nil {
 		return diag.FromErr(err)
 	}
-	for _, g := range out {
-		if g.ID == d.Id() {
-			if err := resourceFronteggTenantSSOGroupMappingDeserialize(d, g); err != nil {
-				return diag.FromErr(err)
-			}
-			return nil
+	g, ok := findSSOGroup(out, d.Id(), d.Get("group").(string))
+	if !ok {
+		d.SetId("")
+		return nil
+	}
+	if err := resourceFronteggTenantSSOGroupMappingDeserialize(d, g); err != nil {
+		return diag.FromErr(err)
+	}
+	return nil
+}
+
+func findSSOGroup(groups []fronteggSSOGroup, id, name string) (fronteggSSOGroup, bool) {
+	for _, g := range groups {
+		if g.ID == id {
+			return g, true
 		}
 	}
-	d.SetId("")
-	return nil
+	for _, g := range groups {
+		if name != "" && g.Group == name {
+			return g, true
+		}
+	}
+	return fronteggSSOGroup{}, false
+}
+
+func currentSSOGroupID(ctx context.Context, client restclient.Client, headers http.Header, ssoConfigID string, d *schema.ResourceData) (string, bool, error) {
+	groups := []fronteggSSOGroup{}
+	if err := client.GetWithHeaders(ctx, fmt.Sprintf(fronteggSSOGroupPath, ssoConfigID), headers, &groups); err != nil {
+		return "", false, err
+	}
+	name, _ := d.GetChange("group")
+	g, ok := findSSOGroup(groups, d.Id(), name.(string))
+	return g.ID, ok, nil
 }
 
 func resourceFronteggTenantSSOGroupMappingUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
@@ -144,7 +168,14 @@ func resourceFronteggTenantSSOGroupMappingUpdate(ctx context.Context, d *schema.
 		return diag.FromErr(err)
 	}
 	ssoConfigID := d.Get("sso_config_id").(string)
-	path := fmt.Sprintf("%s/%s", fmt.Sprintf(fronteggSSOGroupPath, ssoConfigID), d.Id())
+	id, found, err := currentSSOGroupID(ctx, clientHolder.ApiClient, headers, ssoConfigID, d)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	if !found {
+		return diag.Errorf("SSO group mapping %s no longer exists in SSO configuration %s", d.Id(), ssoConfigID)
+	}
+	path := fmt.Sprintf("%s/%s", fmt.Sprintf(fronteggSSOGroupPath, ssoConfigID), id)
 
 	in := resourceFronteggTenantSSOGroupMappingSerialize(d)
 	if err := clientHolder.ApiClient.PatchWithHeaders(ctx, path, headers, in, nil); err != nil {
@@ -160,7 +191,14 @@ func resourceFronteggTenantSSOGroupMappingDelete(ctx context.Context, d *schema.
 		return diag.FromErr(err)
 	}
 	ssoConfigID := d.Get("sso_config_id").(string)
-	path := fmt.Sprintf("%s/%s", fmt.Sprintf(fronteggSSOGroupPath, ssoConfigID), d.Id())
+	id, found, err := currentSSOGroupID(ctx, clientHolder.ApiClient, headers, ssoConfigID, d)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	if !found {
+		return nil
+	}
+	path := fmt.Sprintf("%s/%s", fmt.Sprintf(fronteggSSOGroupPath, ssoConfigID), id)
 
 	if err := clientHolder.ApiClient.DeleteWithHeaders(ctx, path, headers, nil); err != nil {
 		return diag.FromErr(err)
