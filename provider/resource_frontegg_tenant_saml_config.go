@@ -49,6 +49,7 @@ func resourceFronteggTenantSAMLConfig() *schema.Resource {
 		Optional:    true,
 		Sensitive:   true,
 	}
+	addWriteOnlySecret(s, "idp_client_secret")
 
 	return &schema.Resource{
 		Description: `Configures a SAML SSO configuration for a Frontegg tenant. Users whose email domain matches a domain associated with this configuration will be redirected to the SAML Identity Provider (IdP) for authentication.`,
@@ -99,7 +100,7 @@ func samlConfigSerialize(d *schema.ResourceData) fronteggTenantSSOConfig {
 		SignRequest:               d.Get("sign_request").(bool),
 		SPEntityID:                d.Get("sp_entity_id").(string),
 		IDPClientID:               d.Get("idp_client_id").(string),
-		IDPClientSecret:           d.Get("idp_client_secret").(string),
+		IDPClientSecret:           secretValue(d, "idp_client_secret"),
 		OverrideActiveTenant:      d.Get("override_active_tenant").(bool),
 		SubAccountAccessLimit:     d.Get("sub_account_access_limit").(int),
 		SkipEmailDomainValidation: d.Get("skip_email_domain_validation").(bool),
@@ -119,14 +120,20 @@ func samlConfigDeserialize(d *schema.ResourceData, f fronteggTenantSSOConfig) er
 		"sign_request":       f.SignRequest,
 		"acs_url":            f.ACSUrl,
 		"sp_entity_id":       f.SPEntityID,
-		"idp_client_id":      f.IDPClientID,
-		"idp_client_secret":  f.IDPClientSecret,
 	} {
 		if err := d.Set(k, v); err != nil {
 			return err
 		}
 	}
-	return nil
+	if f.IDPClientID != "" {
+		if err := d.Set("idp_client_id", f.IDPClientID); err != nil {
+			return err
+		}
+	}
+	if f.IDPClientSecret == "" {
+		return nil
+	}
+	return setSecretUnlessWriteOnly(d, "idp_client_secret", f.IDPClientSecret)
 }
 
 func resourceFronteggTenantSAMLConfigCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
