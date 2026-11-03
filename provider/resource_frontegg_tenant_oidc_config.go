@@ -21,6 +21,7 @@ func resourceFronteggTenantOIDCConfig() *schema.Resource {
 		Optional:    true,
 		Sensitive:   true,
 	}
+	addWriteOnlySecret(s, "oidc_secret")
 
 	return &schema.Resource{
 		Description: `Configures an OIDC SSO configuration for a Frontegg tenant. Users whose email domain matches a domain associated with this configuration will be redirected to the OIDC Identity Provider (IdP) for authentication.`,
@@ -42,7 +43,7 @@ func oidcConfigSerialize(d *schema.ResourceData) fronteggTenantSSOConfig {
 		Enabled:                   d.Get("enabled").(bool),
 		SSOEndpoint:               d.Get("sso_endpoint").(string),
 		OIDCClientID:              d.Get("oidc_client_id").(string),
-		OIDCSecret:                d.Get("oidc_secret").(string),
+		OIDCSecret:                secretValue(d, "oidc_secret"),
 		OverrideActiveTenant:      d.Get("override_active_tenant").(bool),
 		SubAccountAccessLimit:     d.Get("sub_account_access_limit").(int),
 		SkipEmailDomainValidation: d.Get("skip_email_domain_validation").(bool),
@@ -53,15 +54,10 @@ func oidcConfigDeserialize(d *schema.ResourceData, f fronteggTenantSSOConfig) er
 	if err := setCommonSSOFields(d, f); err != nil {
 		return err
 	}
-	for k, v := range map[string]interface{}{
-		"oidc_client_id": f.OIDCClientID,
-		"oidc_secret":    f.OIDCSecret,
-	} {
-		if err := d.Set(k, v); err != nil {
-			return err
-		}
+	if err := d.Set("oidc_client_id", f.OIDCClientID); err != nil {
+		return err
 	}
-	return nil
+	return setSecretUnlessWriteOnly(d, "oidc_secret", f.OIDCSecret)
 }
 
 func resourceFronteggTenantOIDCConfigCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
