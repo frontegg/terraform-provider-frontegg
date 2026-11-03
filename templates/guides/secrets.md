@@ -71,8 +71,12 @@ resource "frontegg_webhook" "example" {
 `frontegg_user` and `frontegg_portal_user` send `password_wo` only when the user is created.
 Changing a Frontegg password needs the current one, and a write-only password is not kept,
 so changing `password_wo_version` on an existing user fails at plan. Change the password in
-Frontegg instead. Adding the pair to an existing or imported user records it without sending
-anything.
+Frontegg instead.
+
+Adding the pair to an existing or imported user records it without sending anything. This also
+applies after removing the pair: adding it back with a new value does not change the password.
+For the same reason, setting a plain `password` on a `frontegg_user` whose current password is
+not in state, after an import or after using `password_wo`, records the value without sending it.
 
 ## Rotating a write-only secret
 

@@ -121,10 +121,19 @@ tenant cannot be recovered from the user ID alone.`,
 				Optional:    true,
 			},
 		},
-		CustomizeDiff: rejectUserPasswordRotation,
+		CustomizeDiff: resourceFronteggUserCustomizeDiff,
 	}
 	addCreateOnlyPassword(resource.Schema)
+	resource.Schema["password"].Description += " When the current password is not in state, after an import or after using `password_wo`, " +
+		"a new value is recorded but not sent, because Frontegg needs the current password to change it."
 	return resource
+}
+
+func resourceFronteggUserCustomizeDiff(ctx context.Context, d *schema.ResourceDiff, meta interface{}) error {
+	if d.HasChange("tenant_id") {
+		return nil
+	}
+	return rejectUserPasswordRotation(ctx, d, meta)
 }
 
 // addCreateOnlyPassword adds a write-only password that is only sent at creation,
@@ -134,7 +143,8 @@ func addCreateOnlyPassword(attrs map[string]*schema.Schema) {
 	attrs["password_wo"].Description = "Write-only alternative to `password` that is never stored in the plan or state. Accepts ephemeral values. " +
 		"Only sent when the user is created. Requires Terraform 1.11 or later and must be set together with `password_wo_version`."
 	attrs["password_wo_version"].Description = "Version of `password_wo`. Changing it after the user is created fails at plan, because Frontegg " +
-		"needs the current password to change it. Change the password in Frontegg instead."
+		"needs the current password to change it. Change the password in Frontegg instead. Adding `password_wo` to an existing user, " +
+		"including after removing it, never changes the password."
 }
 
 func rejectUserPasswordRotation(ctx context.Context, d *schema.ResourceDiff, meta interface{}) error {
@@ -268,14 +278,13 @@ func resourceFronteggUserUpdate(ctx context.Context, d *schema.ResourceData, met
 		}
 	}
 
-	// Password:
-	if d.HasChange("password") && d.Get("password").(string) != "" {
+	// Password: Frontegg needs the current password, so a value set without one in state is recorded but not sent.
+	oldI, newI := d.GetChange("password")
+	oldPw := oldI.(string)
+	newPw := newI.(string)
+	if d.HasChange("password") && oldPw != "" && newPw != "" {
 		headers := http.Header{}
 		headers.Add("frontegg-user-id", d.Id())
-
-		oldI, newI := d.GetChange("password")
-		oldPw := oldI.(string)
-		newPw := newI.(string)
 
 		if err := clientHolder.ApiClient.RequestWithHeaders(ctx, "POST", fmt.Sprintf("%s/passwords/change", fronteggUserPathV1), headers, struct {
 			OldPW string `json:"password"`

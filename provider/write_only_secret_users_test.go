@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"regexp"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
@@ -168,4 +169,56 @@ func TestUserPasswordMovesToWriteOnly(t *testing.T) {
 			})
 		})
 	}
+}
+
+func TestUserPasswordWithoutCurrentIsRecordedNotSent(t *testing.T) {
+	skipBelowWriteOnlyTerraform(t)
+	api := fakeUserAPI(t)
+	c := userPasswordCases["frontegg_user"]
+
+	resource.UnitTest(t, resource.TestCase{
+		ProviderFactories: testAccProviderFactories,
+		Steps: []resource.TestStep{
+			{Config: c.render("  password_wo         = \"${var.secret}-password\"\n  password_wo_version = 1\n")},
+			{
+				Config: c.render("  password = \"plain-password\"\n"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					checkNoPasswordChange(api),
+					resource.TestCheckResourceAttr(c.address, "password", "plain-password"),
+				),
+			},
+			{
+				Config:   c.render("  password = \"plain-password\"\n"),
+				PlanOnly: true,
+			},
+		},
+	})
+}
+
+func TestUserReplacementAllowsPasswordVersionBump(t *testing.T) {
+	skipBelowWriteOnlyTerraform(t)
+	api := fakeUserAPI(t)
+	c := userPasswordCases["frontegg_user"]
+	inTenant := func(tenantID string, arguments string) string {
+		return strings.Replace(c.render(arguments), `tenant_id = "tenant-1"`, fmt.Sprintf("tenant_id = %q", tenantID), 1)
+	}
+
+	resource.UnitTest(t, resource.TestCase{
+		ProviderFactories: testAccProviderFactories,
+		Steps: []resource.TestStep{
+			{Config: inTenant("tenant-1", "  password_wo         = \"first-password\"\n  password_wo_version = 1\n")},
+			{
+				Config: inTenant("tenant-2", "  password_wo         = \"second-password\"\n  password_wo_version = 2\n"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					func(*terraform.State) error {
+						if got := api.lastSent("password"); got != "second-password" {
+							return fmt.Errorf("replacement user was created with password %q, want the new write-only value", got)
+						}
+						return nil
+					},
+					checkSecretOutOfState("first-password", "second-password"),
+				),
+			},
+		},
+	})
 }

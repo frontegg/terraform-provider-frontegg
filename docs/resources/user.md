@@ -31,9 +31,9 @@ tenant cannot be recovered from the user ID alone.
 > **NOTE**: [Write-only arguments](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments) are supported in Terraform 1.11 and later.
 
 - `automatically_verify` (Boolean) Whether the user gets verified upon creation.
-- `password` (String, Sensitive) The user's login password. Stored in state; use `password_wo` to keep it out of state.
+- `password` (String, Sensitive) The user's login password. Stored in state; use `password_wo` to keep it out of state. When the current password is not in state, after an import or after using `password_wo`, a new value is recorded but not sent, because Frontegg needs the current password to change it.
 - `password_wo` (String, Sensitive, [Write-only](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments)) Write-only alternative to `password` that is never stored in the plan or state. Accepts ephemeral values. Only sent when the user is created. Requires Terraform 1.11 or later and must be set together with `password_wo_version`.
-- `password_wo_version` (Number) Version of `password_wo`. Changing it after the user is created fails at plan, because Frontegg needs the current password to change it. Change the password in Frontegg instead.
+- `password_wo_version` (Number) Version of `password_wo`. Changing it after the user is created fails at plan, because Frontegg needs the current password to change it. Change the password in Frontegg instead. Adding `password_wo` to an existing user, including after removing it, never changes the password.
 - `skip_invite_email` (Boolean) Skip sending the invite email. If true, user is automatically verified on creation.
 - `superuser` (Boolean) Whether the user is a super user.
 
