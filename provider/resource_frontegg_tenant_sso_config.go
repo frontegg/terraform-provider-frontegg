@@ -11,10 +11,10 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
-// fronteggTenantSSOConfigV2Path is used for creating SSO configurations (POST only).
+// fronteggTenantSSOConfigV2Path is used for creating and updating SSO configurations.
 const fronteggTenantSSOConfigV2Path = "/team/resources/sso/v2/configurations"
 
-// fronteggTenantSSOConfigPath is the v1 path used for read, update, and delete operations.
+// fronteggTenantSSOConfigPath is the v1 path used for read and delete operations.
 const fronteggTenantSSOConfigPath = "/team/resources/sso/v1/configurations"
 
 // fronteggTenantSSOConfig is the shared API request/response struct for both SAML and OIDC.
