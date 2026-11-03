@@ -760,19 +760,12 @@ func resourceFronteggWorkspaceRead(ctx context.Context, d *schema.ResourceData, 
 		}
 		items := []interface{}{}
 		if out.IsActive {
-			var outRedirects fronteggOAuthRedirectURIs
-			clientHolder.ApiClient.Ignore404()
-			if err := clientHolder.ApiClient.Get(ctx, fronteggOAuthRedirectURIsURL, &outRedirects); err != nil {
+			allowedRedirectURLs, err := readFronteggAllowedRedirectURLs(ctx, &clientHolder.ApiClient, d)
+			if err != nil {
 				return diag.FromErr(err)
 			}
-			var allowedRedirectURLs []string
-			for _, r := range outRedirects.RedirectURIs {
-				allowedRedirectURLs = append(allowedRedirectURLs, r.RedirectURI)
-			}
-			// Normalize allowed_redirect_urls by trimming trailing slashes to prevent unnecessary plan changes
-			normalizedRedirectURLs := trimRightFromStringSlice(allowedRedirectURLs, "/")
 			items = append(items, map[string]interface{}{
-				"allowed_redirect_urls": normalizedRedirectURLs,
+				"allowed_redirect_urls": allowedRedirectURLs,
 			})
 		}
 		if err := d.Set("hosted_login", items); err != nil {
@@ -939,39 +932,8 @@ func resourceFronteggWorkspaceUpdate(ctx context.Context, d *schema.ResourceData
 			}
 		}
 		if d.HasChange("hosted_login.0.allowed_redirect_urls") {
-			var outRedirects fronteggOAuthRedirectURIs
-			allowedRedirectURLs := d.Get("hosted_login.0.allowed_redirect_urls")
-			allowedRedirectURLsList := stringSetToListWithRightTrim(allowedRedirectURLs.(*schema.Set), "/")
-
-			if err := clientHolder.ApiClient.Get(ctx, fronteggOAuthRedirectURIsURL, &outRedirects); err != nil {
+			if err := updateFronteggAllowedRedirectURLs(ctx, &clientHolder.ApiClient, d); err != nil {
 				return diag.FromErr(err)
-			}
-			for _, r := range outRedirects.RedirectURIs {
-				if !stringInSlice(strings.TrimRight(r.RedirectURI, "/"), allowedRedirectURLsList) {
-					err := clientHolder.ApiClient.Delete(ctx, fmt.Sprintf("%s/%s", fronteggOAuthRedirectURIsURL, r.ID), nil)
-					if err != nil {
-						return diag.FromErr(err)
-					}
-				}
-			}
-			if allowedRedirectURLs != nil {
-				for _, url := range allowedRedirectURLsList {
-					exists := false
-					for _, item := range outRedirects.RedirectURIs {
-						if strings.TrimRight(item.RedirectURI, "/") == strings.TrimRight(url, "/") {
-							exists = true
-						}
-					}
-
-					if !exists {
-						in := fronteggOAuthRedirectURI{
-							RedirectURI: url,
-						}
-						if err := clientHolder.ApiClient.Post(ctx, fronteggOAuthRedirectURIsURL, in, nil); err != nil {
-							return diag.FromErr(err)
-						}
-					}
-				}
 			}
 		}
 	}
