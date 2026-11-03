@@ -64,7 +64,7 @@ func fronteggUserApplicationError(err error) error {
 }
 
 func resourceFronteggUser() *schema.Resource {
-	return &schema.Resource{
+	resource := &schema.Resource{
 		Description: `Configures a Frontegg user.
 
 Import this resource using the ` + "`tenant_id:user_id`" + ` format, since the
@@ -121,7 +121,32 @@ tenant cannot be recovered from the user ID alone.`,
 				Optional:    true,
 			},
 		},
+		CustomizeDiff: rejectUserPasswordRotation,
 	}
+	addCreateOnlyPassword(resource.Schema)
+	return resource
+}
+
+// addCreateOnlyPassword adds a write-only password that is only sent at creation,
+// because changing a Frontegg password needs the current one, which isn't kept.
+func addCreateOnlyPassword(attrs map[string]*schema.Schema) {
+	addWriteOnlySecret(attrs, "password")
+	attrs["password_wo"].Description = "Write-only alternative to `password` that is never stored in the plan or state. Accepts ephemeral values. " +
+		"Only sent when the user is created. Requires Terraform 1.11 or later and must be set together with `password_wo_version`."
+	attrs["password_wo_version"].Description = "Version of `password_wo`. Changing it after the user is created fails at plan, because Frontegg " +
+		"needs the current password to change it. Change the password in Frontegg instead."
+}
+
+func rejectUserPasswordRotation(ctx context.Context, d *schema.ResourceDiff, meta interface{}) error {
+	oldVersion, newVersion := d.GetChange("password_wo_version")
+	if d.Id() == "" || oldVersion.(int) == 0 || newVersion.(int) == 0 || oldVersion == newVersion {
+		return nil
+	}
+	return fmt.Errorf(
+		"password_wo is only sent when the user is created: Frontegg needs the current password to change it, "+
+			"and a write-only password is not kept. Change the password in Frontegg and set password_wo_version back to %d",
+		oldVersion,
+	)
 }
 
 func resourceFronteggUserImport(ctx context.Context, d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
@@ -140,7 +165,7 @@ func resourceFronteggUserSerialize(d *schema.ResourceData) fronteggUser {
 	log.Printf("role IDs: %#v", d.Get("role_ids").(*schema.Set).List())
 	return fronteggUser{
 		Email:           d.Get("email").(string),
-		Password:        d.Get("password").(string),
+		Password:        secretValue(d, "password"),
 		SkipInviteEmail: d.Get("skip_invite_email").(bool),
 		CreateRoleIDs:   d.Get("role_ids").(*schema.Set).List(),
 		SuperUser:       d.Get("superuser").(bool),
@@ -244,7 +269,7 @@ func resourceFronteggUserUpdate(ctx context.Context, d *schema.ResourceData, met
 	}
 
 	// Password:
-	if d.HasChange("password") {
+	if d.HasChange("password") && d.Get("password").(string) != "" {
 		headers := http.Header{}
 		headers.Add("frontegg-user-id", d.Id())
 
