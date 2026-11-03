@@ -16,10 +16,11 @@ import (
 )
 
 type fakeRedirectURIs struct {
-	mu     sync.Mutex
-	nextID int
-	uris   []fronteggOAuthRedirectURI
-	posts  int
+	mu       sync.Mutex
+	nextID   int
+	uris     []fronteggOAuthRedirectURI
+	posts    int
+	failPost string
 }
 
 func (f *fakeRedirectURIs) serve(w http.ResponseWriter, r *http.Request) {
@@ -32,6 +33,11 @@ func (f *fakeRedirectURIs) serve(w http.ResponseWriter, r *http.Request) {
 		var in fronteggOAuthRedirectURI
 		_ = json.NewDecoder(r.Body).Decode(&in)
 		f.posts++
+		if in.RedirectURI == f.failPost {
+			f.failPost = ""
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
 		for _, u := range f.uris {
 			if u.RedirectURI == in.RedirectURI {
 				w.WriteHeader(http.StatusBadRequest)
@@ -156,5 +162,36 @@ func TestReadAllowedRedirectURLsTrimsUnconfiguredURLs(t *testing.T) {
 	want := []string{"https://localhost:4300/", "https://outside.example.com"}
 	if fmt.Sprint(sortedStrings(got)) != fmt.Sprint(want) {
 		t.Errorf("read = %v, want %v", sortedStrings(got), want)
+	}
+}
+
+func TestUpdateAllowedRedirectURLsFinishesAfterFailingMidway(t *testing.T) {
+	f, client := newFakeRedirectURIs(t, "https://a.example.com", "https://old.example.com")
+	urls := []string{"https://a.example.com", "https://b.example.com", "https://c.example.com/", "https://d.example.com"}
+	f.failPost = "https://c.example.com"
+
+	if err := updateFronteggAllowedRedirectURLs(context.Background(), client, redirectURLsResourceData(t, urls...)); err == nil {
+		t.Fatal("first update succeeded, want the failed POST to surface")
+	}
+	read, err := readFronteggAllowedRedirectURLs(context.Background(), client, redirectURLsResourceData(t, urls...))
+	if err != nil {
+		t.Fatalf("read failed: %v", err)
+	}
+	if got, want := fmt.Sprint(sortedStrings(read)), fmt.Sprint(sortedStrings(f.registered())); got != want {
+		t.Errorf("read after failure = %s, want what is registered %s", got, want)
+	}
+
+	missing := 4 - len(f.registered())
+	postsBefore := f.posts
+	if err := updateFronteggAllowedRedirectURLs(context.Background(), client, redirectURLsResourceData(t, urls...)); err != nil {
+		t.Fatalf("second update failed: %v", err)
+	}
+
+	want := []string{"https://a.example.com", "https://b.example.com", "https://c.example.com", "https://d.example.com"}
+	if got := f.registered(); fmt.Sprint(got) != fmt.Sprint(want) {
+		t.Errorf("registered = %v, want %v", got, want)
+	}
+	if got := f.posts - postsBefore; got != missing {
+		t.Errorf("second update posted %d URLs, want only the %d still missing", got, missing)
 	}
 }
