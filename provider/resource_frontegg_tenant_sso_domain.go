@@ -161,15 +161,8 @@ func resourceFronteggTenantSSODomainRead(ctx context.Context, d *schema.Resource
 		return nil
 	}
 
-	var found *fronteggTenantSSODomain
-	for i := range targetConfig.Domains {
-		if targetConfig.Domains[i].ID == d.Id() {
-			found = &targetConfig.Domains[i]
-			break
-		}
-	}
-
-	if found == nil {
+	found, ok := findSSODomain(targetConfig.Domains, d.Id(), d.Get("domain").(string))
+	if !ok {
 		d.SetId("")
 		return nil
 	}
@@ -208,4 +201,18 @@ func resourceFronteggTenantSSODomainDelete(ctx context.Context, d *schema.Resour
 	}
 
 	return nil
+}
+
+func findSSODomain(domains []fronteggTenantSSODomain, id, name string) (fronteggTenantSSODomain, bool) {
+	for _, dom := range domains {
+		if dom.ID == id {
+			return dom, true
+		}
+	}
+	for _, dom := range domains {
+		if name != "" && dom.Domain == name {
+			return dom, true
+		}
+	}
+	return fronteggTenantSSODomain{}, false
 }

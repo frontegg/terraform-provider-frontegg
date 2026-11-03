@@ -70,13 +70,23 @@ func (a *fakeAPI) serve(w http.ResponseWriter, r *http.Request) {
 }
 
 func matchFakeRoute(pattern, path string) (string, bool) {
-	if !strings.HasSuffix(pattern, "/{id}") {
-		return "", pattern == path
-	}
-	prefix := strings.TrimSuffix(pattern, "{id}")
-	id := strings.TrimPrefix(path, prefix)
-	if !strings.HasPrefix(path, prefix) || id == "" || strings.Contains(id, "/") {
+	want := strings.Split(pattern, "/")
+	got := strings.Split(path, "/")
+	if len(want) != len(got) {
 		return "", false
+	}
+	id := ""
+	for i := range want {
+		if want[i] != "{id}" {
+			if want[i] != got[i] {
+				return "", false
+			}
+			continue
+		}
+		if got[i] == "" {
+			return "", false
+		}
+		id = got[i]
 	}
 	return id, true
 }
