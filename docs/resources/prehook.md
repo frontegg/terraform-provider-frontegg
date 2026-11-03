@@ -70,9 +70,13 @@ resource "frontegg_prehook" "custom_code_example" {
 
 ### Optional
 
+> **NOTE**: [Write-only arguments](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments) are supported in Terraform 1.11 and later.
+
 - `code` (String) The JavaScript source that handles the event. It must define and export an `onEvent` handler. Required when `type` is `CUSTOM_CODE`.
 - `runtime` (String) The runtime to execute the code with (e.g. `NODE_20`). Only used when `type` is `CUSTOM_CODE`.
-- `secret` (String, Sensitive) A secret to validate the event with. Required when `type` is `API`.
+- `secret` (String, Sensitive) A secret to validate the event with. Required when `type` is `API`. Stored in state; use `secret_wo` to keep it out of state.
+- `secret_wo` (String, Sensitive, [Write-only](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments)) Write-only alternative to `secret` that is never stored in the plan or state. Accepts ephemeral values. Requires Terraform 1.11 or later and must be set together with `secret_wo_version`.
+- `secret_wo_version` (Number) Version of `secret_wo`. Terraform cannot detect changes to a write-only value, so change this number whenever `secret_wo` changes to send the new value.
 - `timeout` (Number) The execution timeout in seconds (max 10). Only used when `type` is `CUSTOM_CODE`.
 - `type` (String) The prehook type. `API` sends events to `url`; `CUSTOM_CODE` runs `code` on Frontegg.
 - `url` (String) The URL to send events to. Required when `type` is `API`.

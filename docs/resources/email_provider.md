@@ -18,13 +18,17 @@ Configures a Frontegg Email provider.
 ### Required
 
 - `provider_name` (String) Name of the email provider (If the provider is changed, the old provider's configuration will be deleted).
-- `secret` (String, Sensitive) A secret to be included with the event.
 
 ### Optional
+
+> **NOTE**: [Write-only arguments](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments) are supported in Terraform 1.11 and later.
 
 - `domain` (String) Required for Mailgun (required only for Mailgun).
 - `provider_id` (String) Provider ID (required only for AWS SES).
 - `region` (String) Required for AWS SES or Mailgun.
+- `secret` (String, Sensitive) A secret to be included with the event. Exactly one of `secret` or `secret_wo` is required. Stored in state; use `secret_wo` to keep it out of state.
+- `secret_wo` (String, Sensitive, [Write-only](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments)) Write-only alternative to `secret` that is never stored in the plan or state. Accepts ephemeral values. Requires Terraform 1.11 or later and must be set together with `secret_wo_version`.
+- `secret_wo_version` (Number) Version of `secret_wo`. Terraform cannot detect changes to a write-only value, so change this number whenever `secret_wo` changes to send the new value.
 
 ### Read-Only
 
