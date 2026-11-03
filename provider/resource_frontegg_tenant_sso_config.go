@@ -19,25 +19,26 @@ const fronteggTenantSSOConfigPath = "/team/resources/sso/v1/configurations"
 
 // fronteggTenantSSOConfig is the shared API request/response struct for both SAML and OIDC.
 type fronteggTenantSSOConfig struct {
-	ID                        string `json:"id,omitempty"`
-	TenantID                  string `json:"tenantId,omitempty"`
-	Enabled                   bool   `json:"enabled"`
-	SSOEndpoint               string `json:"ssoEndpoint,omitempty"`
-	PublicCertificate         string `json:"publicCertificate,omitempty"`
-	SignRequest               bool   `json:"signRequest"`
-	ACSUrl                    string `json:"acsUrl,omitempty"`
-	SPEntityID                string `json:"spEntityId,omitempty"`
-	Type                      string `json:"type,omitempty"`
-	OIDCClientID              string `json:"oidcClientId,omitempty"`
-	OIDCSecret                string `json:"oidcSecret,omitempty"`
-	OverrideActiveTenant      bool   `json:"overrideActiveTenant"`
-	SubAccountAccessLimit     int    `json:"subAccountAccessLimit,omitempty"`
-	IDPClientID               string `json:"idpClientId,omitempty"`
-	IDPClientSecret           string `json:"idpClientSecret,omitempty"`
-	GeneratedVerification     string `json:"generatedVerification,omitempty"`
-	SkipEmailDomainValidation bool   `json:"skipEmailDomainValidation"`
-	CreatedAt                 string `json:"createdAt,omitempty"`
-	UpdatedAt                 string `json:"updatedAt,omitempty"`
+	ID                        string   `json:"id,omitempty"`
+	TenantID                  string   `json:"tenantId,omitempty"`
+	Enabled                   bool     `json:"enabled"`
+	SSOEndpoint               string   `json:"ssoEndpoint,omitempty"`
+	PublicCertificate         string   `json:"publicCertificate,omitempty"`
+	SignRequest               bool     `json:"signRequest"`
+	ACSUrl                    string   `json:"acsUrl,omitempty"`
+	SPEntityID                string   `json:"spEntityId,omitempty"`
+	Type                      string   `json:"type,omitempty"`
+	OIDCClientID              string   `json:"oidcClientId,omitempty"`
+	OIDCSecret                string   `json:"oidcSecret,omitempty"`
+	OverrideActiveTenant      bool     `json:"overrideActiveTenant"`
+	SubAccountAccessLimit     int      `json:"subAccountAccessLimit,omitempty"`
+	IDPClientID               string   `json:"idpClientId,omitempty"`
+	IDPClientSecret           string   `json:"idpClientSecret,omitempty"`
+	GeneratedVerification     string   `json:"generatedVerification,omitempty"`
+	SkipEmailDomainValidation bool     `json:"skipEmailDomainValidation"`
+	RoleIDs                   []string `json:"roleIds,omitempty"`
+	CreatedAt                 string   `json:"createdAt,omitempty"`
+	UpdatedAt                 string   `json:"updatedAt,omitempty"`
 }
 
 // tenantSSOHeaders builds the per-tenant header required by v1 SSO API operations.
@@ -131,30 +132,48 @@ func tenantSSORead(ctx context.Context, d *schema.ResourceData, meta interface{}
 		return diag.FromErr(err)
 	}
 
-	var configs []fronteggTenantSSOConfig
-	if err := clientHolder.ApiClient.GetWithHeaders(ctx, fronteggTenantSSOConfigPath, headers, &configs); err != nil {
+	config, err := findTenantSSOConfig(ctx, clientHolder.ApiClient, headers, d.Id())
+	if err != nil {
 		return diag.FromErr(err)
 	}
+	if config == nil {
+		d.SetId("")
+		return nil
+	}
+	if err := deserialize(d, *config); err != nil {
+		return diag.FromErr(err)
+	}
+	return nil
+}
+
+func findTenantSSOConfig(ctx context.Context, client restclient.Client, headers http.Header, configID string) (*fronteggTenantSSOConfig, error) {
+	var configs []fronteggTenantSSOConfig
+	if err := client.GetWithHeaders(ctx, fronteggTenantSSOConfigPath, headers, &configs); err != nil {
+		return nil, err
+	}
 	for _, c := range configs {
-		if c.ID == d.Id() {
-			if err := deserialize(d, c); err != nil {
-				return diag.FromErr(err)
-			}
-			return nil
+		if c.ID == configID {
+			return &c, nil
 		}
 	}
-	d.SetId("")
-	return nil
+	return nil, nil
 }
 
 // tenantSSOUpdate is the shared Update handler for both SAML and OIDC resources.
 // Uses v2 API which requires tenantId in the request body (no header). The v2 PATCH
-// replaces the group mappings with the ones in the body, so the current ones are sent back.
+// replaces the group mappings and default roles with the ones in the body, so the current ones are sent back.
 func tenantSSOUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}, serialize func(*schema.ResourceData) fronteggTenantSSOConfig, read func(context.Context, *schema.ResourceData, interface{}) diag.Diagnostics) diag.Diagnostics {
 	clientHolder := meta.(*restclient.ClientHolder)
 	headers, err := tenantSSOHeaders(d.Get("tenant_id").(string))
 	if err != nil {
 		return diag.FromErr(err)
+	}
+	current, err := findTenantSSOConfig(ctx, clientHolder.ApiClient, headers, d.Id())
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	if current == nil {
+		return diag.Errorf("SSO configuration %s no longer exists", d.Id())
 	}
 	groups, err := tenantSSOGroups(ctx, clientHolder.ApiClient, headers, d.Id())
 	if err != nil {
@@ -163,6 +182,7 @@ func tenantSSOUpdate(ctx context.Context, d *schema.ResourceData, meta interface
 
 	in := serialize(d)
 	in.TenantID = d.Get("tenant_id").(string)
+	in.RoleIDs = current.RoleIDs
 	body := fronteggTenantSSOConfigV2Update{fronteggTenantSSOConfig: in, Groups: groups}
 	if err := clientHolder.ApiClient.Patch(ctx, fmt.Sprintf("%s/%s", fronteggTenantSSOConfigV2Path, d.Id()), body, nil); err != nil {
 		return diag.FromErr(err)
