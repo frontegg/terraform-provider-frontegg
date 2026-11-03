@@ -185,7 +185,7 @@ func (c *Client) RequestWithHeaders(ctx context.Context, method string, url stri
 			return err
 		}
 
-		log.Printf("[TRACE] Sending request %+v", req)
+		log.Printf("[TRACE] Sending request %s %s", req.Method, req.URL)
 		res, err := c.client.Do(req)
 		if err != nil {
 			return fmt.Errorf("restclient: failed sending request: %w", err)
@@ -233,10 +233,10 @@ func (c *Client) RequestWithHeaders(ctx context.Context, method string, url stri
 			)
 		}
 
-		log.Printf("[TRACE] Received response data %q", string(resBody))
+		log.Printf("[TRACE] Received response %s for %s %s (%d bytes)", res.Status, req.Method, req.URL, len(resBody))
 		if out != nil {
 			if err := json.Unmarshal(resBody, out); err != nil {
-				return fmt.Errorf("restclient: failed to decode JSON response %#v: %w", string(resBody), err)
+				return fmt.Errorf("restclient: failed to decode JSON response from %s %s: %w", req.Method, req.URL, err)
 			}
 		}
 		return nil
