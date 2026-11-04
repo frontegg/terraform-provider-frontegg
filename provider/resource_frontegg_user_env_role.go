@@ -56,8 +56,8 @@ environment. A block without ` + "`environment_id`" + ` assigns the role globall
 Environment-scoped assignments need the ` + "`env_role_assignment`" + ` feature flag enabled on the account.
 
 The resource manages only the assignments it declares. Destroying it removes those assignments and
-leaves the user and its other roles in place. A global role assigned here also appears in the
-` + "`role_ids`" + ` of a ` + "`frontegg_user`" + ` that manages the same user, so assign each global role in one place only.
+leaves the user and its other roles in place. When a ` + "`frontegg_user`" + ` manages the same user, leave its
+` + "`role_ids`" + ` unset to assign global roles here, and don't give it ` + "`environment_role`" + ` blocks.
 
 Import this resource using the ` + "`tenant_id:user_id`" + ` format. An import reads every role the user has, so the
 first apply after an import removes any of them the configuration does not declare.`,
@@ -188,6 +188,10 @@ func assignUserRoles(ctx context.Context, client *restclient.Client, tenantID, u
 	if err := sendUserRoleAssignments(ctx, client, http.MethodPost, tenantID, userID, assignments); err != nil {
 		return err
 	}
+	return verifyUserRoleAssignments(ctx, client, tenantID, userID, assignments)
+}
+
+func verifyUserRoleAssignments(ctx context.Context, client *restclient.Client, tenantID, userID string, assignments []userRoleAssignment) error {
 	if len(assignments) == 0 {
 		return nil
 	}
@@ -250,15 +254,19 @@ func resourceFronteggUserEnvRoleUpdate(ctx context.Context, d *schema.ResourceDa
 	tenantID := d.Get("tenant_id").(string)
 	userID := d.Get("user_id").(string)
 	oldSet, newSet := d.GetChange("assignment")
-	removed := userRoleAssignmentsFromSet(oldSet.(*schema.Set).Difference(newSet.(*schema.Set)))
-	added := userRoleAssignmentsFromSet(newSet.(*schema.Set).Difference(oldSet.(*schema.Set)))
-	if err := sendUserRoleAssignments(ctx, &client, http.MethodDelete, tenantID, userID, removed); err != nil {
-		return diag.FromErr(err)
-	}
-	if err := assignUserRoles(ctx, &client, tenantID, userID, added); err != nil {
+	if err := replaceUserRoleAssignments(ctx, &client, tenantID, userID, oldSet.(*schema.Set), newSet.(*schema.Set)); err != nil {
 		return diag.FromErr(err)
 	}
 	return nil
+}
+
+func replaceUserRoleAssignments(ctx context.Context, client *restclient.Client, tenantID, userID string, oldSet, newSet *schema.Set) error {
+	removed := userRoleAssignmentsFromSet(oldSet.Difference(newSet))
+	added := userRoleAssignmentsFromSet(newSet.Difference(oldSet))
+	if err := sendUserRoleAssignments(ctx, client, http.MethodDelete, tenantID, userID, removed); err != nil {
+		return err
+	}
+	return assignUserRoles(ctx, client, tenantID, userID, added)
 }
 
 func resourceFronteggUserEnvRoleDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {

@@ -22,14 +22,15 @@ type fronteggUserRole struct {
 }
 
 type fronteggUser struct {
-	Key             string             `json:"id,omitempty"`
-	Email           string             `json:"email,omitempty"`
-	Password        string             `json:"password,omitempty"`
-	CreateRoleIDs   []interface{}      `json:"roleIds,omitempty"`
-	ReadRoleIDs     []fronteggUserRole `json:"roles,omitempty"`
-	SkipInviteEmail bool               `json:"skipInviteEmail,omitempty"`
-	Verified        bool               `json:"verified,omitempty"`
-	SuperUser       bool               `json:"superUser,omitempty"`
+	Key              string                     `json:"id,omitempty"`
+	Email            string                     `json:"email,omitempty"`
+	Password         string                     `json:"password,omitempty"`
+	CreateRoleIDs    []interface{}              `json:"roleIds,omitempty"`
+	ReadRoleIDs      []fronteggUserRole         `json:"roles,omitempty"`
+	SkipInviteEmail  bool                       `json:"skipInviteEmail,omitempty"`
+	Verified         bool                       `json:"verified,omitempty"`
+	SuperUser        bool                       `json:"superUser,omitempty"`
+	EnvironmentRoles []fronteggEnvironmentRoles `json:"environmentRoles,omitempty"`
 }
 
 const fronteggUserPath = "/identity/resources/users/v2"
@@ -67,8 +68,14 @@ func resourceFronteggUser() *schema.Resource {
 	return &schema.Resource{
 		Description: `Configures a Frontegg user.
 
+Global roles go in ` + "`role_ids`" + `. Roles that apply in a single environment go in
+` + "`environment_role`" + ` blocks, which need the ` + "`env_role_assignment`" + ` feature flag enabled on the account.
+Set at least one of the two. When ` + "`role_ids`" + ` is omitted, the provider leaves the user's global roles
+unmanaged, such as the default roles the first user of a tenant gets. Manage a user's environment roles
+either here or in ` + "`frontegg_user_env_role`" + `, not both.
+
 Import this resource using the ` + "`tenant_id:user_id`" + ` format, since the
-tenant cannot be recovered from the user ID alone.`,
+tenant cannot be recovered from the user ID alone. An import does not read environment roles.`,
 
 		CreateContext: resourceFronteggUserCreate,
 		ReadContext:   resourceFronteggUserRead,
@@ -101,13 +108,34 @@ tenant cannot be recovered from the user ID alone.`,
 				Optional:    true,
 			},
 			"role_ids": {
-				Description: "List of the role IDs that the user has in the tenant",
+				Description: "List of the role IDs that the user has in the tenant, in every environment.",
 				Type:        schema.TypeSet,
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
-				MinItems: 1,
-				Required: true,
+				MinItems:     1,
+				Optional:     true,
+				Computed:     true,
+				AtLeastOneOf: []string{"role_ids", "environment_role"},
+			},
+			"environment_role": {
+				Description: "A role the user has only in one environment.",
+				Type:        schema.TypeSet,
+				Optional:    true,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"environment_id": {
+							Description: "The ID of the environment the role applies in.",
+							Type:        schema.TypeString,
+							Required:    true,
+						},
+						"role_id": {
+							Description: "The ID of the role.",
+							Type:        schema.TypeString,
+							Required:    true,
+						},
+					},
+				},
 			},
 			"tenant_id": {
 				Description: "The tenant ID for this user.",
@@ -139,11 +167,12 @@ func resourceFronteggUserImport(ctx context.Context, d *schema.ResourceData, met
 func resourceFronteggUserSerialize(d *schema.ResourceData) fronteggUser {
 	log.Printf("role IDs: %#v", d.Get("role_ids").(*schema.Set).List())
 	return fronteggUser{
-		Email:           d.Get("email").(string),
-		Password:        d.Get("password").(string),
-		SkipInviteEmail: d.Get("skip_invite_email").(bool),
-		CreateRoleIDs:   d.Get("role_ids").(*schema.Set).List(),
-		SuperUser:       d.Get("superuser").(bool),
+		Email:            d.Get("email").(string),
+		Password:         d.Get("password").(string),
+		SkipInviteEmail:  d.Get("skip_invite_email").(bool),
+		CreateRoleIDs:    d.Get("role_ids").(*schema.Set).List(),
+		SuperUser:        d.Get("superuser").(bool),
+		EnvironmentRoles: userRoleAssignmentsRequest(userRoleAssignmentsFromSet(d.Get("environment_role").(*schema.Set))).EnvironmentRoles,
 	}
 }
 
@@ -173,6 +202,11 @@ func resourceFronteggUserCreate(ctx context.Context, d *schema.ResourceData, met
 	}
 
 	if err := resourceFronteggUserDeserialize(d, out); err != nil {
+		return diag.FromErr(err)
+	}
+
+	environmentRoles := userRoleAssignmentsFromSet(d.Get("environment_role").(*schema.Set))
+	if err := verifyUserRoleAssignments(ctx, &clientHolder.ApiClient, d.Get("tenant_id").(string), out.Key, environmentRoles); err != nil {
 		return diag.FromErr(err)
 	}
 
@@ -212,6 +246,22 @@ func resourceFronteggUserRead(ctx context.Context, d *schema.ResourceData, meta 
 	}
 
 	if err := resourceFronteggUserDeserialize(d, out); err != nil {
+		return diag.FromErr(err)
+	}
+	if d.Get("environment_role").(*schema.Set).Len() == 0 {
+		return nil
+	}
+	current, _, err := fetchUserRoleAssignments(ctx, &client, d.Get("tenant_id").(string), d.Id())
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	environmentRoles := []interface{}{}
+	for assignment := range current {
+		if assignment.EnvironmentID != "" {
+			environmentRoles = append(environmentRoles, assignment.block())
+		}
+	}
+	if err := d.Set("environment_role", environmentRoles); err != nil {
 		return diag.FromErr(err)
 	}
 	return nil
@@ -312,6 +362,13 @@ func resourceFronteggUserUpdate(ctx context.Context, d *schema.ResourceData, met
 		}
 
 		if err := d.Set("role_ids", news); err != nil {
+			return diag.FromErr(err)
+		}
+	}
+
+	if d.HasChange("environment_role") {
+		oldSet, newSet := d.GetChange("environment_role")
+		if err := replaceUserRoleAssignments(ctx, &clientHolder.ApiClient, d.Get("tenant_id").(string), d.Id(), oldSet.(*schema.Set), newSet.(*schema.Set)); err != nil {
 			return diag.FromErr(err)
 		}
 	}

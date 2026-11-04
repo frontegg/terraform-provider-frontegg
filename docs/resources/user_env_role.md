@@ -8,8 +8,8 @@ description: |-
   environment. A block without environment_id assigns the role globally, in every environment.
   Environment-scoped assignments need the env_role_assignment feature flag enabled on the account.
   The resource manages only the assignments it declares. Destroying it removes those assignments and
-  leaves the user and its other roles in place. A global role assigned here also appears in the
-  role_ids of a frontegg_user that manages the same user, so assign each global role in one place only.
+  leaves the user and its other roles in place. When a frontegg_user manages the same user, leave its
+  role_ids unset to assign global roles here, and don't give it environment_role blocks.
   Import this resource using the tenant_id:user_id format. An import reads every role the user has, so the
   first apply after an import removes any of them the configuration does not declare.
 ---
@@ -23,8 +23,8 @@ environment. A block without `environment_id` assigns the role globally, in ever
 Environment-scoped assignments need the `env_role_assignment` feature flag enabled on the account.
 
 The resource manages only the assignments it declares. Destroying it removes those assignments and
-leaves the user and its other roles in place. A global role assigned here also appears in the
-`role_ids` of a `frontegg_user` that manages the same user, so assign each global role in one place only.
+leaves the user and its other roles in place. When a `frontegg_user` manages the same user, leave its
+`role_ids` unset to assign global roles here, and don't give it `environment_role` blocks.
 
 Import this resource using the `tenant_id:user_id` format. An import reads every role the user has, so the
 first apply after an import removes any of them the configuration does not declare.
