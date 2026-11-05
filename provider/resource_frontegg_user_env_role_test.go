@@ -232,9 +232,15 @@ func TestMissingUserRoleAssignmentsErrorNamesFlagOnlyForEnvironmentRoles(t *test
 	if strings.Contains(globalOnly.Error(), "env_role_assignment") {
 		t.Errorf("a missing global role should not blame the feature flag: %s", globalOnly)
 	}
+	if !strings.Contains(globalOnly.Error(), "role ID exists") {
+		t.Errorf("a missing global role should suggest checking the role ID: %s", globalOnly)
+	}
 	scoped := missingUserRoleAssignmentsError("user-1", []userRoleAssignment{{RoleID: "admin"}, {RoleID: "viewer", EnvironmentID: "staging"}})
 	if !strings.Contains(scoped.Error(), "env_role_assignment") {
 		t.Errorf("a missing environment role should name the feature flag: %s", scoped)
+	}
+	if !strings.Contains(scoped.Error(), "role ID exists") {
+		t.Errorf("a missing environment role should also suggest checking the role ID, since an unknown role is dropped even with the flag on: %s", scoped)
 	}
 	if missingUserRoleAssignmentsError("user-1", nil) != nil {
 		t.Error("nothing missing should not be an error")

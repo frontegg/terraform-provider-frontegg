@@ -234,9 +234,9 @@ func missingUserRoleAssignmentsError(userID string, missing []userRoleAssignment
 		descriptions = append(descriptions, assignment.String())
 		environmentScoped = environmentScoped || assignment.EnvironmentID != ""
 	}
-	message := fmt.Sprintf("the Frontegg API accepted the request but did not assign %s to user %s", strings.Join(descriptions, ", "), userID)
+	message := fmt.Sprintf("the Frontegg API accepted the request but did not assign %s to user %s. Check that each role ID exists", strings.Join(descriptions, ", "), userID)
 	if environmentScoped {
-		message += ". Environment-scoped role assignments need the env_role_assignment feature flag enabled on the account"
+		message += " and that the env_role_assignment feature flag is enabled on the account"
 	}
 	return errors.New(message)
 }
