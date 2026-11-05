@@ -10,6 +10,7 @@ import (
 	"github.com/frontegg/terraform-provider-frontegg/internal/restclient"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 )
 
 type fronteggSuperUser struct {
@@ -30,6 +31,11 @@ type fronteggUser struct {
 	SkipInviteEmail bool               `json:"skipInviteEmail,omitempty"`
 	Verified        bool               `json:"verified,omitempty"`
 	SuperUser       bool               `json:"superUser,omitempty"`
+}
+
+type fronteggUserCreateRequest struct {
+	fronteggUser
+	EnvironmentRoles []fronteggEnvironmentRoles `json:"environmentRoles,omitempty"`
 }
 
 const fronteggUserPath = "/identity/resources/users/v2"
@@ -67,8 +73,14 @@ func resourceFronteggUser() *schema.Resource {
 	return &schema.Resource{
 		Description: `Configures a Frontegg user.
 
+Global roles go in ` + "`role_ids`" + `. Roles that apply in a single environment go in
+` + "`environment_role`" + ` blocks, which need the ` + "`env_role_assignment`" + ` feature flag enabled on the account.
+Set at least one of the two. When ` + "`role_ids`" + ` is omitted, the provider leaves the user's global roles
+unmanaged, such as the default roles the first user of a tenant gets. Manage a user's environment roles
+either here or in ` + "`frontegg_user_env_role`" + `, not both.
+
 Import this resource using the ` + "`tenant_id:user_id`" + ` format, since the
-tenant cannot be recovered from the user ID alone.`,
+tenant cannot be recovered from the user ID alone. An import does not read environment roles.`,
 
 		CreateContext: resourceFronteggUserCreate,
 		ReadContext:   resourceFronteggUserRead,
@@ -101,13 +113,36 @@ tenant cannot be recovered from the user ID alone.`,
 				Optional:    true,
 			},
 			"role_ids": {
-				Description: "List of the role IDs that the user has in the tenant",
+				Description: "List of the role IDs that the user has in the tenant, in every environment.",
 				Type:        schema.TypeSet,
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
-				MinItems: 1,
-				Required: true,
+				MinItems:     1,
+				Optional:     true,
+				Computed:     true,
+				AtLeastOneOf: []string{"role_ids", "environment_role"},
+			},
+			"environment_role": {
+				Description: "A role the user has only in one environment.",
+				Type:        schema.TypeSet,
+				Optional:    true,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"environment_id": {
+							Description:  "The ID of the environment the role applies in.",
+							Type:         schema.TypeString,
+							Required:     true,
+							ValidateFunc: validation.StringIsNotEmpty,
+						},
+						"role_id": {
+							Description:  "The ID of the role.",
+							Type:         schema.TypeString,
+							Required:     true,
+							ValidateFunc: validation.StringIsNotEmpty,
+						},
+					},
+				},
 			},
 			"tenant_id": {
 				Description: "The tenant ID for this user.",
@@ -136,14 +171,17 @@ func resourceFronteggUserImport(ctx context.Context, d *schema.ResourceData, met
 	return []*schema.ResourceData{d}, nil
 }
 
-func resourceFronteggUserSerialize(d *schema.ResourceData) fronteggUser {
+func resourceFronteggUserSerialize(d *schema.ResourceData) fronteggUserCreateRequest {
 	log.Printf("role IDs: %#v", d.Get("role_ids").(*schema.Set).List())
-	return fronteggUser{
-		Email:           d.Get("email").(string),
-		Password:        d.Get("password").(string),
-		SkipInviteEmail: d.Get("skip_invite_email").(bool),
-		CreateRoleIDs:   d.Get("role_ids").(*schema.Set).List(),
-		SuperUser:       d.Get("superuser").(bool),
+	return fronteggUserCreateRequest{
+		fronteggUser: fronteggUser{
+			Email:           d.Get("email").(string),
+			Password:        d.Get("password").(string),
+			SkipInviteEmail: d.Get("skip_invite_email").(bool),
+			CreateRoleIDs:   d.Get("role_ids").(*schema.Set).List(),
+			SuperUser:       d.Get("superuser").(bool),
+		},
+		EnvironmentRoles: userRoleAssignmentsRequest(userRoleAssignmentsFromSet(d.Get("environment_role").(*schema.Set))).EnvironmentRoles,
 	}
 }
 
@@ -176,24 +214,35 @@ func resourceFronteggUserCreate(ctx context.Context, d *schema.ResourceData, met
 		return diag.FromErr(err)
 	}
 
+	requestedRoles := append(globalRoleAssignments(in.CreateRoleIDs), userRoleAssignmentsFromSet(d.Get("environment_role").(*schema.Set))...)
+	diags := unassignedRolesWarning(ctx, &clientHolder.ApiClient, d.Get("tenant_id").(string), out.Key, requestedRoles)
+
 	superUser := d.Get("superuser").(bool)
 	if superUser {
 		in := fronteggSuperUser{
 			SuperUser: superUser,
 		}
 		if err := clientHolder.ApiClient.Put(ctx, fmt.Sprintf("%s/%s/superuser", fronteggUserPathV1, out.Key), in, nil); err != nil {
-			return diag.FromErr(err)
+			return append(diags, diag.FromErr(err)...)
 		}
 	}
 
 	if !d.Get("automatically_verify").(bool) {
-		return nil
+		return diags
 	}
 	if err := clientHolder.ApiClient.Post(ctx, fmt.Sprintf("%s/%s/verify", fronteggUserPathV1, out.Key), nil, nil); err != nil {
-		return diag.FromErr(err)
+		return append(diags, diag.FromErr(err)...)
 	}
 
-	return nil
+	return diags
+}
+
+func globalRoleAssignments(roleIDs []interface{}) []userRoleAssignment {
+	assignments := []userRoleAssignment{}
+	for _, roleID := range roleIDs {
+		assignments = append(assignments, userRoleAssignment{RoleID: roleID.(string)})
+	}
+	return assignments
 }
 
 func resourceFronteggUserRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
@@ -212,6 +261,22 @@ func resourceFronteggUserRead(ctx context.Context, d *schema.ResourceData, meta 
 	}
 
 	if err := resourceFronteggUserDeserialize(d, out); err != nil {
+		return diag.FromErr(err)
+	}
+	if d.Get("environment_role").(*schema.Set).Len() == 0 {
+		return nil
+	}
+	current, _, err := fetchUserRoleAssignments(ctx, &client, d.Get("tenant_id").(string), d.Id())
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	environmentRoles := []interface{}{}
+	for assignment := range current {
+		if assignment.EnvironmentID != "" {
+			environmentRoles = append(environmentRoles, assignment.block())
+		}
+	}
+	if err := d.Set("environment_role", environmentRoles); err != nil {
 		return diag.FromErr(err)
 	}
 	return nil
@@ -275,43 +340,25 @@ func resourceFronteggUserUpdate(ctx context.Context, d *schema.ResourceData, met
 		}
 	}
 
-	// Roles:
 	if d.HasChange("role_ids") {
-		headers := http.Header{}
-		headers.Add("frontegg-tenant-id", d.Get("tenant_id").(string))
-
-		oldsI, newsI := d.GetChange("role_ids")
-		olds := oldsI.(*schema.Set)
-		news := newsI.(*schema.Set)
-
-		toAddSet := news.Difference(olds)
-		toDelSet := olds.Difference(news)
-
-		var toAdd, toDel []string
-
-		for _, add := range toAddSet.List() {
-			toAdd = append(toAdd, add.(string))
+		tenantID := d.Get("tenant_id").(string)
+		oldSet, newSet := d.GetChange("role_ids")
+		added := globalRoleAssignments(newSet.(*schema.Set).Difference(oldSet.(*schema.Set)).List())
+		removed := globalRoleAssignments(oldSet.(*schema.Set).Difference(newSet.(*schema.Set)).List())
+		if err := assignUserRoles(ctx, &clientHolder.ApiClient, tenantID, d.Id(), added); err != nil {
+			return diag.FromErr(err)
 		}
-		for _, del := range toDelSet.List() {
-			toDel = append(toDel, del.(string))
+		if err := sendUserRoleAssignments(ctx, &clientHolder.ApiClient, http.MethodDelete, tenantID, d.Id(), removed); err != nil {
+			return diag.FromErr(err)
 		}
+		if err := d.Set("role_ids", newSet); err != nil {
+			return diag.FromErr(err)
+		}
+	}
 
-		if len(toAdd) > 0 {
-			if err := clientHolder.ApiClient.RequestWithHeaders(ctx, "POST", fmt.Sprintf("%s/%s/roles", fronteggUserPathV1, d.Id()), headers, struct {
-				RoleIds []string `json:"roleIds"`
-			}{toAdd}, nil); err != nil {
-				return diag.FromErr(err)
-			}
-		}
-		if len(toDel) > 0 {
-			if err := clientHolder.ApiClient.RequestWithHeaders(ctx, "DELETE", fmt.Sprintf("%s/%s/roles", fronteggUserPathV1, d.Id()), headers, struct {
-				RoleIds []string `json:"roleIds"`
-			}{toDel}, nil); err != nil {
-				return diag.FromErr(err)
-			}
-		}
-
-		if err := d.Set("role_ids", news); err != nil {
+	if d.HasChange("environment_role") {
+		oldSet, newSet := d.GetChange("environment_role")
+		if err := replaceUserRoleAssignments(ctx, &clientHolder.ApiClient, d.Get("tenant_id").(string), d.Id(), oldSet.(*schema.Set), newSet.(*schema.Set)); err != nil {
 			return diag.FromErr(err)
 		}
 	}

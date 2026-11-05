@@ -69,7 +69,7 @@ Both authenticate via `/auth/vendor` using the same credentials.
 
 ### Available Resources
 
-- **Identity & Access**: roles, permissions, permission_category, users, portal_users, tenants
+- **Identity & Access**: roles, permissions, permission_category, users, user_env_role (global and environment-scoped role assignments), portal_users, tenants
 - **Authentication**: workspace, auth_policy, sso_domain_policy, social_login, auth0/cognito/firebase/custom_code user sources
 - **Tenant SSO**: tenant_saml_config, tenant_oidc_config, tenant_sso_domain, tenant_sso_group_mapping, tenant_mfa_policy
 - **Configuration**: admin_portal, email_template, email_provider, webhook, allowed_origin, redirect_uri, secret, prehook (API + custom code via `type`)
