@@ -16,6 +16,7 @@ type fakeUserRoleStore struct {
 	assignments              map[string]map[userRoleAssignment]bool
 	environmentRolesIgnored  bool
 	environmentRolesRejected bool
+	unknownRoleIDs           map[string]bool
 }
 
 func newFakeUserRoleAPI(t *testing.T, store *fakeUserRoleStore) *fakeAPI {
@@ -51,6 +52,9 @@ func (s *fakeUserRoleStore) change(assign bool) func(*fakeAPI, string, fakeDoc) 
 			}
 		}
 		for _, assignment := range changed {
+			if assign && s.unknownRoleIDs[assignment.RoleID] {
+				continue
+			}
 			if assign {
 				user[assignment] = true
 			} else {
@@ -166,19 +170,32 @@ func TestUserEnvRoleLifecycle(t *testing.T) {
 	})
 }
 
-func TestUserEnvRoleReportsIgnoredEnvironmentRoles(t *testing.T) {
+func TestUserEnvRolePartlyAppliedCreateIsTracked(t *testing.T) {
 	store := &fakeUserRoleStore{
-		assignments:             map[string]map[userRoleAssignment]bool{"user-1": {}},
-		environmentRolesIgnored: true,
+		assignments:    map[string]map[userRoleAssignment]bool{"user-1": {}},
+		unknownRoleIDs: map[string]bool{"ghost": true},
 	}
 	newFakeUserRoleAPI(t, store)
+	config := userEnvRoleConfig(userRoleAssignment{RoleID: "admin"}, userRoleAssignment{RoleID: "ghost", EnvironmentID: "staging"})
 
 	resource.UnitTest(t, resource.TestCase{
 		ProviderFactories: testAccProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config:      userEnvRoleConfig(userRoleAssignment{RoleID: "admin"}, userRoleAssignment{RoleID: "viewer", EnvironmentID: "staging"}),
-				ExpectError: regexp.MustCompile(`role viewer in environment staging[\s\S]*env_role_assignment feature flag`),
+				Config: config,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("frontegg_user_env_role.test", "id", "tenant-1:user-1"),
+					store.expect("user-1", "global role admin"),
+				),
+				ExpectNonEmptyPlan: true,
+			},
+			{
+				Config:      config,
+				ExpectError: regexp.MustCompile(`role ghost in environment staging[\s\S]*role ID exists[\s\S]*env_role_assignment feature flag`),
+			},
+			{
+				Config: "locals {}",
+				Check:  store.expect("user-1"),
 			},
 		},
 	})

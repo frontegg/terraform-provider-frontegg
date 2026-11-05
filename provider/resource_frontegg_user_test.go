@@ -328,7 +328,11 @@ func (s *fakeUserRoleStore) deleteUser(_ *fakeAPI, userID string, _ fakeDoc) (in
 func userWithRolesConfig(roleIDs []string, environmentRoles ...userRoleAssignment) string {
 	var arguments strings.Builder
 	if roleIDs != nil {
-		fmt.Fprintf(&arguments, "  role_ids = [%q]\n", strings.Join(roleIDs, `", "`))
+		quoted := []string{}
+		for _, roleID := range roleIDs {
+			quoted = append(quoted, fmt.Sprintf("%q", roleID))
+		}
+		fmt.Fprintf(&arguments, "  role_ids = [%s]\n", strings.Join(quoted, ", "))
 	}
 	for _, environmentRole := range environmentRoles {
 		fmt.Fprintf(&arguments, "  environment_role {\n    environment_id = %q\n    role_id = %q\n  }\n", environmentRole.EnvironmentID, environmentRole.RoleID)
@@ -481,6 +485,52 @@ resource "frontegg_user_env_role" "test" {
 			{
 				Config:   config("production"),
 				PlanOnly: true,
+			},
+		},
+	})
+}
+
+func TestUserUnknownGlobalRoleIsReported(t *testing.T) {
+	store := &fakeUserRoleStore{assignments: map[string]map[userRoleAssignment]bool{}, unknownRoleIDs: map[string]bool{"ghost": true}}
+	newFakeUserWithRolesAPI(t, store)
+
+	resource.UnitTest(t, resource.TestCase{
+		ProviderFactories: testAccProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: userWithRolesConfig([]string{"admin"}),
+				Check:  store.expect("user-1", "global role admin"),
+			},
+			{
+				Config:      userWithRolesConfig([]string{"admin", "ghost"}),
+				ExpectError: regexp.MustCompile(`global role ghost[\s\S]*role ID exists`),
+			},
+		},
+	})
+}
+
+func TestUserCreatedWithUnknownGlobalRoleIsKept(t *testing.T) {
+	store := &fakeUserRoleStore{assignments: map[string]map[userRoleAssignment]bool{}, unknownRoleIDs: map[string]bool{"ghost": true}}
+	api := newFakeUserWithRolesAPI(t, store)
+	config := userWithRolesConfig([]string{"admin", "ghost"})
+
+	resource.UnitTest(t, resource.TestCase{
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy: func(*terraform.State) error {
+			if api.nextID != 1 {
+				return fmt.Errorf("the provider created %d users, want 1", api.nextID)
+			}
+			return nil
+		},
+		Steps: []resource.TestStep{
+			{
+				Config:             config,
+				Check:              store.expect("user-1", "global role admin"),
+				ExpectNonEmptyPlan: true,
+			},
+			{
+				Config:      config,
+				ExpectError: regexp.MustCompile(`global role ghost[\s\S]*role ID exists`),
 			},
 		},
 	})

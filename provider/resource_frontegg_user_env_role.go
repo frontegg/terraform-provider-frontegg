@@ -246,11 +246,31 @@ func resourceFronteggUserEnvRoleCreate(ctx context.Context, d *schema.ResourceDa
 	tenantID := d.Get("tenant_id").(string)
 	userID := d.Get("user_id").(string)
 	assignments := userRoleAssignmentsFromSet(d.Get("assignment").(*schema.Set))
-	if err := assignUserRoles(ctx, &client, tenantID, userID, assignments); err != nil {
+	if err := sendUserRoleAssignments(ctx, &client, http.MethodPost, tenantID, userID, assignments); err != nil {
 		return diag.FromErr(err)
 	}
 	d.SetId(fmt.Sprintf("%s:%s", tenantID, userID))
-	return nil
+	return unassignedRolesWarning(ctx, &client, tenantID, userID, assignments)
+}
+
+// After a create the request may have granted some roles, so the resource is saved untainted and a shortfall is a warning that the next apply retries.
+func unassignedRolesWarning(ctx context.Context, client *restclient.Client, tenantID, userID string, requested []userRoleAssignment) diag.Diagnostics {
+	missing, err := missingUserRoleAssignments(ctx, client, tenantID, userID, requested)
+	if err != nil {
+		return diag.Diagnostics{{
+			Severity: diag.Warning,
+			Summary:  "Role assignments could not be confirmed",
+			Detail:   fmt.Sprintf("reading the roles of user %s back failed: %s. The next refresh checks them again.", userID, err),
+		}}
+	}
+	if len(missing) == 0 {
+		return nil
+	}
+	return diag.Diagnostics{{
+		Severity: diag.Warning,
+		Summary:  "Roles were not assigned",
+		Detail:   missingUserRoleAssignmentsError(userID, missing).Error() + ". The next apply retries them.",
+	}}
 }
 
 func resourceFronteggUserEnvRoleRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {

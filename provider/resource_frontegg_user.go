@@ -214,10 +214,8 @@ func resourceFronteggUserCreate(ctx context.Context, d *schema.ResourceData, met
 		return diag.FromErr(err)
 	}
 
-	diags, err := warnUnassignedEnvironmentRoles(ctx, d, &clientHolder.ApiClient, out.Key)
-	if err != nil {
-		return diag.FromErr(err)
-	}
+	requestedRoles := append(globalRoleAssignments(in.CreateRoleIDs), userRoleAssignmentsFromSet(d.Get("environment_role").(*schema.Set))...)
+	diags := unassignedRolesWarning(ctx, &clientHolder.ApiClient, d.Get("tenant_id").(string), out.Key, requestedRoles)
 
 	superUser := d.Get("superuser").(bool)
 	if superUser {
@@ -239,18 +237,12 @@ func resourceFronteggUserCreate(ctx context.Context, d *schema.ResourceData, met
 	return diags
 }
 
-// A failed create would taint the user and recreate it on every apply, so missing roles are a warning and the next refresh plans their retry.
-func warnUnassignedEnvironmentRoles(ctx context.Context, d *schema.ResourceData, client *restclient.Client, userID string) (diag.Diagnostics, error) {
-	requested := userRoleAssignmentsFromSet(d.Get("environment_role").(*schema.Set))
-	missing, err := missingUserRoleAssignments(ctx, client, d.Get("tenant_id").(string), userID, requested)
-	if err != nil || len(missing) == 0 {
-		return nil, err
+func globalRoleAssignments(roleIDs []interface{}) []userRoleAssignment {
+	assignments := []userRoleAssignment{}
+	for _, roleID := range roleIDs {
+		assignments = append(assignments, userRoleAssignment{RoleID: roleID.(string)})
 	}
-	return diag.Diagnostics{{
-		Severity: diag.Warning,
-		Summary:  "Environment roles were not assigned",
-		Detail:   missingUserRoleAssignmentsError(userID, missing).Error() + ". The next apply retries them.",
-	}}, nil
+	return assignments
 }
 
 func resourceFronteggUserRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
@@ -348,43 +340,18 @@ func resourceFronteggUserUpdate(ctx context.Context, d *schema.ResourceData, met
 		}
 	}
 
-	// Roles:
 	if d.HasChange("role_ids") {
-		headers := http.Header{}
-		headers.Add("frontegg-tenant-id", d.Get("tenant_id").(string))
-
-		oldsI, newsI := d.GetChange("role_ids")
-		olds := oldsI.(*schema.Set)
-		news := newsI.(*schema.Set)
-
-		toAddSet := news.Difference(olds)
-		toDelSet := olds.Difference(news)
-
-		var toAdd, toDel []string
-
-		for _, add := range toAddSet.List() {
-			toAdd = append(toAdd, add.(string))
+		tenantID := d.Get("tenant_id").(string)
+		oldSet, newSet := d.GetChange("role_ids")
+		added := globalRoleAssignments(newSet.(*schema.Set).Difference(oldSet.(*schema.Set)).List())
+		removed := globalRoleAssignments(oldSet.(*schema.Set).Difference(newSet.(*schema.Set)).List())
+		if err := assignUserRoles(ctx, &clientHolder.ApiClient, tenantID, d.Id(), added); err != nil {
+			return diag.FromErr(err)
 		}
-		for _, del := range toDelSet.List() {
-			toDel = append(toDel, del.(string))
+		if err := sendUserRoleAssignments(ctx, &clientHolder.ApiClient, http.MethodDelete, tenantID, d.Id(), removed); err != nil {
+			return diag.FromErr(err)
 		}
-
-		if len(toAdd) > 0 {
-			if err := clientHolder.ApiClient.RequestWithHeaders(ctx, "POST", fmt.Sprintf("%s/%s/roles", fronteggUserPathV1, d.Id()), headers, struct {
-				RoleIds []string `json:"roleIds"`
-			}{toAdd}, nil); err != nil {
-				return diag.FromErr(err)
-			}
-		}
-		if len(toDel) > 0 {
-			if err := clientHolder.ApiClient.RequestWithHeaders(ctx, "DELETE", fmt.Sprintf("%s/%s/roles", fronteggUserPathV1, d.Id()), headers, struct {
-				RoleIds []string `json:"roleIds"`
-			}{toDel}, nil); err != nil {
-				return diag.FromErr(err)
-			}
-		}
-
-		if err := d.Set("role_ids", news); err != nil {
+		if err := d.Set("role_ids", newSet); err != nil {
 			return diag.FromErr(err)
 		}
 	}
