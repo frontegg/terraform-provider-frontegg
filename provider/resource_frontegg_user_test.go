@@ -441,3 +441,47 @@ func TestUserRequiresGlobalOrEnvironmentRoles(t *testing.T) {
 		},
 	})
 }
+
+func TestUserWithEnvironmentRolesInUserEnvRole(t *testing.T) {
+	store := &fakeUserRoleStore{assignments: map[string]map[userRoleAssignment]bool{}}
+	newFakeUserWithRolesAPI(t, store)
+
+	admin := userRoleAssignment{RoleID: "admin"}
+	stagingViewer := userRoleAssignment{RoleID: "viewer", EnvironmentID: "staging"}
+	productionViewer := userRoleAssignment{RoleID: "viewer", EnvironmentID: "production"}
+	config := func(environmentID string) string {
+		return userWithRolesConfig([]string{admin.RoleID}) + fmt.Sprintf(`
+resource "frontegg_user_env_role" "test" {
+  tenant_id = "tenant-1"
+  user_id   = frontegg_user.test.id
+
+  assignment {
+    role_id        = "viewer"
+    environment_id = %q
+  }
+}
+`, environmentID)
+	}
+
+	resource.UnitTest(t, resource.TestCase{
+		ProviderFactories: testAccProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: config("staging"),
+				Check:  store.expect("user-1", admin.String(), stagingViewer.String()),
+			},
+			{
+				Config:   config("staging"),
+				PlanOnly: true,
+			},
+			{
+				Config: config("production"),
+				Check:  store.expect("user-1", admin.String(), productionViewer.String()),
+			},
+			{
+				Config:   config("production"),
+				PlanOnly: true,
+			},
+		},
+	})
+}
