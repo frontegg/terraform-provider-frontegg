@@ -13,8 +13,9 @@ import (
 )
 
 type fakeUserRoleStore struct {
-	assignments             map[string]map[userRoleAssignment]bool
-	environmentRolesIgnored bool
+	assignments              map[string]map[userRoleAssignment]bool
+	environmentRolesIgnored  bool
+	environmentRolesRejected bool
 }
 
 func newFakeUserRoleAPI(t *testing.T, store *fakeUserRoleStore) *fakeAPI {
@@ -37,6 +38,9 @@ func (s *fakeUserRoleStore) change(assign bool) func(*fakeAPI, string, fakeDoc) 
 			changed = append(changed, userRoleAssignment{RoleID: roleID.(string)})
 		}
 		environmentRoles, _ := body["environmentRoles"].([]interface{})
+		if assign && s.environmentRolesRejected && len(environmentRoles) > 0 {
+			return http.StatusBadRequest, fakeDoc{"errors": []string{"Environment-scoped roles are not enabled"}, "errorCode": "ER-01262"}
+		}
 		for _, item := range environmentRoles {
 			if s.environmentRolesIgnored {
 				break
@@ -175,6 +179,29 @@ func TestUserEnvRoleReportsIgnoredEnvironmentRoles(t *testing.T) {
 			{
 				Config:      userEnvRoleConfig(userRoleAssignment{RoleID: "admin"}, userRoleAssignment{RoleID: "viewer", EnvironmentID: "staging"}),
 				ExpectError: regexp.MustCompile(`role viewer in environment staging[\s\S]*env_role_assignment feature flag`),
+			},
+		},
+	})
+}
+
+func TestUserEnvRoleRejectedCreateKeepsExistingRoles(t *testing.T) {
+	admin := userRoleAssignment{RoleID: "admin"}
+	store := &fakeUserRoleStore{
+		assignments:              map[string]map[userRoleAssignment]bool{"user-1": {admin: true}},
+		environmentRolesRejected: true,
+	}
+	newFakeUserRoleAPI(t, store)
+
+	resource.UnitTest(t, resource.TestCase{
+		ProviderFactories: testAccProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config:      userEnvRoleConfig(admin, userRoleAssignment{RoleID: "viewer", EnvironmentID: "staging"}),
+				ExpectError: regexp.MustCompile(`Environment-scoped roles are not enabled`),
+			},
+			{
+				Config: "locals {}",
+				Check:  store.expect("user-1", admin.String()),
 			},
 		},
 	})
