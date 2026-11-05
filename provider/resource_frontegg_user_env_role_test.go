@@ -299,3 +299,33 @@ func TestUserEnvRoleImportRejectsMalformedID(t *testing.T) {
 		},
 	})
 }
+
+func TestUserEnvRoleRejectedMoveKeepsOldAssignment(t *testing.T) {
+	store := &fakeUserRoleStore{assignments: map[string]map[userRoleAssignment]bool{"user-1": {}}}
+	newFakeUserRoleAPI(t, store)
+	stagingViewer := userRoleAssignment{RoleID: "viewer", EnvironmentID: "staging"}
+	productionViewer := userRoleAssignment{RoleID: "viewer", EnvironmentID: "production"}
+
+	resource.UnitTest(t, resource.TestCase{
+		ProviderFactories: testAccProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: userEnvRoleConfig(stagingViewer),
+				Check:  store.expect("user-1", stagingViewer.String()),
+			},
+			{
+				PreConfig:   func() { store.environmentRolesRejected = true },
+				Config:      userEnvRoleConfig(productionViewer),
+				ExpectError: regexp.MustCompile(`Environment-scoped roles are not enabled`),
+			},
+			{
+				PreConfig: func() {
+					if err := store.expect("user-1", stagingViewer.String())(nil); err != nil {
+						t.Errorf("after the rejected move: %s", err)
+					}
+				},
+				Config: "locals {}",
+			},
+		},
+	})
+}

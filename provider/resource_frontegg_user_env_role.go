@@ -253,7 +253,6 @@ func resourceFronteggUserEnvRoleCreate(ctx context.Context, d *schema.ResourceDa
 	return unassignedRolesWarning(ctx, &client, tenantID, userID, assignments)
 }
 
-// After a create the request may have granted some roles, so the resource is saved untainted and a shortfall is a warning that the next apply retries.
 func unassignedRolesWarning(ctx context.Context, client *restclient.Client, tenantID, userID string, requested []userRoleAssignment) diag.Diagnostics {
 	missing, err := missingUserRoleAssignments(ctx, client, tenantID, userID, requested)
 	if err != nil {
@@ -309,10 +308,10 @@ func resourceFronteggUserEnvRoleUpdate(ctx context.Context, d *schema.ResourceDa
 func replaceUserRoleAssignments(ctx context.Context, client *restclient.Client, tenantID, userID string, oldSet, newSet *schema.Set) error {
 	removed := userRoleAssignmentsFromSet(oldSet.Difference(newSet))
 	added := userRoleAssignmentsFromSet(newSet.Difference(oldSet))
-	if err := sendUserRoleAssignments(ctx, client, http.MethodDelete, tenantID, userID, removed); err != nil {
+	if err := assignUserRoles(ctx, client, tenantID, userID, added); err != nil {
 		return err
 	}
-	return assignUserRoles(ctx, client, tenantID, userID, added)
+	return sendUserRoleAssignments(ctx, client, http.MethodDelete, tenantID, userID, removed)
 }
 
 func resourceFronteggUserEnvRoleDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
