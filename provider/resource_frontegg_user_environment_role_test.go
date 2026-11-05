@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 )
 
 const fakeDefaultRoleID = "default"
@@ -111,16 +112,42 @@ func TestUserEnvironmentRoles(t *testing.T) {
 	})
 }
 
-func TestUserEnvironmentRolesReportIgnoredFlag(t *testing.T) {
+func TestUserEnvironmentRolesIgnoredFlagKeepsUser(t *testing.T) {
 	store := &fakeUserRoleStore{assignments: map[string]map[userRoleAssignment]bool{}, environmentRolesIgnored: true}
-	newFakeUserWithRolesAPI(t, store)
+	api := newFakeUserWithRolesAPI(t, store)
+	config := userWithRolesConfig(nil, userRoleAssignment{RoleID: "viewer", EnvironmentID: "staging"})
+
+	resource.UnitTest(t, resource.TestCase{
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy: func(*terraform.State) error {
+			if api.nextID != 1 {
+				return fmt.Errorf("the provider created %d users, want 1", api.nextID)
+			}
+			return nil
+		},
+		Steps: []resource.TestStep{
+			{
+				Config:             config,
+				Check:              resource.TestCheckResourceAttr("frontegg_user.test", "id", "user-1"),
+				ExpectNonEmptyPlan: true,
+			},
+			{
+				Config:      config,
+				ExpectError: regexp.MustCompile(`role viewer in environment staging[\s\S]*env_role_assignment feature flag`),
+			},
+		},
+	})
+}
+
+func TestUserEnvironmentRoleRejectsEmptyIDs(t *testing.T) {
+	newFakeUserWithRolesAPI(t, &fakeUserRoleStore{assignments: map[string]map[userRoleAssignment]bool{}})
 
 	resource.UnitTest(t, resource.TestCase{
 		ProviderFactories: testAccProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config:      userWithRolesConfig(nil, userRoleAssignment{RoleID: "viewer", EnvironmentID: "staging"}),
-				ExpectError: regexp.MustCompile(`role viewer in environment staging[\s\S]*env_role_assignment feature flag`),
+				Config:      emptyEnvironmentVariable + userWithRolesConfig(nil, userRoleAssignment{RoleID: "viewer", EnvironmentID: "${var.environment_id}"}),
+				ExpectError: regexp.MustCompile(`to not be an empty string`),
 			},
 		},
 	})

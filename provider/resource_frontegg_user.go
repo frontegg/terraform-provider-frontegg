@@ -10,6 +10,7 @@ import (
 	"github.com/frontegg/terraform-provider-frontegg/internal/restclient"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 )
 
 type fronteggSuperUser struct {
@@ -125,14 +126,16 @@ tenant cannot be recovered from the user ID alone. An import does not read envir
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"environment_id": {
-							Description: "The ID of the environment the role applies in.",
-							Type:        schema.TypeString,
-							Required:    true,
+							Description:  "The ID of the environment the role applies in.",
+							Type:         schema.TypeString,
+							Required:     true,
+							ValidateFunc: validation.StringIsNotEmpty,
 						},
 						"role_id": {
-							Description: "The ID of the role.",
-							Type:        schema.TypeString,
-							Required:    true,
+							Description:  "The ID of the role.",
+							Type:         schema.TypeString,
+							Required:     true,
+							ValidateFunc: validation.StringIsNotEmpty,
 						},
 					},
 				},
@@ -205,8 +208,8 @@ func resourceFronteggUserCreate(ctx context.Context, d *schema.ResourceData, met
 		return diag.FromErr(err)
 	}
 
-	environmentRoles := userRoleAssignmentsFromSet(d.Get("environment_role").(*schema.Set))
-	if err := verifyUserRoleAssignments(ctx, &clientHolder.ApiClient, d.Get("tenant_id").(string), out.Key, environmentRoles); err != nil {
+	diags, err := warnUnassignedEnvironmentRoles(ctx, d, &clientHolder.ApiClient, out.Key)
+	if err != nil {
 		return diag.FromErr(err)
 	}
 
@@ -216,18 +219,32 @@ func resourceFronteggUserCreate(ctx context.Context, d *schema.ResourceData, met
 			SuperUser: superUser,
 		}
 		if err := clientHolder.ApiClient.Put(ctx, fmt.Sprintf("%s/%s/superuser", fronteggUserPathV1, out.Key), in, nil); err != nil {
-			return diag.FromErr(err)
+			return append(diags, diag.FromErr(err)...)
 		}
 	}
 
 	if !d.Get("automatically_verify").(bool) {
-		return nil
+		return diags
 	}
 	if err := clientHolder.ApiClient.Post(ctx, fmt.Sprintf("%s/%s/verify", fronteggUserPathV1, out.Key), nil, nil); err != nil {
-		return diag.FromErr(err)
+		return append(diags, diag.FromErr(err)...)
 	}
 
-	return nil
+	return diags
+}
+
+// A failed create would taint the user and recreate it on every apply, so missing roles are a warning and the next refresh plans their retry.
+func warnUnassignedEnvironmentRoles(ctx context.Context, d *schema.ResourceData, client *restclient.Client, userID string) (diag.Diagnostics, error) {
+	requested := userRoleAssignmentsFromSet(d.Get("environment_role").(*schema.Set))
+	missing, err := missingUserRoleAssignments(ctx, client, d.Get("tenant_id").(string), userID, requested)
+	if err != nil || len(missing) == 0 {
+		return nil, err
+	}
+	return diag.Diagnostics{{
+		Severity: diag.Warning,
+		Summary:  "Environment roles were not assigned",
+		Detail:   missingUserRoleAssignmentsError(userID, missing).Error() + ". The next apply retries them.",
+	}}, nil
 }
 
 func resourceFronteggUserRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {

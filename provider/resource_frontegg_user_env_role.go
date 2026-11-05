@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -11,6 +12,7 @@ import (
 	"github.com/frontegg/terraform-provider-frontegg/internal/restclient"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 )
 
 const fronteggUserRolesPathV3 = "/identity/resources/users/v3/roles"
@@ -56,7 +58,8 @@ environment. A block without ` + "`environment_id`" + ` assigns the role globall
 Environment-scoped assignments need the ` + "`env_role_assignment`" + ` feature flag enabled on the account.
 
 The resource manages only the assignments it declares. Destroying it removes those assignments and
-leaves the user and its other roles in place. When a ` + "`frontegg_user`" + ` manages the same user, leave its
+leaves the user and its other roles in place. A declared assignment the user already had, such as a default
+role or one another resource also declares, is removed too, so declare each assignment in one place only. When a ` + "`frontegg_user`" + ` manages the same user, leave its
 ` + "`role_ids`" + ` unset to assign global roles here, and don't give it ` + "`environment_role`" + ` blocks.
 
 Import this resource using the ` + "`tenant_id:user_id`" + ` format. An import reads every role the user has, so the
@@ -91,14 +94,16 @@ first apply after an import removes any of them the configuration does not decla
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"role_id": {
-							Description: "The ID of the role.",
-							Type:        schema.TypeString,
-							Required:    true,
+							Description:  "The ID of the role.",
+							Type:         schema.TypeString,
+							Required:     true,
+							ValidateFunc: validation.StringIsNotEmpty,
 						},
 						"environment_id": {
-							Description: "The ID of the environment the role applies in. Omit it to assign the role globally.",
-							Type:        schema.TypeString,
-							Optional:    true,
+							Description:  "The ID of the environment the role applies in. Omit it to assign the role globally.",
+							Type:         schema.TypeString,
+							Optional:     true,
+							ValidateFunc: validation.StringIsNotEmpty,
 						},
 					},
 				},
@@ -192,27 +197,45 @@ func assignUserRoles(ctx context.Context, client *restclient.Client, tenantID, u
 }
 
 func verifyUserRoleAssignments(ctx context.Context, client *restclient.Client, tenantID, userID string, assignments []userRoleAssignment) error {
-	if len(assignments) == 0 {
-		return nil
-	}
-	current, _, err := fetchUserRoleAssignments(ctx, client, tenantID, userID)
+	missing, err := missingUserRoleAssignments(ctx, client, tenantID, userID, assignments)
 	if err != nil {
 		return err
 	}
-	missing := []string{}
+	return missingUserRoleAssignmentsError(userID, missing)
+}
+
+func missingUserRoleAssignments(ctx context.Context, client *restclient.Client, tenantID, userID string, assignments []userRoleAssignment) ([]userRoleAssignment, error) {
+	missing := []userRoleAssignment{}
+	if len(assignments) == 0 {
+		return missing, nil
+	}
+	current, _, err := fetchUserRoleAssignments(ctx, client, tenantID, userID)
+	if err != nil {
+		return nil, err
+	}
 	for _, assignment := range assignments {
 		if !current[assignment] {
-			missing = append(missing, assignment.String())
+			missing = append(missing, assignment)
 		}
 	}
-	if len(missing) > 0 {
-		return fmt.Errorf(
-			"the Frontegg API accepted the request but did not assign %s to user %s. "+
-				"Environment-scoped role assignments need the env_role_assignment feature flag enabled on the account",
-			strings.Join(missing, ", "), userID,
-		)
+	return missing, nil
+}
+
+func missingUserRoleAssignmentsError(userID string, missing []userRoleAssignment) error {
+	if len(missing) == 0 {
+		return nil
 	}
-	return nil
+	descriptions := []string{}
+	environmentScoped := false
+	for _, assignment := range missing {
+		descriptions = append(descriptions, assignment.String())
+		environmentScoped = environmentScoped || assignment.EnvironmentID != ""
+	}
+	message := fmt.Sprintf("the Frontegg API accepted the request but did not assign %s to user %s", strings.Join(descriptions, ", "), userID)
+	if environmentScoped {
+		message += ". Environment-scoped role assignments need the env_role_assignment feature flag enabled on the account"
+	}
+	return errors.New(message)
 }
 
 func resourceFronteggUserEnvRoleCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {

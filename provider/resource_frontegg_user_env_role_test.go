@@ -180,6 +180,40 @@ func TestUserEnvRoleReportsIgnoredEnvironmentRoles(t *testing.T) {
 	})
 }
 
+const emptyEnvironmentVariable = `
+variable "environment_id" {
+  default = ""
+}
+`
+
+func TestUserEnvRoleRejectsEmptyEnvironmentID(t *testing.T) {
+	newFakeUserRoleAPI(t, &fakeUserRoleStore{assignments: map[string]map[userRoleAssignment]bool{"user-1": {}}})
+
+	resource.UnitTest(t, resource.TestCase{
+		ProviderFactories: testAccProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config:      emptyEnvironmentVariable + userEnvRoleConfig(userRoleAssignment{RoleID: "admin", EnvironmentID: "${var.environment_id}"}),
+				ExpectError: regexp.MustCompile(`to not be an empty string`),
+			},
+		},
+	})
+}
+
+func TestMissingUserRoleAssignmentsErrorNamesFlagOnlyForEnvironmentRoles(t *testing.T) {
+	globalOnly := missingUserRoleAssignmentsError("user-1", []userRoleAssignment{{RoleID: "admin"}})
+	if strings.Contains(globalOnly.Error(), "env_role_assignment") {
+		t.Errorf("a missing global role should not blame the feature flag: %s", globalOnly)
+	}
+	scoped := missingUserRoleAssignmentsError("user-1", []userRoleAssignment{{RoleID: "admin"}, {RoleID: "viewer", EnvironmentID: "staging"}})
+	if !strings.Contains(scoped.Error(), "env_role_assignment") {
+		t.Errorf("a missing environment role should name the feature flag: %s", scoped)
+	}
+	if missingUserRoleAssignmentsError("user-1", nil) != nil {
+		t.Error("nothing missing should not be an error")
+	}
+}
+
 func TestUserEnvRoleRemovedWithUser(t *testing.T) {
 	store := &fakeUserRoleStore{assignments: map[string]map[userRoleAssignment]bool{"user-1": {}}}
 	newFakeUserRoleAPI(t, store)
