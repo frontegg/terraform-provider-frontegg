@@ -23,14 +23,18 @@ type fronteggUserRole struct {
 }
 
 type fronteggUser struct {
-	Key              string                     `json:"id,omitempty"`
-	Email            string                     `json:"email,omitempty"`
-	Password         string                     `json:"password,omitempty"`
-	CreateRoleIDs    []interface{}              `json:"roleIds,omitempty"`
-	ReadRoleIDs      []fronteggUserRole         `json:"roles,omitempty"`
-	SkipInviteEmail  bool                       `json:"skipInviteEmail,omitempty"`
-	Verified         bool                       `json:"verified,omitempty"`
-	SuperUser        bool                       `json:"superUser,omitempty"`
+	Key             string             `json:"id,omitempty"`
+	Email           string             `json:"email,omitempty"`
+	Password        string             `json:"password,omitempty"`
+	CreateRoleIDs   []interface{}      `json:"roleIds,omitempty"`
+	ReadRoleIDs     []fronteggUserRole `json:"roles,omitempty"`
+	SkipInviteEmail bool               `json:"skipInviteEmail,omitempty"`
+	Verified        bool               `json:"verified,omitempty"`
+	SuperUser       bool               `json:"superUser,omitempty"`
+}
+
+type fronteggUserCreateRequest struct {
+	fronteggUser
 	EnvironmentRoles []fronteggEnvironmentRoles `json:"environmentRoles,omitempty"`
 }
 
@@ -167,14 +171,16 @@ func resourceFronteggUserImport(ctx context.Context, d *schema.ResourceData, met
 	return []*schema.ResourceData{d}, nil
 }
 
-func resourceFronteggUserSerialize(d *schema.ResourceData) fronteggUser {
+func resourceFronteggUserSerialize(d *schema.ResourceData) fronteggUserCreateRequest {
 	log.Printf("role IDs: %#v", d.Get("role_ids").(*schema.Set).List())
-	return fronteggUser{
-		Email:            d.Get("email").(string),
-		Password:         d.Get("password").(string),
-		SkipInviteEmail:  d.Get("skip_invite_email").(bool),
-		CreateRoleIDs:    d.Get("role_ids").(*schema.Set).List(),
-		SuperUser:        d.Get("superuser").(bool),
+	return fronteggUserCreateRequest{
+		fronteggUser: fronteggUser{
+			Email:           d.Get("email").(string),
+			Password:        d.Get("password").(string),
+			SkipInviteEmail: d.Get("skip_invite_email").(bool),
+			CreateRoleIDs:   d.Get("role_ids").(*schema.Set).List(),
+			SuperUser:       d.Get("superuser").(bool),
+		},
 		EnvironmentRoles: userRoleAssignmentsRequest(userRoleAssignmentsFromSet(d.Get("environment_role").(*schema.Set))).EnvironmentRoles,
 	}
 }

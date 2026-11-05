@@ -180,8 +180,8 @@ func TestUserEnvRoleReportsIgnoredEnvironmentRoles(t *testing.T) {
 	})
 }
 
-const emptyEnvironmentVariable = `
-variable "environment_id" {
+const emptyStringVariable = `
+variable "empty" {
   default = ""
 }
 `
@@ -193,7 +193,7 @@ func TestUserEnvRoleRejectsEmptyEnvironmentID(t *testing.T) {
 		ProviderFactories: testAccProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config:      emptyEnvironmentVariable + userEnvRoleConfig(userRoleAssignment{RoleID: "admin", EnvironmentID: "${var.environment_id}"}),
+				Config:      emptyStringVariable + userEnvRoleConfig(userRoleAssignment{RoleID: "admin", EnvironmentID: "${var.empty}"}),
 				ExpectError: regexp.MustCompile(`to not be an empty string`),
 			},
 		},
