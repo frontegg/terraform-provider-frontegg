@@ -96,3 +96,47 @@ func TestUserCreateReportsAnEmailThatStaysInUse(t *testing.T) {
 		t.Errorf("POSTs = %d, want %d", *posts, userCreateEmailRetries)
 	}
 }
+
+func TestUserDeleteIgnoresAUserAlreadyGone(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusNotFound)
+		_, _ = w.Write([]byte(`{"errors":["User not found: user-1"],"errorCode":"ER-01089"}`))
+	}))
+	defer srv.Close()
+	client := restclient.MakeRestClient(srv.URL, "", "")
+	client.Authenticate("test-token")
+	d := schema.TestResourceDataRaw(t, resourceFronteggUser().Schema, map[string]interface{}{"tenant_id": "tenant-1"})
+	d.SetId("user-1")
+
+	if diags := resourceFronteggUserDelete(context.Background(), d, &restclient.ClientHolder{ApiClient: client}); diags.HasError() {
+		t.Fatalf("delete of a user that is already gone: %v", diags)
+	}
+}
+
+func TestUserCreateNamesTheExistingUserToImport(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch {
+		case r.Method == http.MethodPost && r.URL.Path == fronteggUserPath:
+			w.WriteHeader(http.StatusBadRequest)
+			_, _ = w.Write([]byte(`{"errors":["User already exists"],"errorCode":"ER-01086"}`))
+		case r.Method == http.MethodGet && r.URL.Path == fronteggUserPathV1+"/email" && r.URL.Query().Get("email") == "user@example.com":
+			_, _ = w.Write([]byte(`{"id":"user-9","email":"user@example.com"}`))
+		default:
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer srv.Close()
+	client := restclient.MakeRestClient(srv.URL, "", "")
+	client.Authenticate("test-token")
+
+	diags := resourceFronteggUserCreate(context.Background(), userCreateData(t), &restclient.ClientHolder{ApiClient: client})
+
+	if !diags.HasError() {
+		t.Fatal("create succeeded, want an error")
+	}
+	if got := diags[0].Summary; !strings.Contains(got, "already exists in tenant tenant-2") || !strings.Contains(got, "tenant-2:user-9") {
+		t.Errorf("error = %q, want it to say the user exists in tenant-2 and give the import ID tenant-2:user-9", got)
+	}
+}

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -40,6 +41,7 @@ const (
 	fronteggErrNoApplicationID    = "ER-00008"
 	fronteggErrTenantNotInAppCode = "ER-01008"
 	fronteggErrEmailInUse         = "ER-01200"
+	fronteggErrUserExists         = "ER-01086"
 	userCreateEmailRetries        = 20
 )
 
@@ -186,6 +188,22 @@ func createFronteggUser(ctx context.Context, client *restclient.Client, headers 
 	}
 }
 
+func fronteggUserExistsError(ctx context.Context, client *restclient.Client, tenantID, email string, err error) error {
+	if !strings.Contains(err.Error(), fronteggErrUserExists) {
+		return err
+	}
+	importID := tenantID + ":<user_id>"
+	var existing fronteggUser
+	if lookupErr := client.Get(ctx, fmt.Sprintf("%s/email?email=%s", fronteggUserPathV1, url.QueryEscape(email)), &existing); lookupErr == nil && existing.Key != "" {
+		importID = tenantID + ":" + existing.Key
+	}
+	return fmt.Errorf(
+		"user %s already exists in tenant %s. Import it with the ID %s instead of creating it, "+
+			"or remove it from the tenant first.\n\noriginal error: %w",
+		email, tenantID, importID, err,
+	)
+}
+
 func resourceFronteggUserCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	clientHolder := meta.(*restclient.ClientHolder)
 	in := resourceFronteggUserSerialize(d)
@@ -193,6 +211,7 @@ func resourceFronteggUserCreate(ctx context.Context, d *schema.ResourceData, met
 	headers := http.Header{}
 	headers.Add("frontegg-tenant-id", d.Get("tenant_id").(string))
 	if err := createFronteggUser(ctx, &clientHolder.ApiClient, headers, in, &out); err != nil {
+		err = fronteggUserExistsError(ctx, &clientHolder.ApiClient, d.Get("tenant_id").(string), in.Email, err)
 		return diag.FromErr(fronteggUserApplicationError(err))
 	}
 
@@ -242,10 +261,11 @@ func resourceFronteggUserRead(ctx context.Context, d *schema.ResourceData, meta 
 }
 
 func resourceFronteggUserDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	clientHolder := meta.(*restclient.ClientHolder)
+	client := meta.(*restclient.ClientHolder).ApiClient
+	client.Ignore404()
 	headers := http.Header{}
 	headers.Add("frontegg-tenant-id", d.Get("tenant_id").(string))
-	if err := clientHolder.ApiClient.DeleteWithHeaders(ctx, fmt.Sprintf("%s/%s", fronteggUserPathV1, d.Id()), headers, nil); err != nil {
+	if err := client.DeleteWithHeaders(ctx, fmt.Sprintf("%s/%s", fronteggUserPathV1, d.Id()), headers, nil); err != nil {
 		return diag.FromErr(err)
 	}
 	return nil
