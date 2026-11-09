@@ -59,6 +59,24 @@ func (b *fakeSSOBackend) recreateChildren() {
 	}
 }
 
+func (b *fakeSSOBackend) setDefaultRoles(roleIDs ...string) func() {
+	return func() {
+		b.mu.Lock()
+		defer b.mu.Unlock()
+		roles := []interface{}{}
+		for _, id := range roleIDs {
+			roles = append(roles, id)
+		}
+		b.config["roleIds"] = roles
+	}
+}
+
+func (b *fakeSSOBackend) defaultRoles() string {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return fmt.Sprint(b.config["roleIds"])
+}
+
 func (b *fakeSSOBackend) serve(w http.ResponseWriter, r *http.Request) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
@@ -99,6 +117,7 @@ func (b *fakeSSOBackend) route(method, path string, body map[string]interface{})
 			b.groups = append(b.groups, group)
 		}
 		delete(body, "groups")
+		b.config["roleIds"] = []interface{}{}
 		for k, v := range body {
 			b.config[k] = v
 		}
@@ -278,6 +297,34 @@ func TestTenantSSOChildrenAdoptRecreatedIDs(t *testing.T) {
 			{
 				Config: tenantSSOConfigWithChildren("https://idp-a.example.com", false),
 				Check:  checkGroupMappingMatchesBackend(b),
+			},
+		},
+	})
+}
+
+func TestTenantSSOConfigUpdateKeepsDefaultRoles(t *testing.T) {
+	b := newFakeSSOBackend(t)
+	checkDefaultRoles := func(*terraform.State) error {
+		if got := b.defaultRoles(); got != "[role-default]" {
+			return fmt.Errorf("backend default roles = %s, want [role-default]", got)
+		}
+		return nil
+	}
+
+	resource.UnitTest(t, resource.TestCase{
+		ProviderFactories: testAccProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: tenantSSOConfigWithChildren("https://idp-a.example.com", false),
+			},
+			{
+				PreConfig: b.setDefaultRoles("role-default"),
+				Config:    tenantSSOConfigWithChildren("https://idp-b.example.com", false),
+				Check:     checkDefaultRoles,
+			},
+			{
+				Config: tenantSSOConfigWithChildren("https://idp-b.example.com", true),
+				Check:  checkDefaultRoles,
 			},
 		},
 	})
