@@ -121,19 +121,12 @@ tenant cannot be recovered from the user ID alone.`,
 				Optional:    true,
 			},
 		},
-		CustomizeDiff: resourceFronteggUserCustomizeDiff,
+		CustomizeDiff: rejectUserPasswordRotation,
 	}
 	addCreateOnlyPassword(resource.Schema)
 	resource.Schema["password"].Description += " When the current password is not in state, after an import or after using `password_wo`, " +
 		"a new value is recorded but not sent, because Frontegg needs the current password to change it."
 	return resource
-}
-
-func resourceFronteggUserCustomizeDiff(ctx context.Context, d *schema.ResourceDiff, meta interface{}) error {
-	if d.HasChange("tenant_id") {
-		return nil
-	}
-	return rejectUserPasswordRotation(ctx, d, meta)
 }
 
 func addCreateOnlyPassword(attrs map[string]*schema.Schema) {

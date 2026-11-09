@@ -195,7 +195,7 @@ func TestUserPasswordWithoutCurrentIsRecordedNotSent(t *testing.T) {
 	})
 }
 
-func TestUserReplacementAllowsPasswordVersionBump(t *testing.T) {
+func TestUserReplacementRejectsPasswordVersionBump(t *testing.T) {
 	skipBelowWriteOnlyTerraform(t)
 	api := fakeUserAPI(t)
 	c := userPasswordCases["frontegg_user"]
@@ -208,15 +208,19 @@ func TestUserReplacementAllowsPasswordVersionBump(t *testing.T) {
 		Steps: []resource.TestStep{
 			{Config: inTenant("tenant-1", "  password_wo         = \"first-password\"\n  password_wo_version = 1\n")},
 			{
-				Config: inTenant("tenant-2", "  password_wo         = \"second-password\"\n  password_wo_version = 2\n"),
+				Config:      inTenant("tenant-2", "  password_wo         = \"second-password\"\n  password_wo_version = 2\n"),
+				ExpectError: regexp.MustCompile(`set password_wo_version back to 1`),
+			},
+			{
+				Config: inTenant("tenant-2", "  password_wo         = \"first-password\"\n  password_wo_version = 1\n"),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					func(*terraform.State) error {
-						if got := api.lastSent("password"); got != "second-password" {
-							return fmt.Errorf("replacement user was created with password %q, want the new write-only value", got)
+						if got := api.lastSent("password"); got != "first-password" {
+							return fmt.Errorf("replacement user was created with password %q, want the current write-only value", got)
 						}
 						return nil
 					},
-					checkSecretOutOfState("first-password", "second-password"),
+					checkSecretOutOfState("first-password"),
 				),
 			},
 		},
