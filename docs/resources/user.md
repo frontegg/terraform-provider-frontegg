@@ -4,6 +4,9 @@ page_title: "frontegg_user Resource - terraform-provider-frontegg"
 subcategory: ""
 description: |-
   Configures a Frontegg user.
+  Destroying the resource, or changing tenant_id, removes the user from its tenant only. Frontegg deletes
+  the user when it belongs to no other tenant. A user that is also in other tenants keeps its ID and password
+  when it moves to another tenant.
   Import this resource using the tenant_id:user_id format, since the
   tenant cannot be recovered from the user ID alone.
 ---
@@ -11,6 +14,10 @@ description: |-
 # frontegg_user (Resource)
 
 Configures a Frontegg user.
+
+Destroying the resource, or changing `tenant_id`, removes the user from its tenant only. Frontegg deletes
+the user when it belongs to no other tenant. A user that is also in other tenants keeps its ID and password
+when it moves to another tenant.
 
 Import this resource using the `tenant_id:user_id` format, since the
 tenant cannot be recovered from the user ID alone.

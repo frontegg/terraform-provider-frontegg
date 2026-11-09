@@ -67,6 +67,10 @@ func resourceFronteggUser() *schema.Resource {
 	return &schema.Resource{
 		Description: `Configures a Frontegg user.
 
+Destroying the resource, or changing ` + "`tenant_id`" + `, removes the user from its tenant only. Frontegg deletes
+the user when it belongs to no other tenant. A user that is also in other tenants keeps its ID and password
+when it moves to another tenant.
+
 Import this resource using the ` + "`tenant_id:user_id`" + ` format, since the
 tenant cannot be recovered from the user ID alone.`,
 
@@ -219,7 +223,9 @@ func resourceFronteggUserRead(ctx context.Context, d *schema.ResourceData, meta 
 
 func resourceFronteggUserDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	clientHolder := meta.(*restclient.ClientHolder)
-	if err := clientHolder.ApiClient.Delete(ctx, fmt.Sprintf("%s/%s", fronteggUserPathV1, d.Id()), nil); err != nil {
+	headers := http.Header{}
+	headers.Add("frontegg-tenant-id", d.Get("tenant_id").(string))
+	if err := clientHolder.ApiClient.DeleteWithHeaders(ctx, fmt.Sprintf("%s/%s", fronteggUserPathV1, d.Id()), headers, nil); err != nil {
 		return diag.FromErr(err)
 	}
 	return nil
