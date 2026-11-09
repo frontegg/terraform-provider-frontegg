@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/frontegg/terraform-provider-frontegg/internal/restclient"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -38,6 +39,8 @@ const fronteggUserPathV1 = "/identity/resources/users/v1"
 const (
 	fronteggErrNoApplicationID    = "ER-00008"
 	fronteggErrTenantNotInAppCode = "ER-01008"
+	fronteggErrEmailInUse         = "ER-01200"
+	userCreateEmailRetries        = 20
 )
 
 func fronteggUserApplicationError(err error) error {
@@ -166,13 +169,30 @@ func resourceFronteggUserDeserialize(d *schema.ResourceData, f fronteggUser) err
 	return nil
 }
 
+var userCreateEmailRetryDelay = 500 * time.Millisecond
+
+func createFronteggUser(ctx context.Context, client *restclient.Client, headers http.Header, in interface{}, out *fronteggUser) error {
+	for attempt := 1; ; attempt++ {
+		err := client.RequestWithHeaders(ctx, "POST", fronteggUserPath, headers, in, out)
+		if err == nil || !strings.Contains(err.Error(), fronteggErrEmailInUse) || attempt == userCreateEmailRetries {
+			return err
+		}
+		log.Printf("[WARN] email still in use, as after a recent delete; retrying user create (%d/%d)", attempt, userCreateEmailRetries)
+		select {
+		case <-ctx.Done():
+			return err
+		case <-time.After(userCreateEmailRetryDelay):
+		}
+	}
+}
+
 func resourceFronteggUserCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	clientHolder := meta.(*restclient.ClientHolder)
 	in := resourceFronteggUserSerialize(d)
 	var out fronteggUser
 	headers := http.Header{}
 	headers.Add("frontegg-tenant-id", d.Get("tenant_id").(string))
-	if err := clientHolder.ApiClient.RequestWithHeaders(ctx, "POST", fronteggUserPath, headers, in, &out); err != nil {
+	if err := createFronteggUser(ctx, &clientHolder.ApiClient, headers, in, &out); err != nil {
 		return diag.FromErr(fronteggUserApplicationError(err))
 	}
 
