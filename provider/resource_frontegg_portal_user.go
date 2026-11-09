@@ -35,7 +35,6 @@ func resourceFronteggPortalUser() *schema.Resource {
 				Sensitive:   true,
 				Optional:    true,
 				DiffSuppressFunc: func(k, old, newVal string, d *schema.ResourceData) bool {
-					// Ignore password changes after creation, but let a removal clear it from state.
 					return d.Id() != "" && newVal != ""
 				},
 			},

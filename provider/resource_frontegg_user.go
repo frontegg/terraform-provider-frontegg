@@ -136,8 +136,6 @@ func resourceFronteggUserCustomizeDiff(ctx context.Context, d *schema.ResourceDi
 	return rejectUserPasswordRotation(ctx, d, meta)
 }
 
-// addCreateOnlyPassword adds a write-only password that is only sent at creation,
-// because changing a Frontegg password needs the current one, which isn't kept.
 func addCreateOnlyPassword(attrs map[string]*schema.Schema) {
 	addWriteOnlySecret(attrs, "password")
 	attrs["password_wo"].Description = "Write-only alternative to `password` that is never stored in the plan or state. Accepts ephemeral values. " +
@@ -278,7 +276,7 @@ func resourceFronteggUserUpdate(ctx context.Context, d *schema.ResourceData, met
 		}
 	}
 
-	// Password: Frontegg needs the current password, so a value set without one in state is recorded but not sent.
+	// Password:
 	oldI, newI := d.GetChange("password")
 	oldPw := oldI.(string)
 	newPw := newI.(string)
