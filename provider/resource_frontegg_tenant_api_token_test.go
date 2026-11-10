@@ -16,9 +16,19 @@ resource "frontegg_tenant" "token" {
   name = "tf-acc token tenant %[1]s"
 }
 
+resource "frontegg_role" "token" {
+  key            = "tf-acc-token-role-%[1]s"
+  name           = "tf-acc token role %[1]s"
+  description    = "role for the tenant API token acceptance test"
+  level          = 1
+  default        = false
+  permission_ids = []
+}
+
 resource "frontegg_tenant_api_token" "test" {
   tenant_id   = frontegg_tenant.token.id
   description = %[2]q
+  role_ids    = [frontegg_role.token.id]
 }
 `, suffix, description)
 }
