@@ -119,7 +119,13 @@ func resourceFronteggSocialLoginCustomizeDiff(ctx context.Context, d *schema.Res
 }
 
 func validateFronteggSocialLoginFields(d fronteggFieldGetter) error {
-	if d.Get("customised").(bool) && d.Get("secret").(string) == "" && !usesWriteOnlySecret(d, "secret") {
+	if valueUnknown(d, "customised") || !d.Get("customised").(bool) {
+		return nil
+	}
+	if stringValueMissing(d, "client_id") {
+		return fmt.Errorf("client_id is required when customised is true")
+	}
+	if secretValueMissing(d, "secret") {
 		return fmt.Errorf("secret or secret_wo is required when customised is true")
 	}
 	return nil
