@@ -316,6 +316,27 @@ func resourceFronteggUserDelete(ctx context.Context, d *schema.ResourceData, met
 	return nil
 }
 
+func updateUserRoles(ctx context.Context, client *restclient.Client, d *schema.ResourceData) error {
+	tenantID := d.Get("tenant_id").(string)
+	oldRoleIDs, newRoleIDs := d.GetChange("role_ids")
+	oldEnvironmentRoles, newEnvironmentRoles := d.GetChange("environment_role")
+	added := append(
+		globalRoleAssignments(newRoleIDs.(*schema.Set).Difference(oldRoleIDs.(*schema.Set)).List()),
+		userRoleAssignmentsFromSet(newEnvironmentRoles.(*schema.Set).Difference(oldEnvironmentRoles.(*schema.Set)))...,
+	)
+	removed := append(
+		globalRoleAssignments(oldRoleIDs.(*schema.Set).Difference(newRoleIDs.(*schema.Set)).List()),
+		userRoleAssignmentsFromSet(oldEnvironmentRoles.(*schema.Set).Difference(newEnvironmentRoles.(*schema.Set)))...,
+	)
+	if err := assignUserRoles(ctx, client, tenantID, d.Id(), added); err != nil {
+		return err
+	}
+	if err := sendUserRoleAssignments(ctx, client, http.MethodDelete, tenantID, d.Id(), removed); err != nil {
+		return err
+	}
+	return d.Set("role_ids", newRoleIDs)
+}
+
 func resourceFronteggUserUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	clientHolder := meta.(*restclient.ClientHolder)
 	// TODO: fields like phone number and avatar URL need https://docs.frontegg.com/reference/userscontrollerv1_updateuser
@@ -365,25 +386,8 @@ func resourceFronteggUserUpdate(ctx context.Context, d *schema.ResourceData, met
 		}
 	}
 
-	if d.HasChange("role_ids") {
-		tenantID := d.Get("tenant_id").(string)
-		oldSet, newSet := d.GetChange("role_ids")
-		added := globalRoleAssignments(newSet.(*schema.Set).Difference(oldSet.(*schema.Set)).List())
-		removed := globalRoleAssignments(oldSet.(*schema.Set).Difference(newSet.(*schema.Set)).List())
-		if err := assignUserRoles(ctx, &clientHolder.ApiClient, tenantID, d.Id(), added); err != nil {
-			return diag.FromErr(err)
-		}
-		if err := sendUserRoleAssignments(ctx, &clientHolder.ApiClient, http.MethodDelete, tenantID, d.Id(), removed); err != nil {
-			return diag.FromErr(err)
-		}
-		if err := d.Set("role_ids", newSet); err != nil {
-			return diag.FromErr(err)
-		}
-	}
-
-	if d.HasChange("environment_role") {
-		oldSet, newSet := d.GetChange("environment_role")
-		if err := replaceUserRoleAssignments(ctx, &clientHolder.ApiClient, d.Get("tenant_id").(string), d.Id(), oldSet.(*schema.Set), newSet.(*schema.Set)); err != nil {
+	if d.HasChanges("role_ids", "environment_role") {
+		if err := updateUserRoles(ctx, &clientHolder.ApiClient, d); err != nil {
 			return diag.FromErr(err)
 		}
 	}

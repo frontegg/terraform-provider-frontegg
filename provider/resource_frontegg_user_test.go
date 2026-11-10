@@ -535,3 +535,36 @@ func TestUserCreatedWithUnknownGlobalRoleIsKept(t *testing.T) {
 		},
 	})
 }
+
+func TestUserRejectedMoveFromGlobalToEnvironmentKeepsTheGlobalRole(t *testing.T) {
+	store := &fakeUserRoleStore{assignments: map[string]map[userRoleAssignment]bool{}}
+	newFakeUserWithRolesAPI(t, store)
+	admin := userRoleAssignment{RoleID: "admin"}
+	viewer := userRoleAssignment{RoleID: "viewer"}
+	stagingAdmin := userRoleAssignment{RoleID: "admin", EnvironmentID: "staging"}
+
+	resource.UnitTest(t, resource.TestCase{
+		ProviderFactories: testAccProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: userWithRolesConfig([]string{"admin", "viewer"}),
+				Check:  store.expect("user-1", admin.String(), viewer.String()),
+			},
+			{
+				PreConfig:   func() { store.environmentRolesRejected = true },
+				Config:      userWithRolesConfig([]string{"viewer"}, stagingAdmin),
+				ExpectError: regexp.MustCompile(`Environment-scoped roles are not enabled`),
+			},
+			{
+				PreConfig: func() {
+					if err := store.expect("user-1", admin.String(), viewer.String())(nil); err != nil {
+						t.Errorf("after the rejected move: %s", err)
+					}
+					store.environmentRolesRejected = false
+				},
+				Config: userWithRolesConfig([]string{"viewer"}, stagingAdmin),
+				Check:  store.expect("user-1", viewer.String(), stagingAdmin.String()),
+			},
+		},
+	})
+}
