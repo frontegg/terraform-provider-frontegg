@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"net/url"
 	"strings"
+	"time"
 
 	"github.com/frontegg/terraform-provider-frontegg/internal/restclient"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -44,6 +46,9 @@ const fronteggUserPathV1 = "/identity/resources/users/v1"
 const (
 	fronteggErrNoApplicationID    = "ER-00008"
 	fronteggErrTenantNotInAppCode = "ER-01008"
+	fronteggErrEmailInUse         = "ER-01200"
+	fronteggErrUserExists         = "ER-01086"
+	userCreateEmailRetries        = 20
 )
 
 func fronteggUserApplicationError(err error) error {
@@ -78,6 +83,10 @@ Global roles go in ` + "`role_ids`" + `. Roles that apply in a single environmen
 Set at least one of the two. When ` + "`role_ids`" + ` is omitted, the provider leaves the user's global roles
 unmanaged, such as the default roles the first user of a tenant gets. Manage a user's environment roles
 either here or in ` + "`frontegg_user_env_role`" + `, not both.
+
+Destroying the resource, or changing ` + "`tenant_id`" + `, removes the user from its tenant only. Frontegg deletes
+the user when it belongs to no other tenant. A user that is also in other tenants keeps its ID and password
+when it moves to another tenant.
 
 Import this resource using the ` + "`tenant_id:user_id`" + ` format, since the
 tenant cannot be recovered from the user ID alone. An import does not read environment roles.`,
@@ -226,13 +235,47 @@ func resourceFronteggUserDeserialize(d *schema.ResourceData, f fronteggUser) err
 	return nil
 }
 
+var userCreateEmailRetryDelay = 500 * time.Millisecond
+
+func createFronteggUser(ctx context.Context, client *restclient.Client, headers http.Header, in interface{}, out *fronteggUser) error {
+	for attempt := 1; ; attempt++ {
+		err := client.RequestWithHeaders(ctx, "POST", fronteggUserPath, headers, in, out)
+		if err == nil || !strings.Contains(err.Error(), fronteggErrEmailInUse) || attempt == userCreateEmailRetries {
+			return err
+		}
+		log.Printf("[WARN] email still in use, as after a recent delete; retrying user create (%d/%d)", attempt, userCreateEmailRetries)
+		select {
+		case <-ctx.Done():
+			return err
+		case <-time.After(userCreateEmailRetryDelay):
+		}
+	}
+}
+
+func fronteggUserExistsError(ctx context.Context, client *restclient.Client, tenantID, email string, err error) error {
+	if !strings.Contains(err.Error(), fronteggErrUserExists) {
+		return err
+	}
+	importID := tenantID + ":<user_id>"
+	var existing fronteggUser
+	if lookupErr := client.Get(ctx, fmt.Sprintf("%s/email?email=%s", fronteggUserPathV1, url.QueryEscape(email)), &existing); lookupErr == nil && existing.Key != "" {
+		importID = tenantID + ":" + existing.Key
+	}
+	return fmt.Errorf(
+		"user %s already exists in tenant %s. Import it with the ID %s instead of creating it, "+
+			"or remove it from the tenant first.\n\noriginal error: %w",
+		email, tenantID, importID, err,
+	)
+}
+
 func resourceFronteggUserCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	clientHolder := meta.(*restclient.ClientHolder)
 	in := resourceFronteggUserSerialize(d)
 	var out fronteggUser
 	headers := http.Header{}
 	headers.Add("frontegg-tenant-id", d.Get("tenant_id").(string))
-	if err := clientHolder.ApiClient.RequestWithHeaders(ctx, "POST", fronteggUserPath, headers, in, &out); err != nil {
+	if err := createFronteggUser(ctx, &clientHolder.ApiClient, headers, in, &out); err != nil {
+		err = fronteggUserExistsError(ctx, &clientHolder.ApiClient, d.Get("tenant_id").(string), in.Email, err)
 		return diag.FromErr(fronteggUserApplicationError(err))
 	}
 
@@ -309,8 +352,11 @@ func resourceFronteggUserRead(ctx context.Context, d *schema.ResourceData, meta 
 }
 
 func resourceFronteggUserDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	clientHolder := meta.(*restclient.ClientHolder)
-	if err := clientHolder.ApiClient.Delete(ctx, fmt.Sprintf("%s/%s", fronteggUserPathV1, d.Id()), nil); err != nil {
+	client := meta.(*restclient.ClientHolder).ApiClient
+	client.Ignore404()
+	headers := http.Header{}
+	headers.Add("frontegg-tenant-id", d.Get("tenant_id").(string))
+	if err := client.DeleteWithHeaders(ctx, fmt.Sprintf("%s/%s", fronteggUserPathV1, d.Id()), headers, nil); err != nil {
 		return diag.FromErr(err)
 	}
 	return nil

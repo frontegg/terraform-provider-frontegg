@@ -9,6 +9,9 @@ description: |-
   Set at least one of the two. When role_ids is omitted, the provider leaves the user's global roles
   unmanaged, such as the default roles the first user of a tenant gets. Manage a user's environment roles
   either here or in frontegg_user_env_role, not both.
+  Destroying the resource, or changing tenant_id, removes the user from its tenant only. Frontegg deletes
+  the user when it belongs to no other tenant. A user that is also in other tenants keeps its ID and password
+  when it moves to another tenant.
   Import this resource using the tenant_id:user_id format, since the
   tenant cannot be recovered from the user ID alone. An import does not read environment roles.
 ---
@@ -22,6 +25,10 @@ Global roles go in `role_ids`. Roles that apply in a single environment go in
 Set at least one of the two. When `role_ids` is omitted, the provider leaves the user's global roles
 unmanaged, such as the default roles the first user of a tenant gets. Manage a user's environment roles
 either here or in `frontegg_user_env_role`, not both.
+
+Destroying the resource, or changing `tenant_id`, removes the user from its tenant only. Frontegg deletes
+the user when it belongs to no other tenant. A user that is also in other tenants keeps its ID and password
+when it moves to another tenant.
 
 Import this resource using the `tenant_id:user_id` format, since the
 tenant cannot be recovered from the user ID alone. An import does not read environment roles.
