@@ -27,6 +27,7 @@ func dataSourceFronteggPlan() *schema.Resource {
 		field.Default = nil
 		field.ValidateFunc = nil
 	}
+	s["default_treatment"].Description = "The default treatment for the plan."
 	s["name"].Computed = false
 	s["name"].Required = true
 	return &schema.Resource{

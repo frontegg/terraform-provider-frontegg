@@ -32,9 +32,10 @@ func resourceFronteggSecret() *schema.Resource {
 
 		Schema: map[string]*schema.Schema{
 			"key": {
-				Description:  "The key of the secret, at most 20 characters.",
+				Description:  "The key of the secret, at most 20 characters. Changing it replaces the secret.",
 				Type:         schema.TypeString,
 				Required:     true,
+				ForceNew:     true,
 				ValidateFunc: validation.StringLenBetween(1, 20),
 			},
 			"value": {

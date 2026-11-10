@@ -38,7 +38,7 @@ resource "frontegg_entitlement" "by_name" {
 - `assign_on_signup` (Boolean) Whether the plan is assigned automatically upon signup.
 - `created_at` (String) When the plan was created.
 - `default_time_limitation` (Number) Default time limitation in days for auto-assigned plans.
-- `default_treatment` (String) The default treatment for the plan. Frontegg uses `false` when it is omitted.
+- `default_treatment` (String) The default treatment for the plan.
 - `description` (String) A description of the plan.
 - `id` (String) The ID of this resource.
 - `rules` (List of Map of String) Set of conditions targeting the plan.

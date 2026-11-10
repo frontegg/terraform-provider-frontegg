@@ -20,6 +20,7 @@ resource "frontegg_secret" "test" {
 
 func TestAccFronteggSecret_lifecycle(t *testing.T) {
 	key := "TF_ACC_" + strings.ToUpper(acctest.RandString(8))
+	renamedKey := key + "_NEW"
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviderFactories,
@@ -39,6 +40,14 @@ func TestAccFronteggSecret_lifecycle(t *testing.T) {
 			},
 			{
 				Config:   testAccSecretConfig(key, "second-value"),
+				PlanOnly: true,
+			},
+			{
+				Config: testAccSecretConfig(renamedKey, "second-value"),
+				Check:  resource.TestCheckResourceAttr("frontegg_secret.test", "key", renamedKey),
+			},
+			{
+				Config:   testAccSecretConfig(renamedKey, "second-value"),
 				PlanOnly: true,
 			},
 			{

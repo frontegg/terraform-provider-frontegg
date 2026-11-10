@@ -25,7 +25,7 @@ func testAccCheckDestroyed(resourceType string) resource.TestCheckFunc {
 			data := resourceSchema.Data(stateResource.Primary)
 			diags := resourceSchema.ReadContext(ctx, data, provider.Meta())
 			if diags.HasError() {
-				if strings.Contains(diags[0].Summary, "404") {
+				if strings.Contains(diags[0].Summary, ": 404 ") {
 					continue
 				}
 				return fmt.Errorf("read %s %s after destroy: %s", resourceType, stateResource.Primary.ID, diags[0].Summary)
