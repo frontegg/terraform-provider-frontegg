@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"net/url"
 	"strings"
+	"time"
 
 	"github.com/frontegg/terraform-provider-frontegg/internal/restclient"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -38,6 +40,9 @@ const fronteggUserPathV1 = "/identity/resources/users/v1"
 const (
 	fronteggErrNoApplicationID    = "ER-00008"
 	fronteggErrTenantNotInAppCode = "ER-01008"
+	fronteggErrEmailInUse         = "ER-01200"
+	fronteggErrUserExists         = "ER-01086"
+	userCreateEmailRetries        = 20
 )
 
 func fronteggUserApplicationError(err error) error {
@@ -64,8 +69,12 @@ func fronteggUserApplicationError(err error) error {
 }
 
 func resourceFronteggUser() *schema.Resource {
-	return &schema.Resource{
+	resource := &schema.Resource{
 		Description: `Configures a Frontegg user.
+
+Destroying the resource, or changing ` + "`tenant_id`" + `, removes the user from its tenant only. Frontegg deletes
+the user when it belongs to no other tenant. A user that is also in other tenants keeps its ID and password
+when it moves to another tenant.
 
 Import this resource using the ` + "`tenant_id:user_id`" + ` format, since the
 tenant cannot be recovered from the user ID alone.`,
@@ -121,7 +130,33 @@ tenant cannot be recovered from the user ID alone.`,
 				Optional:    true,
 			},
 		},
+		CustomizeDiff: rejectUserPasswordRotation,
 	}
+	addCreateOnlyPassword(resource.Schema)
+	resource.Schema["password"].Description += " When the current password is not in state, after an import or after using `password_wo`, " +
+		"a new value is recorded but not sent, because Frontegg needs the current password to change it."
+	return resource
+}
+
+func addCreateOnlyPassword(attrs map[string]*schema.Schema) {
+	addWriteOnlySecret(attrs, "password")
+	attrs["password_wo"].Description = "Write-only alternative to `password` that is never stored in the plan or state. Accepts ephemeral values. " +
+		"Only sent when the user is created. Requires Terraform 1.11 or later and must be set together with `password_wo_version`."
+	attrs["password_wo_version"].Description = "Version of `password_wo`. Changing it after the user is created fails at plan, because Frontegg " +
+		"needs the current password to change it. Change the password in Frontegg instead. Adding `password_wo` to an existing user, " +
+		"including after removing it, never changes the password."
+}
+
+func rejectUserPasswordRotation(ctx context.Context, d *schema.ResourceDiff, meta interface{}) error {
+	oldVersion, newVersion := d.GetChange("password_wo_version")
+	if d.Id() == "" || oldVersion.(int) == 0 || newVersion.(int) == 0 || oldVersion == newVersion {
+		return nil
+	}
+	return fmt.Errorf(
+		"password_wo is only sent when the user is created: Frontegg needs the current password to change it, "+
+			"and a write-only password is not kept. Change the password in Frontegg and set password_wo_version back to %d",
+		oldVersion,
+	)
 }
 
 func resourceFronteggUserImport(ctx context.Context, d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
@@ -140,7 +175,7 @@ func resourceFronteggUserSerialize(d *schema.ResourceData) fronteggUser {
 	log.Printf("role IDs: %#v", d.Get("role_ids").(*schema.Set).List())
 	return fronteggUser{
 		Email:           d.Get("email").(string),
-		Password:        d.Get("password").(string),
+		Password:        secretValue(d, "password"),
 		SkipInviteEmail: d.Get("skip_invite_email").(bool),
 		CreateRoleIDs:   d.Get("role_ids").(*schema.Set).List(),
 		SuperUser:       d.Get("superuser").(bool),
@@ -162,13 +197,47 @@ func resourceFronteggUserDeserialize(d *schema.ResourceData, f fronteggUser) err
 	return nil
 }
 
+var userCreateEmailRetryDelay = 500 * time.Millisecond
+
+func createFronteggUser(ctx context.Context, client *restclient.Client, headers http.Header, in interface{}, out *fronteggUser) error {
+	for attempt := 1; ; attempt++ {
+		err := client.RequestWithHeaders(ctx, "POST", fronteggUserPath, headers, in, out)
+		if err == nil || !strings.Contains(err.Error(), fronteggErrEmailInUse) || attempt == userCreateEmailRetries {
+			return err
+		}
+		log.Printf("[WARN] email still in use, as after a recent delete; retrying user create (%d/%d)", attempt, userCreateEmailRetries)
+		select {
+		case <-ctx.Done():
+			return err
+		case <-time.After(userCreateEmailRetryDelay):
+		}
+	}
+}
+
+func fronteggUserExistsError(ctx context.Context, client *restclient.Client, tenantID, email string, err error) error {
+	if !strings.Contains(err.Error(), fronteggErrUserExists) {
+		return err
+	}
+	importID := tenantID + ":<user_id>"
+	var existing fronteggUser
+	if lookupErr := client.Get(ctx, fmt.Sprintf("%s/email?email=%s", fronteggUserPathV1, url.QueryEscape(email)), &existing); lookupErr == nil && existing.Key != "" {
+		importID = tenantID + ":" + existing.Key
+	}
+	return fmt.Errorf(
+		"user %s already exists in tenant %s. Import it with the ID %s instead of creating it, "+
+			"or remove it from the tenant first.\n\noriginal error: %w",
+		email, tenantID, importID, err,
+	)
+}
+
 func resourceFronteggUserCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	clientHolder := meta.(*restclient.ClientHolder)
 	in := resourceFronteggUserSerialize(d)
 	var out fronteggUser
 	headers := http.Header{}
 	headers.Add("frontegg-tenant-id", d.Get("tenant_id").(string))
-	if err := clientHolder.ApiClient.RequestWithHeaders(ctx, "POST", fronteggUserPath, headers, in, &out); err != nil {
+	if err := createFronteggUser(ctx, &clientHolder.ApiClient, headers, in, &out); err != nil {
+		err = fronteggUserExistsError(ctx, &clientHolder.ApiClient, d.Get("tenant_id").(string), in.Email, err)
 		return diag.FromErr(fronteggUserApplicationError(err))
 	}
 
@@ -218,8 +287,11 @@ func resourceFronteggUserRead(ctx context.Context, d *schema.ResourceData, meta 
 }
 
 func resourceFronteggUserDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	clientHolder := meta.(*restclient.ClientHolder)
-	if err := clientHolder.ApiClient.Delete(ctx, fmt.Sprintf("%s/%s", fronteggUserPathV1, d.Id()), nil); err != nil {
+	client := meta.(*restclient.ClientHolder).ApiClient
+	client.Ignore404()
+	headers := http.Header{}
+	headers.Add("frontegg-tenant-id", d.Get("tenant_id").(string))
+	if err := client.DeleteWithHeaders(ctx, fmt.Sprintf("%s/%s", fronteggUserPathV1, d.Id()), headers, nil); err != nil {
 		return diag.FromErr(err)
 	}
 	return nil
@@ -244,13 +316,12 @@ func resourceFronteggUserUpdate(ctx context.Context, d *schema.ResourceData, met
 	}
 
 	// Password:
-	if d.HasChange("password") {
+	oldI, newI := d.GetChange("password")
+	oldPw := oldI.(string)
+	newPw := newI.(string)
+	if d.HasChange("password") && oldPw != "" && newPw != "" {
 		headers := http.Header{}
 		headers.Add("frontegg-user-id", d.Id())
-
-		oldI, newI := d.GetChange("password")
-		oldPw := oldI.(string)
-		newPw := newI.(string)
 
 		if err := clientHolder.ApiClient.RequestWithHeaders(ctx, "POST", fmt.Sprintf("%s/passwords/change", fronteggUserPathV1), headers, struct {
 			OldPW string `json:"password"`
