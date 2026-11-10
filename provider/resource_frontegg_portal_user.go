@@ -12,7 +12,7 @@ import (
 )
 
 func resourceFronteggPortalUser() *schema.Resource {
-	return &schema.Resource{
+	resource := &schema.Resource{
 		Description: `Configures a Frontegg portal user.`,
 
 		CreateContext: resourceFronteggPortalUserCreate,
@@ -30,13 +30,12 @@ func resourceFronteggPortalUser() *schema.Resource {
 				Required:    true,
 			},
 			"password": {
-				Description: "The user's login password. This field is write-only and will not be stored in state. Changes to this field are ignored after creation.",
+				Description: "The user's login password. Only sent when the user is created; later changes are ignored.",
 				Type:        schema.TypeString,
 				Sensitive:   true,
 				Optional:    true,
 				DiffSuppressFunc: func(k, old, newVal string, d *schema.ResourceData) bool {
-					// Always suppress diff for password after resource creation
-					return d.Id() != ""
+					return d.Id() != "" && newVal != ""
 				},
 			},
 			"role_ids": {
@@ -49,14 +48,17 @@ func resourceFronteggPortalUser() *schema.Resource {
 				Required: true,
 			},
 		},
+		CustomizeDiff: rejectUserPasswordRotation,
 	}
+	addCreateOnlyPassword(resource.Schema)
+	return resource
 }
 
 func resourceFronteggPortalUserSerialize(d *schema.ResourceData) fronteggUser {
 	log.Printf("role IDs: %#v", d.Get("role_ids").(*schema.Set).List())
 	return fronteggUser{
 		Email:         d.Get("email").(string),
-		Password:      d.Get("password").(string),
+		Password:      secretValue(d, "password"),
 		CreateRoleIDs: d.Get("role_ids").(*schema.Set).List(),
 	}
 }
