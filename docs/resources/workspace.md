@@ -211,7 +211,7 @@ Optional:
 
 Optional:
 
-- `allowed_redirect_urls` (Set of String) Allowed redirect URLs.
+- `allowed_redirect_urls` (Set of String) Allowed redirect URLs. A bare http or https origin is the same URL with or without a trailing slash, so `https://app.example.com` and `https://app.example.com/` are registered once. A trailing slash after a path is kept: `https://app.example.com/callback/` and `https://app.example.com/callback` are different URLs.
 
 
 <a id="nestedblock--lockout_policy"></a>

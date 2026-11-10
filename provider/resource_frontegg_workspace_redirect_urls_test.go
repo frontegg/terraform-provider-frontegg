@@ -195,3 +195,48 @@ func TestUpdateAllowedRedirectURLsFinishesAfterFailingMidway(t *testing.T) {
 		t.Errorf("second update posted %d URLs, want only the %d still missing", got, missing)
 	}
 }
+
+func TestUpdateAllowedRedirectURLsKeepsATrailingSlashInAPath(t *testing.T) {
+	f, client := newFakeRedirectURIs(t)
+	d := redirectURLsResourceData(t, "https://app.example.com/callback/", "https://app.example.com/callback", "https://app.example.com/")
+
+	if err := updateFronteggAllowedRedirectURLs(context.Background(), client, d); err != nil {
+		t.Fatalf("update failed: %v", err)
+	}
+
+	want := []string{"https://app.example.com", "https://app.example.com/callback", "https://app.example.com/callback/"}
+	if got := f.registered(); fmt.Sprint(got) != fmt.Sprint(want) {
+		t.Errorf("registered = %v, want %v", got, want)
+	}
+}
+
+func TestReadAllowedRedirectURLsTellsPathsWithAndWithoutTrailingSlashApart(t *testing.T) {
+	_, client := newFakeRedirectURIs(t, "https://app.example.com/callback/")
+	d := redirectURLsResourceData(t, "https://app.example.com/callback")
+
+	got, err := readFronteggAllowedRedirectURLs(context.Background(), client, d)
+	if err != nil {
+		t.Fatalf("read failed: %v", err)
+	}
+
+	want := []string{"https://app.example.com/callback/"}
+	if fmt.Sprint(sortedStrings(got)) != fmt.Sprint(want) {
+		t.Errorf("read = %v, want %v, so the missing /callback shows as drift", sortedStrings(got), want)
+	}
+}
+
+func TestNormalizeRedirectURLOnlyDropsABareOriginsSlash(t *testing.T) {
+	cases := map[string]string{
+		"https://localhost:4300/":           "https://localhost:4300",
+		"https://localhost:4300":            "https://localhost:4300",
+		"https://app.example.com/callback/": "https://app.example.com/callback/",
+		"https://app.example.com/callback":  "https://app.example.com/callback",
+		"https://app.example.com/?next=1":   "https://app.example.com/?next=1",
+		"myapp://callback/":                 "myapp://callback/",
+	}
+	for in, want := range cases {
+		if got := normalizeRedirectURL(in); got != want {
+			t.Errorf("normalizeRedirectURL(%q) = %q, want %q", in, got, want)
+		}
+	}
+}

@@ -3,14 +3,22 @@ package provider
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"strings"
 
 	"github.com/frontegg/terraform-provider-frontegg/internal/restclient"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
-func normalizeRedirectURL(url string) string {
-	return strings.TrimRight(url, "/")
+func normalizeRedirectURL(redirectURL string) string {
+	parsed, err := url.Parse(redirectURL)
+	if err != nil || (parsed.Scheme != "http" && parsed.Scheme != "https") {
+		return redirectURL
+	}
+	if parsed.Path != "/" || parsed.RawQuery != "" || parsed.Fragment != "" || strings.HasSuffix(redirectURL, "?") || strings.HasSuffix(redirectURL, "#") {
+		return redirectURL
+	}
+	return strings.TrimSuffix(redirectURL, "/")
 }
 
 func readFronteggAllowedRedirectURLs(ctx context.Context, client *restclient.Client, d *schema.ResourceData) ([]string, error) {
@@ -45,7 +53,8 @@ func readFronteggAllowedRedirectURLs(ctx context.Context, client *restclient.Cli
 func updateFronteggAllowedRedirectURLs(ctx context.Context, client *restclient.Client, d *schema.ResourceData) error {
 	wanted := []string{}
 	isWanted := map[string]bool{}
-	for _, url := range stringSetToListWithRightTrim(d.Get("hosted_login.0.allowed_redirect_urls").(*schema.Set), "/") {
+	for _, v := range d.Get("hosted_login.0.allowed_redirect_urls").(*schema.Set).List() {
+		url := normalizeRedirectURL(v.(string))
 		if !isWanted[url] {
 			wanted = append(wanted, url)
 			isWanted[url] = true
