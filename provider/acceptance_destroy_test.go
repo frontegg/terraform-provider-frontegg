@@ -9,7 +9,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 )
 
-// Reuses the resource's own Read, which clears the ID when the object is gone.
 func testAccCheckDestroyed(resourceType string) resource.TestCheckFunc {
 	return func(state *terraform.State) error {
 		ctx := context.Background()
