@@ -210,18 +210,46 @@ func TestUpdateAllowedRedirectURLsKeepsATrailingSlashInAPath(t *testing.T) {
 	}
 }
 
-func TestReadAllowedRedirectURLsTellsPathsWithAndWithoutTrailingSlashApart(t *testing.T) {
-	_, client := newFakeRedirectURIs(t, "https://app.example.com/callback/")
-	d := redirectURLsResourceData(t, "https://app.example.com/callback")
+func TestReadAllowedRedirectURLsKeepsARegisteredURLThatDiffersOnlyByATrailingSlash(t *testing.T) {
+	_, client := newFakeRedirectURIs(t, "https://app.example.com/callback/", "com.example.app://")
+	d := redirectURLsResourceData(t, "https://app.example.com/callback", "com.example.app:")
 
 	got, err := readFronteggAllowedRedirectURLs(context.Background(), client, d)
 	if err != nil {
 		t.Fatalf("read failed: %v", err)
 	}
 
-	want := []string{"https://app.example.com/callback/"}
+	want := []string{"com.example.app:", "https://app.example.com/callback"}
 	if fmt.Sprint(sortedStrings(got)) != fmt.Sprint(want) {
-		t.Errorf("read = %v, want %v, so the missing /callback shows as drift", sortedStrings(got), want)
+		t.Errorf("read = %v, want %v, so upgrading from a release that trimmed every slash shows no drift", sortedStrings(got), want)
+	}
+}
+
+func TestUpdateAllowedRedirectURLsLeavesARegisteredURLThatDiffersOnlyByATrailingSlash(t *testing.T) {
+	f, client := newFakeRedirectURIs(t, "https://app.example.com/callback/", "com.example.app://")
+	d := redirectURLsResourceData(t, "https://app.example.com/callback", "com.example.app:")
+
+	if err := updateFronteggAllowedRedirectURLs(context.Background(), client, d); err != nil {
+		t.Fatalf("update failed: %v", err)
+	}
+
+	want := []string{"com.example.app://", "https://app.example.com/callback/"}
+	if got := f.registered(); fmt.Sprint(got) != fmt.Sprint(want) || f.posts != 0 {
+		t.Errorf("registered = %v after %d POSTs, want %v untouched", got, f.posts, want)
+	}
+}
+
+func TestUpdateAllowedRedirectURLsAddsAPathSlashVariantNextToARegisteredOne(t *testing.T) {
+	f, client := newFakeRedirectURIs(t, "https://app.example.com/callback")
+	d := redirectURLsResourceData(t, "https://app.example.com/callback", "https://app.example.com/callback/")
+
+	if err := updateFronteggAllowedRedirectURLs(context.Background(), client, d); err != nil {
+		t.Fatalf("update failed: %v", err)
+	}
+
+	want := []string{"https://app.example.com/callback", "https://app.example.com/callback/"}
+	if got := f.registered(); fmt.Sprint(got) != fmt.Sprint(want) || f.posts != 1 {
+		t.Errorf("registered = %v after %d POSTs, want %v after 1", got, f.posts, want)
 	}
 }
 
