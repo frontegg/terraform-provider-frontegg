@@ -27,10 +27,6 @@ jobs:
           TF_ACC_TERRAFORM_VERSION: "1.13.4"
   test:
     runs-on: ubuntu-latest
-    concurrency:
-      group: frontegg-acceptance-account
-      cancel-in-progress: false
-      queue: max
     strategy:
       fail-fast: false
       matrix:
