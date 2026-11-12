@@ -10,6 +10,8 @@ import (
 
 const tokenRefreshTimeout = 30 * time.Second
 
+const tokenRefreshRetryDelay = 5 * time.Second
+
 // TokenSource shares one management token across clients; a zero lifetime means refresh only on a 401.
 type TokenSource struct {
 	mu         sync.Mutex
@@ -74,6 +76,11 @@ func (s *TokenSource) Token(ctx context.Context) (string, error) {
 		// A rejected (invalidated) or unknown-lifetime token never reaches this fallback.
 		if ctx.Err() == nil && s.token != "" && time.Now().Before(s.expiresAt) {
 			log.Printf("[WARN] Management token refresh failed; using the cached token until its expiry")
+			retryAt := time.Now().Add(tokenRefreshRetryDelay)
+			if retryAt.After(s.expiresAt) {
+				retryAt = s.expiresAt
+			}
+			s.refreshAt = retryAt
 			return s.token, nil
 		}
 		return "", err

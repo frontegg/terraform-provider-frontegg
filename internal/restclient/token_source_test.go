@@ -105,3 +105,31 @@ func TestWaitingForRefreshCanBeCanceled(t *testing.T) {
 		t.Fatalf("waiting caller error = %v, want deadline exceeded", err)
 	}
 }
+
+func TestRefreshFailureSharesCachedTokenUntilRetry(t *testing.T) {
+	calls := 0
+	source := NewTokenSource(func(context.Context) (string, time.Duration, error) {
+		calls++
+		if calls == 1 {
+			return "cached", time.Minute, nil
+		}
+		return "", 0, errors.New("authentication temporarily unavailable")
+	})
+	if _, err := source.Token(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	source.refreshAt = time.Now().Add(-time.Second)
+	for i := 0; i < 3; i++ {
+		if token, err := source.Token(context.Background()); token != "cached" || err != nil {
+			t.Fatalf("Token() = %q, %v; want cached token", token, err)
+		}
+	}
+	if calls != 2 {
+		t.Fatalf("refresh called %d times, want 2: one success and one failed retry", calls)
+	}
+	source.expiresAt = time.Now().Add(-time.Second)
+	source.refreshAt = source.expiresAt
+	if token, err := source.Token(context.Background()); token != "" || err == nil {
+		t.Fatalf("Token() after expiry = %q, %v; want refresh error", token, err)
+	}
+}
