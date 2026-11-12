@@ -45,9 +45,10 @@ func resourceFronteggPlan() *schema.Resource {
 				Required:    true,
 			},
 			"default_treatment": {
-				Description: "The default treatment for the plan.",
+				Description: "The default treatment for the plan. Frontegg uses `false` when it is omitted.",
 				Type:        schema.TypeString,
 				Optional:    true,
+				Computed:    true,
 				ValidateFunc: validation.StringInSlice([]string{
 					"true",
 					"false",
