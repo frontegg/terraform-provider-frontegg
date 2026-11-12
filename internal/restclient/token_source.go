@@ -10,9 +10,7 @@ import (
 
 const tokenRefreshTimeout = 30 * time.Second
 
-// TokenSource shares one management token across the API and portal clients.
-// The refresh function returns the token and its lifetime; a zero lifetime
-// means the server did not provide an expiry, so a 401 triggers the refresh.
+// TokenSource shares one management token across clients; a zero lifetime means refresh only on a 401.
 type TokenSource struct {
 	mu         sync.Mutex
 	refresh    func(context.Context) (string, time.Duration, error)
@@ -27,8 +25,7 @@ func NewTokenSource(refresh func(context.Context) (string, time.Duration, error)
 }
 
 func (s *TokenSource) Token(ctx context.Context) (string, error) {
-	// Bound both authentication (including rate-limit waits) and the time a
-	// caller spends waiting for another request to refresh the shared token.
+	// Bounds both the refresh, including rate-limit waits, and waiting on another caller's refresh.
 	ctx, cancel := context.WithTimeout(ctx, tokenRefreshTimeout)
 	defer cancel()
 
@@ -57,8 +54,7 @@ func (s *TokenSource) Token(ctx context.Context) (string, error) {
 		break
 	}
 
-	// Start the lifetime before the network call, so its duration cannot make
-	// the client use a token beyond the server's expiry.
+	// Measured before the call so its duration can't push use past the server's expiry.
 	startedAt := time.Now()
 	token, lifetime, err := s.refresh(ctx)
 	if err == nil {
@@ -75,9 +71,7 @@ func (s *TokenSource) Token(ctx context.Context) (string, error) {
 		s.refreshing = nil
 	}()
 	if err != nil {
-		// An early refresh failure need not fail the resource while the old
-		// token is still valid. Invalidate clears it after a 401, so a rejected
-		// token can never be reused here. Unknown lifetimes also cannot fall back.
+		// A rejected (invalidated) or unknown-lifetime token never reaches this fallback.
 		if ctx.Err() == nil && s.token != "" && time.Now().Before(s.expiresAt) {
 			log.Printf("[WARN] Management token refresh failed; using the cached token until its expiry")
 			return s.token, nil
@@ -96,8 +90,7 @@ func (s *TokenSource) Token(ctx context.Context) (string, error) {
 	return token, nil
 }
 
-// Invalidate forces a refresh after a 401, unless another request has already
-// replaced the rejected token.
+// Invalidate forces a refresh after a 401 unless another request already replaced the token.
 func (s *TokenSource) Invalidate(rejectedToken string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()

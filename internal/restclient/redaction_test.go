@@ -98,3 +98,25 @@ func TestRequestLoggingPreservesScopeAndRedactsCredentials(t *testing.T) {
 		}
 	}
 }
+
+func TestAuthenticationErrorKeepsOnlyFronteggMessage(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusUnauthorized)
+		_, _ = fmt.Fprint(w, `{"errors":["Invalid client id or secret"],"errorCode":"ER-01001","token":"sensitive-response"}`)
+	}))
+	defer srv.Close()
+	client := MakeRestClient(srv.URL, "", "")
+	client.RedactResponses()
+	err := client.Post(context.Background(), "/auth/vendor", nil, nil)
+	if err == nil {
+		t.Fatal("expected an error")
+	}
+	for _, want := range []string{"Invalid client id or secret", "ER-01001"} {
+		if !strings.Contains(err.Error(), want) {
+			t.Errorf("error %q is missing %q", err, want)
+		}
+	}
+	if strings.Contains(err.Error(), "sensitive-response") {
+		t.Errorf("error leaked a response field: %s", err)
+	}
+}

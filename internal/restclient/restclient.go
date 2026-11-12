@@ -45,8 +45,7 @@ func (c *Client) UseTokenSource(source *TokenSource) {
 	c.tokenSource = source
 }
 
-// RedactResponses keeps response bodies and headers out of logs and errors, for clients
-// whose responses carry credentials.
+// RedactResponses keeps credential-bearing response bodies and headers out of logs and errors.
 func (c *Client) RedactResponses() {
 	c.redactResponses = true
 }
@@ -224,11 +223,9 @@ func (c *Client) RequestWithHeaders(ctx context.Context, method string, url stri
 			return fmt.Errorf("restclient: failed to read response: %w", err)
 		}
 
-		// Keep authentication response bodies and headers out of every error
-		// path as well as successful trace output.
 		errorBody := string(resBody)
 		if c.redactResponses {
-			errorBody = "[REDACTED]"
+			errorBody = redactedErrorBody(resBody)
 		}
 
 		switch {
@@ -291,4 +288,16 @@ func (c *Client) RequestWithHeaders(ctx context.Context, method string, url stri
 		}
 		return nil
 	}
+}
+
+// Only Frontegg's error messages are kept, never the raw body, which may hold a token.
+func redactedErrorBody(body []byte) string {
+	var fronteggError struct {
+		Errors    []string `json:"errors"`
+		ErrorCode string   `json:"errorCode"`
+	}
+	if json.Unmarshal(body, &fronteggError) != nil || len(fronteggError.Errors) == 0 {
+		return "[REDACTED]"
+	}
+	return strings.TrimSpace(strings.Join(fronteggError.Errors, "; ") + " " + fronteggError.ErrorCode)
 }

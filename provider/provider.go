@@ -110,8 +110,7 @@ func New(version string) func() *schema.Provider {
 				apiBaseURL := d.Get("api_base_url").(string)
 				apiClient := restclient.MakeRestClient(apiBaseURL, environmentId, applicationId)
 				portalClient := restclient.MakeRestClient(d.Get("portal_base_url").(string), environmentId, applicationId)
-				// Keep authentication independent of tokenSource: using it here would
-				// recursively wait for the very refresh this client is performing.
+				// Must not use tokenSource: it would wait on the refresh it is performing.
 				authClient := restclient.MakeRestClient(apiBaseURL, environmentId, applicationId)
 				authClient.RedactResponses()
 				in := struct {
