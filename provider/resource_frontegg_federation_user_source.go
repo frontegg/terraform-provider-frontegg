@@ -61,15 +61,17 @@ func resourceFronteggFederationUserSource() *schema.Resource {
 	}
 
 	baseSchema["wellknown_url"] = &schema.Schema{
-		Description: "The well-known URL of the OIDC provider. Required if oauth2_config is not provided.",
-		Type:        schema.TypeString,
-		Optional:    true,
+		Description:  "The well-known URL of the OIDC provider. Required if oauth2_config is not provided.",
+		Type:         schema.TypeString,
+		Optional:     true,
+		AtLeastOneOf: []string{"wellknown_url", "oauth2_config"},
 	}
 	baseSchema["oauth2_config"] = &schema.Schema{
-		Description: "OAuth2 configuration. Required if wellknown_url is not provided.",
-		Type:        schema.TypeList,
-		Optional:    true,
-		MaxItems:    1,
+		Description:  "OAuth2 configuration. Required if wellknown_url is not provided.",
+		Type:         schema.TypeList,
+		Optional:     true,
+		MaxItems:     1,
+		AtLeastOneOf: []string{"wellknown_url", "oauth2_config"},
 		Elem: &schema.Resource{
 			Schema: map[string]*schema.Schema{
 				"authorization_url": {
@@ -123,8 +125,23 @@ func resourceFronteggFederationUserSource() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},
-		Schema: baseSchema,
+		CustomizeDiff: resourceFronteggFederationUserSourceCustomizeDiff,
+		Schema:        baseSchema,
 	}
+}
+
+func resourceFronteggFederationUserSourceCustomizeDiff(_ context.Context, d *schema.ResourceDiff, _ interface{}) error {
+	return validateFronteggFederationUserSourceFields(d)
+}
+
+func validateFronteggFederationUserSourceFields(d fronteggFieldGetter) error {
+	if valueUnknown(d, "use_pkce") || d.Get("use_pkce").(bool) {
+		return nil
+	}
+	if secretValueMissing(d, "secret") {
+		return fmt.Errorf("secret or secret_wo is required when use_pkce is false")
+	}
+	return nil
 }
 
 func extractFederationStringList(m map[string]interface{}, key string) []string {
