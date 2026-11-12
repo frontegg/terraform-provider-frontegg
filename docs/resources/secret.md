@@ -17,7 +17,7 @@ Configures a Frontegg secret.
 
 ### Required
 
-- `key` (String) The key of the secret.
+- `key` (String) The key of the secret, at most 20 characters. Changing it replaces the secret.
 
 ### Optional
 
