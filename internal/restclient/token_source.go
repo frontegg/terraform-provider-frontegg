@@ -8,6 +8,8 @@ import (
 	"time"
 )
 
+const vendorLoginPath = "/auth/vendor"
+
 const tokenRefreshTimeout = 30 * time.Second
 
 const tokenRefreshRetryDelay = 5 * time.Second
@@ -22,8 +24,40 @@ type TokenSource struct {
 	refreshing chan struct{}
 }
 
-func NewTokenSource(refresh func(context.Context) (string, time.Duration, error)) *TokenSource {
+func NewVendorTokenSource(baseURL, environmentId, applicationId, clientID, secretKey string) *TokenSource {
+	login := MakeRestClient(baseURL, environmentId, applicationId)
+	login.redactResponses = true
+	credentials := vendorCredentials{ClientID: clientID, SecretKey: secretKey}
+	return newTokenSource(func(ctx context.Context) (string, time.Duration, error) {
+		return vendorLogin(ctx, &login, credentials)
+	})
+}
+
+func newTokenSource(refresh func(context.Context) (string, time.Duration, error)) *TokenSource {
 	return &TokenSource{refresh: refresh}
+}
+
+type vendorCredentials struct {
+	ClientID  string `json:"clientId"`
+	SecretKey string `json:"secret"`
+}
+
+func vendorLogin(ctx context.Context, login *Client, credentials vendorCredentials) (string, time.Duration, error) {
+	var out struct {
+		AccessToken string   `json:"token"`
+		ExpiresIn   *float64 `json:"expiresIn"`
+	}
+	if err := login.Post(ctx, vendorLoginPath, credentials, &out); err != nil {
+		return "", 0, err
+	}
+	if out.ExpiresIn == nil || *out.ExpiresIn == 0 {
+		log.Printf("[WARN] Frontegg authentication response has no positive expiresIn; management tokens will refresh only after a 401")
+		return out.AccessToken, 0, nil
+	}
+	if *out.ExpiresIn < 0 {
+		return "", 0, fmt.Errorf("management token authentication returned a negative token lifetime")
+	}
+	return out.AccessToken, time.Duration(*out.ExpiresIn * float64(time.Second)), nil
 }
 
 func (s *TokenSource) Token(ctx context.Context) (string, error) {

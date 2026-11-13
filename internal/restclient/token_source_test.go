@@ -2,7 +2,9 @@ package restclient
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -14,7 +16,7 @@ func TestRefreshFailureFallsBackOnlyToValidToken(t *testing.T) {
 		t.Run(state, func(t *testing.T) {
 			refreshErr := errors.New("authentication temporarily unavailable")
 			calls := 0
-			source := NewTokenSource(func(context.Context) (string, time.Duration, error) {
+			source := newTokenSource(func(context.Context) (string, time.Duration, error) {
 				calls++
 				if calls == 1 {
 					return "cached", time.Minute, nil
@@ -47,7 +49,7 @@ func TestRefreshFailureFallsBackOnlyToValidToken(t *testing.T) {
 
 func TestRefreshHasDeadline(t *testing.T) {
 	started := time.Now()
-	source := NewTokenSource(func(ctx context.Context) (string, time.Duration, error) {
+	source := newTokenSource(func(ctx context.Context) (string, time.Duration, error) {
 		deadline, ok := ctx.Deadline()
 		if !ok || deadline.After(started.Add(31*time.Second)) {
 			t.Errorf("refresh deadline = %v, present = %v; want at most 30s", deadline, ok)
@@ -66,7 +68,7 @@ func TestRateLimitedAuthenticationHonorsDeadline(t *testing.T) {
 	}))
 	defer srv.Close()
 	authClient := MakeRestClient(srv.URL, "", "")
-	source := NewTokenSource(func(ctx context.Context) (string, time.Duration, error) {
+	source := newTokenSource(func(ctx context.Context) (string, time.Duration, error) {
 		return "", 0, authClient.Post(ctx, "/auth/vendor", nil, nil)
 	})
 	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
@@ -78,7 +80,7 @@ func TestRateLimitedAuthenticationHonorsDeadline(t *testing.T) {
 
 func TestWaitingForRefreshCanBeCanceled(t *testing.T) {
 	started, release := make(chan struct{}), make(chan struct{})
-	source := NewTokenSource(func(ctx context.Context) (string, time.Duration, error) {
+	source := newTokenSource(func(ctx context.Context) (string, time.Duration, error) {
 		close(started)
 		select {
 		case <-release:
@@ -108,7 +110,7 @@ func TestWaitingForRefreshCanBeCanceled(t *testing.T) {
 
 func TestRefreshFailureSharesCachedTokenUntilRetry(t *testing.T) {
 	calls := 0
-	source := NewTokenSource(func(context.Context) (string, time.Duration, error) {
+	source := newTokenSource(func(context.Context) (string, time.Duration, error) {
 		calls++
 		if calls == 1 {
 			return "cached", time.Minute, nil
@@ -131,5 +133,30 @@ func TestRefreshFailureSharesCachedTokenUntilRetry(t *testing.T) {
 	source.refreshAt = source.expiresAt
 	if token, err := source.Token(context.Background()); token != "" || err == nil {
 		t.Fatalf("Token() after expiry = %q, %v; want refresh error", token, err)
+	}
+}
+
+func TestVendorTokenSourceLogsInWithItsCredentials(t *testing.T) {
+	var logins int
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var body map[string]string
+		_ = json.NewDecoder(r.Body).Decode(&body)
+		if r.Method != http.MethodPost || r.URL.Path != "/auth/vendor" || body["clientId"] != "client" || body["secret"] != "secret" {
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+		logins++
+		_, _ = fmt.Fprintf(w, `{"token":"vendor-token-%d","expiresIn":300}`, logins)
+	}))
+	defer srv.Close()
+	source := NewVendorTokenSource(srv.URL, "", "", "client", "secret")
+	for range 2 {
+		token, err := source.Token(context.Background())
+		if err != nil || token != "vendor-token-1" {
+			t.Fatalf("Token() = %q, %v; want vendor-token-1", token, err)
+		}
+	}
+	if logins != 1 {
+		t.Fatalf("logins = %d, want 1 while the token is valid", logins)
 	}
 }

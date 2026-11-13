@@ -38,7 +38,7 @@ func TestAuthenticationResponseRedaction(t *testing.T) {
 			}))
 			defer srv.Close()
 			client := MakeRestClient(srv.URL, "", "")
-			client.RedactResponses()
+			client.redactResponses = true
 			client.rl.maxAttempts = 1
 			client.rl.defaultWait = time.Millisecond
 			var out struct {
@@ -105,9 +105,7 @@ func TestAuthenticationErrorKeepsOnlyFronteggMessage(t *testing.T) {
 		_, _ = fmt.Fprint(w, `{"errors":["Invalid client id or secret"],"errorCode":"ER-01001","token":"sensitive-response"}`)
 	}))
 	defer srv.Close()
-	client := MakeRestClient(srv.URL, "", "")
-	client.RedactResponses()
-	err := client.Post(context.Background(), "/auth/vendor", nil, nil)
+	_, err := NewVendorTokenSource(srv.URL, "", "", "client", "secret").Token(context.Background())
 	if err == nil {
 		t.Fatal("expected an error")
 	}

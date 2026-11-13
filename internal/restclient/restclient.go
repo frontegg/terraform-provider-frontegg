@@ -45,11 +45,6 @@ func (c *Client) UseTokenSource(source *TokenSource) {
 	c.tokenSource = source
 }
 
-// RedactResponses keeps credential-bearing response bodies and headers out of logs and errors.
-func (c *Client) RedactResponses() {
-	c.redactResponses = true
-}
-
 func (c *Client) ConflictRetryMethod(method string) {
 	c.conflictRetryMethod = method
 }

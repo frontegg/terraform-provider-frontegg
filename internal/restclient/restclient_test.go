@@ -25,7 +25,7 @@ func newTestClient(baseURL string) Client {
 
 func TestSharedTokenSourceRefreshesBeforeExpiry(t *testing.T) {
 	var issued int
-	source := NewTokenSource(func(context.Context) (string, time.Duration, error) {
+	source := newTokenSource(func(context.Context) (string, time.Duration, error) {
 		issued++
 		return fmt.Sprintf("token-%d", issued), 5 * time.Minute, nil
 	})
@@ -75,7 +75,7 @@ func TestSharedTokenSourceRefreshesBeforeExpiry(t *testing.T) {
 
 func TestUnauthorizedRefreshesAndReplaysBodyOnce(t *testing.T) {
 	var issued, calls int
-	source := NewTokenSource(func(context.Context) (string, time.Duration, error) {
+	source := newTokenSource(func(context.Context) (string, time.Duration, error) {
 		issued++
 		return fmt.Sprintf("token-%d", issued), 0, nil
 	})
@@ -111,7 +111,7 @@ func TestUnauthorizedRefreshesAndReplaysBodyOnce(t *testing.T) {
 
 func TestUnauthorizedRetryIsBounded(t *testing.T) {
 	var issued, calls int
-	source := NewTokenSource(func(context.Context) (string, time.Duration, error) {
+	source := newTokenSource(func(context.Context) (string, time.Duration, error) {
 		issued++
 		return fmt.Sprintf("token-%d", issued), 0, nil
 	})
@@ -134,7 +134,7 @@ func TestUnauthorizedRetryIsBounded(t *testing.T) {
 
 func TestConcurrentRequestsShareRefresh(t *testing.T) {
 	var issued atomic.Int32
-	source := NewTokenSource(func(context.Context) (string, time.Duration, error) {
+	source := newTokenSource(func(context.Context) (string, time.Duration, error) {
 		issued.Add(1)
 		return "shared-token", time.Hour, nil
 	})
