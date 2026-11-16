@@ -4,12 +4,13 @@ import (
 	"os"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-go/tfprotov5"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
-var testAccProviderFactories = map[string]func() (*schema.Provider, error){
-	"frontegg": func() (*schema.Provider, error) {
-		return New("test")(), nil
+var testAccProviderFactories = map[string]func() (tfprotov5.ProviderServer, error){
+	"frontegg": func() (tfprotov5.ProviderServer, error) {
+		return schema.NewGRPCProviderServer(New("test")()), nil
 	},
 }
 

@@ -14,10 +14,10 @@ import (
 
 	"github.com/frontegg/terraform-provider-frontegg/internal/restclient"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 )
 
 func permissionResourceData(t *testing.T, raw map[string]interface{}) *schema.ResourceData {
@@ -250,7 +250,7 @@ func TestPermissionUpdateSendsAssignmentTypeOnlyWhenChanged(t *testing.T) {
 	t.Setenv("FRONTEGG_SECRET_KEY", "unit-test")
 
 	resource.UnitTest(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
+		ProtoV5ProviderFactories: testAccProviderFactories,
 		Steps: []resource.TestStep{
 			{Config: permissionUnitConfig("first", "")},
 			{
@@ -305,9 +305,9 @@ data "frontegg_permission" "p" {
 func TestAccFronteggPermission_assignmentType(t *testing.T) {
 	suffix := acctest.RandString(8)
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckPermissionDestroy,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProviderFactories,
+		CheckDestroy:             testAccCheckPermissionDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccPermissionConfig(suffix, "NEVER"),
@@ -337,9 +337,9 @@ func TestAccFronteggPermission_assignmentType(t *testing.T) {
 func TestAccFronteggPermission_defaultsToAssignable(t *testing.T) {
 	suffix := acctest.RandString(8)
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckPermissionDestroy,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProviderFactories,
+		CheckDestroy:             testAccCheckPermissionDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: fmt.Sprintf(`

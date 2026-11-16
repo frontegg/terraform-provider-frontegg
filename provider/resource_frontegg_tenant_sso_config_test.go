@@ -9,8 +9,8 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 )
 
 type fakeSSOBackend struct {
@@ -252,7 +252,7 @@ func TestTenantSSOConfigUpdateKeepsGroupMappings(t *testing.T) {
 	b := newFakeSSOBackend(t)
 
 	resource.UnitTest(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
+		ProtoV5ProviderFactories: testAccProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: tenantSSOConfigWithChildren("https://idp-a.example.com", false),
@@ -284,7 +284,7 @@ func TestTenantSSOChildrenAdoptRecreatedIDs(t *testing.T) {
 	b := newFakeSSOBackend(t)
 
 	resource.UnitTest(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
+		ProtoV5ProviderFactories: testAccProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: tenantSSOConfigWithChildren("https://idp-a.example.com", false),
@@ -312,7 +312,7 @@ func TestTenantSSOConfigUpdateKeepsDefaultRoles(t *testing.T) {
 	}
 
 	resource.UnitTest(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
+		ProtoV5ProviderFactories: testAccProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: tenantSSOConfigWithChildren("https://idp-a.example.com", false),
@@ -352,7 +352,7 @@ func TestTenantSSOGroupMappingChangesInSameApplyAsConfigUpdate(t *testing.T) {
 	b := newFakeSSOBackend(t)
 
 	resource.UnitTest(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
+		ProtoV5ProviderFactories: testAccProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: tenantSSOConfigWithMapping("https://idp-a.example.com", false, "role-1"),
