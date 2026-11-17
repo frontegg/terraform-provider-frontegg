@@ -65,6 +65,8 @@ Both authenticate via `/auth/vendor` using the same credentials.
 
 **Write-only secrets**: Practitioner-supplied secrets get a `<name>_wo` + `<name>_wo_version` pair via `addWriteOnlySecret` in `write_only_secret.go`. Serialize with `secretValue(d, name)` and refresh with `setSecretUnlessWriteOnly(d, name, value)`, which only refreshes a secret already in state, so a write-only or imported secret never lands in state. Write-only tests need Terraform >= 1.11 and skip below it.
 
+**Logging**: log with `tflog` and the operation's `ctx`, never `log.Printf`, and pass values as fields rather than formatting them into the message. Requests through `restclient` mask fields named like credentials (`token`, `secret`, `password`, …) and any bearer token in a message or string field (`internal/restclient/log_masking.go`). Masking can't see inside maps or structs, so don't log raw API payloads.
+
 **Compound import IDs**: Some resources use colon-delimited IDs for import. Example: `tenant_sso_domain` uses `tenant_id:sso_config_id:domain_id`. Document import format in resource `Importer` block.
 
 ### Available Resources

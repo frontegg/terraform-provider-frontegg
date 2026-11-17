@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -13,6 +12,8 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/hashicorp/terraform-plugin-log/tflogtest"
 )
 
 // newTestClient points a Client at a test server's URL and gives it an
@@ -704,26 +705,18 @@ func TestIsNotFoundSurvivesTrimmedFormat(t *testing.T) {
 	}
 }
 
-func captureLog(t *testing.T) *bytes.Buffer {
-	t.Helper()
-	var buf bytes.Buffer
-	previousOutput := log.Writer()
-	log.SetOutput(&buf)
-	t.Cleanup(func() { log.SetOutput(previousOutput) })
-	return &buf
-}
-
 func TestTraceLogOmitsTokenAndResponseBody(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_, _ = io.WriteString(w, `{"token":"vendor-token-from-response"}`)
 	}))
 	defer srv.Close()
-	logs := captureLog(t)
+	var logs bytes.Buffer
+	ctx := tflogtest.RootLogger(context.Background(), &logs)
 	c := MakeRestClient(srv.URL, "", "")
 	c.Authenticate("bearer-token-from-request")
 
 	var out map[string]string
-	if err := c.Post(context.Background(), "/auth/vendor", map[string]string{"clientId": "id"}, &out); err != nil {
+	if err := c.Post(ctx, "/auth/vendor", map[string]string{"clientId": "id"}, &out); err != nil {
 		t.Fatalf("post: %v", err)
 	}
 
@@ -733,7 +726,7 @@ func TestTraceLogOmitsTokenAndResponseBody(t *testing.T) {
 			t.Errorf("log contains %q:\n%s", secret, logged)
 		}
 	}
-	for _, want := range []string{"Sending request POST " + srv.URL + "/auth/vendor", "Received response 200 OK"} {
+	for _, want := range []string{`"@message":"sending request"`, `"@message":"received response"`, `"http_url":"` + srv.URL + `/auth/vendor"`, `"http_status":"200 OK"`} {
 		if !strings.Contains(logged, want) {
 			t.Errorf("log is missing %q:\n%s", want, logged)
 		}

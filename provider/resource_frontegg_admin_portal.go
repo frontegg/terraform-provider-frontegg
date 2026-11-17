@@ -4,10 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"reflect"
 
 	"github.com/frontegg/terraform-provider-frontegg/internal/restclient"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
@@ -364,7 +364,6 @@ func resourceFronteggAdminPortalRead(ctx context.Context, d *schema.ResourceData
 	if err := clientHolder.ApiClient.Get(ctx, fronteggAdminPortalURL, &metadataResponse); err != nil {
 		return diag.FromErr(err)
 	}
-	log.Printf("[DEBUG] metadataResponse: %v", metadataResponse)
 
 	// Convert the response to our known structure
 	jsonData, err := json.Marshal(metadataResponse)
@@ -379,10 +378,9 @@ func resourceFronteggAdminPortalRead(ctx context.Context, d *schema.ResourceData
 	if err != nil {
 		return diag.FromErr(err)
 	}
-	log.Printf("[DEBUG] out: %v", out)
 
 	if len(out.Rows) == 0 {
-		log.Printf("[DEBUG] no admin portal configuration found")
+		tflog.Debug(ctx, "no admin portal configuration found")
 		d.SetId("")
 		return nil
 	}
@@ -628,7 +626,7 @@ func resourceFronteggAdminPortalUpdate(ctx context.Context, d *schema.ResourceDa
 
 	switch len(out.Rows) {
 	case 0:
-		log.Printf("[DEBUG] no admin portal found, creating one with default config.")
+		tflog.Debug(ctx, "no admin portal found, creating one with the default configuration")
 		configuration = &adminPortal.Configuration
 	case 1:
 		adminPortal = out.Rows[0]
@@ -710,8 +708,7 @@ func resourceFronteggAdminPortalUpdate(ctx context.Context, d *schema.ResourceDa
 }
 
 func resourceFronteggAdminPortalDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	log.Printf("[WARN] Cannot destroy admin portal configuration. Terraform will remove this resource from the " +
-		"state file, but the admin portal configuration will remain in its last-applied state.")
+	tflog.Warn(ctx, "Cannot destroy admin portal configuration. Terraform will remove this resource from the state file, but the admin portal configuration will remain in its last-applied state.")
 	return nil
 }
 
