@@ -7,6 +7,7 @@ import (
 	"github.com/frontegg/terraform-provider-frontegg/internal/restclient"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 )
 
 const fronteggSecretPath = "/custom-code/resources/secrets/v1"
@@ -31,9 +32,11 @@ func resourceFronteggSecret() *schema.Resource {
 
 		Schema: map[string]*schema.Schema{
 			"key": {
-				Description: "The key of the secret.",
-				Type:        schema.TypeString,
-				Required:    true,
+				Description:  "The key of the secret, at most 20 characters. Changing it replaces the secret.",
+				Type:         schema.TypeString,
+				Required:     true,
+				ForceNew:     true,
+				ValidateFunc: validation.StringLenBetween(1, 20),
 			},
 			"value": {
 				Description: "The value of the secret.",

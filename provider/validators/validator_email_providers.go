@@ -30,30 +30,19 @@ func ValidateProvider(val interface{}, key string) (warns []string, errs []error
 
 func ValidateRequiredFields(ctx context.Context, rd *schema.ResourceDiff, i interface{}) error {
 
+	if !rd.NewValueKnown("provider_name") {
+		return nil
+	}
 	provider := rd.Get("provider_name").(string)
 
-	requiredFieldError := func(field, provider string) error {
-		return fmt.Errorf("%s is required when provider is '%s'", field, provider)
+	requiredFields := map[string][]string{
+		SES:     {"region", "provider_id"},
+		Mailgun: {"domain", "region"},
 	}
-
-	if provider == SES {
-		if region, ok := rd.GetOk("region"); !ok || region.(string) == "" {
-			return requiredFieldError("region", SES)
-		}
-
-		if id, ok := rd.GetOk("provider_id"); !ok || id.(string) == "" {
-			return requiredFieldError("provider_id", SES)
+	for _, field := range requiredFields[provider] {
+		if rd.NewValueKnown(field) && rd.Get(field).(string) == "" {
+			return fmt.Errorf("%s is required when provider is '%s'", field, provider)
 		}
 	}
-
-	if provider == Mailgun {
-		if domain, ok := rd.GetOk("domain"); !ok || domain.(string) == "" {
-			return requiredFieldError("domain", Mailgun)
-		}
-		if region, ok := rd.GetOk("region"); !ok || region.(string) == "" {
-			return requiredFieldError("region", Mailgun)
-		}
-	}
-
 	return nil
 }

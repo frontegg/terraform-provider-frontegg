@@ -15,9 +15,19 @@ The provider works with only one workspace at a time. To provision multiple
 workspaces, you will need to configure multiple copies of the provider.
 
 Note that the client ID and secret key are *not* the client ID and secret key
-that appear in "Workspace Settings". You need to generate a workspace API key
-and secret specifically for the Terraform provider's use in the administration
-portal:
+that appear in "Workspace Settings". Generate a personal API token for the Terraform provider in the administration
+portal.
+
+The `client_id` and `secret_key` identify the personal API token created in the
+administration portal. The provider exchanges those credentials at
+`/auth/vendor` for a short-lived **management token** used by both API clients.
+The endpoint name does not refer to a different credential you need to supply.
+
+The provider refreshes the management token before its reported `expiresIn`
+lifetime ends. If the response omits that lifetime or reports zero, the provider
+logs a warning and refreshes on a 401 instead. A request rejected with a 401 is
+retried once with a refreshed token. Authentication and waiting for a shared
+refresh are limited to 30 seconds (or the caller's earlier deadline).
 
 ![API key generation example](https://user-images.githubusercontent.com/882976/132739276-bc72aa75-8c30-452c-b929-85a8d7ffa4d0.png)
 
