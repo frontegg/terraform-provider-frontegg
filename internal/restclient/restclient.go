@@ -6,10 +6,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
 type Client struct {
@@ -145,6 +146,7 @@ func (c *Client) buildRequest(ctx context.Context, method string, url string, he
 }
 
 func (c *Client) RequestWithHeaders(ctx context.Context, method string, url string, headers http.Header, in interface{}, out interface{}) error {
+	ctx = withSecretMasking(ctx)
 	// Capture the single-use flags once. They must be reused on every retry
 	// iteration below: the 429 retry is a loop (not recursion), so re-reading
 	// the struct fields would see them already zeroed and drop 409/404 behavior.
@@ -207,7 +209,11 @@ func (c *Client) RequestWithHeaders(ctx context.Context, method string, url stri
 				requestHeaders.Set(name, "[REDACTED]")
 			}
 		}
-		log.Printf("[TRACE] Sending request %s %s headers: %v", req.Method, req.URL, requestHeaders)
+		tflog.Trace(ctx, "sending request", map[string]interface{}{
+			"http_method":     req.Method,
+			"http_url":        req.URL.String(),
+			"request_headers": fmt.Sprint(requestHeaders),
+		})
 		res, err := c.client.Do(req)
 		if err != nil {
 			return fmt.Errorf("restclient: failed sending request: %w", err)
@@ -242,17 +248,19 @@ func (c *Client) RequestWithHeaders(ctx context.Context, method string, url stri
 			// a long one) is always honored; the ceiling bounds repeated cycles.
 			if c.rl.exceeded(attempts, totalWait) {
 				if !c.redactResponses {
-					log.Printf("[TRACE] Response headers for failed request: %v", res.Header)
+					logFailedResponseHeaders(ctx, res.Header)
 				}
 				return fmt.Errorf(
 					"restclient: rate limited and gave up after %d attempts (%s total): %s %s: %s%s: %s",
 					attempts, totalWait, req.Method, req.URL, res.Status, traceSuffix(res.Header), errorBody,
 				)
 			}
-			log.Printf(
-				"[WARN] rate limited on %s; waiting %s (source: %s) before retry %d",
-				routeKey, wait, source, attempts,
-			)
+			tflog.Warn(ctx, "rate limited; waiting before retry", map[string]interface{}{
+				"route":       routeKey,
+				"wait":        wait.String(),
+				"wait_source": source,
+				"attempt":     attempts,
+			})
 			if err := waitContext(ctx, wait); err != nil {
 				return err
 			}
@@ -260,7 +268,7 @@ func (c *Client) RequestWithHeaders(ctx context.Context, method string, url stri
 			continue
 		case res.StatusCode < 200 || res.StatusCode >= 300:
 			if !c.redactResponses {
-				log.Printf("[TRACE] Response headers for failed request: %v", res.Header)
+				logFailedResponseHeaders(ctx, res.Header)
 			}
 			status := res.Status
 			if res.StatusCode == http.StatusUnauthorized && authRetry {
@@ -272,7 +280,12 @@ func (c *Client) RequestWithHeaders(ctx context.Context, method string, url stri
 			)
 		}
 
-		log.Printf("[TRACE] Received response %s for %s %s (%d bytes)", res.Status, req.Method, req.URL, len(resBody))
+		tflog.Trace(ctx, "received response", map[string]interface{}{
+			"http_method":    req.Method,
+			"http_url":       req.URL.String(),
+			"http_status":    res.Status,
+			"response_bytes": len(resBody),
+		})
 		if out != nil {
 			if err := json.Unmarshal(resBody, out); err != nil {
 				if c.redactResponses {

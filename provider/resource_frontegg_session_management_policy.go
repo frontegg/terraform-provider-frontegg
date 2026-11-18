@@ -2,9 +2,9 @@ package provider
 
 import (
 	"context"
-	"log"
 
 	"github.com/frontegg/terraform-provider-frontegg/internal/restclient"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
@@ -173,7 +173,6 @@ func resourceFronteggSessionManagementPolicyUpdate(ctx context.Context, d *schem
 }
 
 func resourceFronteggSessionManagementPolicyDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	log.Printf("[WARN] Cannot destroy session management policy. Terraform will remove this resource from the " +
-		"state file, but the session management policy will remain in its last-applied state.")
+	tflog.Warn(ctx, "Cannot destroy session management policy. Terraform will remove this resource from the state file, but the session management policy will remain in its last-applied state.")
 	return nil
 }
