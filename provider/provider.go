@@ -106,24 +106,15 @@ func New(version string) func() *schema.Provider {
 				applicationId := d.Get("application_id").(string)
 				apiClient := restclient.MakeRestClient(d.Get("api_base_url").(string), environmentId, applicationId)
 				portalClient := restclient.MakeRestClient(d.Get("portal_base_url").(string), environmentId, applicationId)
-				{
-					in := struct {
-						ClientId  string `json:"clientId"`
-						SecretKey string `json:"secret"`
-					}{
-						ClientId:  d.Get("client_id").(string),
-						SecretKey: d.Get("secret_key").(string),
-					}
-					var out struct {
-						AccessToken string `json:"token"`
-					}
-					err := apiClient.Post(ctx, "/auth/vendor", in, &out)
-					if err != nil {
-						return nil, diag.Errorf("unable to authenticate with frontegg: %s", err)
-					}
-					portalClient.Authenticate(out.AccessToken)
-					apiClient.Authenticate(out.AccessToken)
+				tokenSource := restclient.NewVendorTokenSource(
+					d.Get("api_base_url").(string), environmentId, applicationId,
+					d.Get("client_id").(string), d.Get("secret_key").(string),
+				)
+				if _, err := tokenSource.Token(ctx); err != nil {
+					return nil, diag.Errorf("unable to authenticate with frontegg: %s", err)
 				}
+				apiClient.UseTokenSource(tokenSource)
+				portalClient.UseTokenSource(tokenSource)
 				return &restclient.ClientHolder{
 					ApiClient:    apiClient,
 					PortalClient: portalClient,

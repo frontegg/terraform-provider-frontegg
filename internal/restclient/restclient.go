@@ -15,12 +15,14 @@ import (
 
 type Client struct {
 	token               string
+	tokenSource         *TokenSource
 	client              http.Client
 	baseURL             string
 	conflictRetryMethod string
 	ignore404           bool
 	environmentId       string
 	applicationId       string
+	redactResponses     bool
 	rl                  *rateLimiter
 }
 
@@ -36,6 +38,12 @@ func MakeRestClient(baseURL string, environmentId string, applicationId string) 
 
 func (c *Client) Authenticate(token string) {
 	c.token = token
+	c.tokenSource = nil
+}
+
+func (c *Client) UseTokenSource(source *TokenSource) {
+	c.token = ""
+	c.tokenSource = source
 }
 
 func (c *Client) ConflictRetryMethod(method string) {
@@ -118,8 +126,15 @@ func (c *Client) buildRequest(ctx context.Context, method string, url string, he
 		}
 	}
 	req.Header.Set("Content-Type", "application/json")
-	if c.token != "" {
-		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", c.token))
+	token := c.token
+	if c.tokenSource != nil {
+		token, err = c.tokenSource.Token(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("restclient: failed to authenticate: %w", err)
+		}
+	}
+	if token != "" {
+		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
 	}
 	if c.environmentId != "" {
 		req.Header.Set("frontegg-environment-id", c.environmentId)
@@ -154,6 +169,7 @@ func (c *Client) RequestWithHeaders(ctx context.Context, method string, url stri
 	var (
 		attempts  int
 		totalWait time.Duration
+		authRetry bool
 	)
 	for {
 		// Pre-send wait: if this route is known to be rate-limited, wait until
@@ -187,7 +203,17 @@ func (c *Client) RequestWithHeaders(ctx context.Context, method string, url stri
 			return err
 		}
 
-		tflog.Trace(ctx, "sending request", map[string]interface{}{"http_method": req.Method, "http_url": req.URL.String()})
+		requestHeaders := req.Header.Clone()
+		for _, name := range []string{"Authorization", "Proxy-Authorization", "Cookie"} {
+			if _, exists := requestHeaders[http.CanonicalHeaderKey(name)]; exists {
+				requestHeaders.Set(name, "[REDACTED]")
+			}
+		}
+		tflog.Trace(ctx, "sending request", map[string]interface{}{
+			"http_method":     req.Method,
+			"http_url":        req.URL.String(),
+			"request_headers": fmt.Sprint(requestHeaders),
+		})
 		res, err := c.client.Do(req)
 		if err != nil {
 			return fmt.Errorf("restclient: failed sending request: %w", err)
@@ -198,9 +224,18 @@ func (c *Client) RequestWithHeaders(ctx context.Context, method string, url stri
 			return fmt.Errorf("restclient: failed to read response: %w", err)
 		}
 
+		errorBody := string(resBody)
+		if c.redactResponses {
+			errorBody = redactedErrorBody(resBody)
+		}
+
 		switch {
 		case res.StatusCode == 404 && ignore404:
 			return nil
+		case res.StatusCode == http.StatusUnauthorized && c.tokenSource != nil && !authRetry:
+			c.tokenSource.Invalidate(strings.TrimPrefix(req.Header.Get("Authorization"), "Bearer "))
+			authRetry = true
+			continue
 		case res.StatusCode == 409 && conflictRetryMethod != "":
 			// Preserve existing behavior exactly: recurse with the swapped method.
 			return c.RequestWithHeaders(ctx, conflictRetryMethod, url, headers, in, out)
@@ -212,10 +247,12 @@ func (c *Client) RequestWithHeaders(ctx context.Context, method string, url stri
 			// because this single wait would cross it. A lone reset window (even
 			// a long one) is always honored; the ceiling bounds repeated cycles.
 			if c.rl.exceeded(attempts, totalWait) {
-				logFailedResponseHeaders(ctx, res.Header)
+				if !c.redactResponses {
+					logFailedResponseHeaders(ctx, res.Header)
+				}
 				return fmt.Errorf(
 					"restclient: rate limited and gave up after %d attempts (%s total): %s %s: %s%s: %s",
-					attempts, totalWait, req.Method, req.URL, res.Status, traceSuffix(res.Header), resBody,
+					attempts, totalWait, req.Method, req.URL, res.Status, traceSuffix(res.Header), errorBody,
 				)
 			}
 			tflog.Warn(ctx, "rate limited; waiting before retry", map[string]interface{}{
@@ -230,10 +267,16 @@ func (c *Client) RequestWithHeaders(ctx context.Context, method string, url stri
 			totalWait += wait
 			continue
 		case res.StatusCode < 200 || res.StatusCode >= 300:
-			logFailedResponseHeaders(ctx, res.Header)
+			if !c.redactResponses {
+				logFailedResponseHeaders(ctx, res.Header)
+			}
+			status := res.Status
+			if res.StatusCode == http.StatusUnauthorized && authRetry {
+				status += " (after refreshing the management token)"
+			}
 			return fmt.Errorf(
 				"restclient: request failed: %s %s: %s%s: %s",
-				req.Method, req.URL, res.Status, traceSuffix(res.Header), resBody,
+				req.Method, req.URL, status, traceSuffix(res.Header), errorBody,
 			)
 		}
 
@@ -245,9 +288,24 @@ func (c *Client) RequestWithHeaders(ctx context.Context, method string, url stri
 		})
 		if out != nil {
 			if err := json.Unmarshal(resBody, out); err != nil {
+				if c.redactResponses {
+					return fmt.Errorf("restclient: failed to decode response: %s %s (response redacted)", req.Method, req.URL)
+				}
 				return fmt.Errorf("restclient: failed to decode JSON response from %s %s: %w", req.Method, req.URL, err)
 			}
 		}
 		return nil
 	}
+}
+
+// Only Frontegg's error messages are kept, never the raw body, which may hold a token.
+func redactedErrorBody(body []byte) string {
+	var fronteggError struct {
+		Errors    []string `json:"errors"`
+		ErrorCode string   `json:"errorCode"`
+	}
+	if json.Unmarshal(body, &fronteggError) != nil || len(fronteggError.Errors) == 0 {
+		return "[REDACTED]"
+	}
+	return strings.TrimSpace(strings.Join(fronteggError.Errors, "; ") + " " + fronteggError.ErrorCode)
 }
