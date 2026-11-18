@@ -280,16 +280,11 @@ func resourceFronteggPlanRead(ctx context.Context, d *schema.ResourceData, meta 
 func resourceFronteggPlanUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	clientHolder := meta.(*restclient.ClientHolder)
 	in := resourceFronteggPlanSerialize(d)
-	var out fronteggPlan
-	if err := clientHolder.ApiClient.Patch(ctx, fmt.Sprintf("%s/%s", fronteggPlanPath, d.Id()), in, &out); err != nil {
+	if err := clientHolder.ApiClient.Patch(ctx, fmt.Sprintf("%s/%s", fronteggPlanPath, d.Id()), in, nil); err != nil {
 		return diag.FromErr(err)
 	}
 
-	if err := resourceFronteggPlanDeserialize(d, out); err != nil {
-		return diag.FromErr(err)
-	}
-
-	return nil
+	return resourceFronteggPlanRead(ctx, d, meta)
 }
 
 func resourceFronteggPlanDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {

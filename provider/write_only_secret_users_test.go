@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 )
 
 type userPasswordCase struct {
@@ -94,7 +94,7 @@ func TestUserWriteOnlyPasswordLifecycle(t *testing.T) {
 			}
 
 			resource.UnitTest(t, resource.TestCase{
-				ProviderFactories: testAccProviderFactories,
+				ProtoV5ProviderFactories: testAccProviderFactories,
 				Steps: []resource.TestStep{
 					{
 						Config: c.render(writeOnly(1)),
@@ -147,7 +147,7 @@ func TestUserPasswordMovesToWriteOnly(t *testing.T) {
 			writeOnly := "  password_wo         = \"${var.secret}-password\"\n  password_wo_version = 1\n"
 
 			resource.UnitTest(t, resource.TestCase{
-				ProviderFactories: testAccProviderFactories,
+				ProtoV5ProviderFactories: testAccProviderFactories,
 				Steps: []resource.TestStep{
 					{
 						Config: c.render("  password = \"plain-password\"\n"),
@@ -177,7 +177,7 @@ func TestUserPasswordWithoutCurrentIsRecordedNotSent(t *testing.T) {
 	c := userPasswordCases["frontegg_user"]
 
 	resource.UnitTest(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
+		ProtoV5ProviderFactories: testAccProviderFactories,
 		Steps: []resource.TestStep{
 			{Config: c.render("  password_wo         = \"${var.secret}-password\"\n  password_wo_version = 1\n")},
 			{
@@ -204,7 +204,7 @@ func TestUserReplacementRejectsPasswordVersionBump(t *testing.T) {
 	}
 
 	resource.UnitTest(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
+		ProtoV5ProviderFactories: testAccProviderFactories,
 		Steps: []resource.TestStep{
 			{Config: inTenant("tenant-1", "  password_wo         = \"first-password\"\n  password_wo_version = 1\n")},
 			{

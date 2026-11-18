@@ -9,9 +9,9 @@ import (
 	"regexp"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 )
 
 func prehookResourceData(t *testing.T, raw map[string]interface{}) *schema.ResourceData {
@@ -222,9 +222,9 @@ resource "frontegg_prehook" "cc" {
 
 func TestAccFronteggPrehook_customCodeLifecycle(t *testing.T) {
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckPrehookDestroy,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProviderFactories,
+		CheckDestroy:             testAccCheckPrehookDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccPrehookCustomCodeCreate,
@@ -277,9 +277,9 @@ resource "frontegg_prehook" "api" {
 
 func TestAccFronteggPrehook_apiLifecycle(t *testing.T) {
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckPrehookDestroy,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProviderFactories,
+		CheckDestroy:             testAccCheckPrehookDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccPrehookAPICreate,
@@ -323,9 +323,9 @@ resource "frontegg_prehook" "b" {
 
 func TestAccFronteggPrehook_duplicateEventRejected(t *testing.T) {
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckPrehookDestroy,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProviderFactories,
+		CheckDestroy:             testAccCheckPrehookDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config:      testAccPrehookDuplicateEvent,
@@ -360,8 +360,8 @@ resource "frontegg_prehook" "bad" {
 
 func TestAccFronteggPrehook_requiresURLOrCode(t *testing.T) {
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config:      testAccPrehookAPIMissingURL,

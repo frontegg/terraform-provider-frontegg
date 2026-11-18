@@ -9,8 +9,8 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 )
 
 type fakeDoc = map[string]interface{}
@@ -252,7 +252,7 @@ func testWriteOnlySecretLifecycle(t *testing.T, api *fakeAPI, c writeOnlySecretC
 	}
 
 	resource.UnitTest(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
+		ProtoV5ProviderFactories: testAccProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: c.render(c.arguments(plain, 0)),

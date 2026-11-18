@@ -5,15 +5,16 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	sdkterraform "github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 )
 
 func testAccCheckDestroyed(resourceType string) resource.TestCheckFunc {
 	return func(state *terraform.State) error {
 		ctx := context.Background()
 		provider := New("test")()
-		if diags := provider.Configure(ctx, terraform.NewResourceConfigRaw(nil)); diags.HasError() {
+		if diags := provider.Configure(ctx, sdkterraform.NewResourceConfigRaw(nil)); diags.HasError() {
 			return fmt.Errorf("configure provider: %v", diags)
 		}
 		resourceSchema := provider.ResourcesMap[resourceType]
@@ -21,7 +22,7 @@ func testAccCheckDestroyed(resourceType string) resource.TestCheckFunc {
 			if stateResource.Type != resourceType {
 				continue
 			}
-			data := resourceSchema.Data(stateResource.Primary)
+			data := resourceSchema.Data(&sdkterraform.InstanceState{ID: stateResource.Primary.ID, Attributes: stateResource.Primary.Attributes})
 			diags := resourceSchema.ReadContext(ctx, data, provider.Meta())
 			if diags.HasError() {
 				if strings.Contains(diags[0].Summary, ": 404 ") {

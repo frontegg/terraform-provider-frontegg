@@ -11,8 +11,8 @@ import (
 	"testing"
 
 	"github.com/hashicorp/go-version"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 )
 
 func TestWriteOnlySecretsArePaired(t *testing.T) {
@@ -108,7 +108,7 @@ func TestWebhookWriteOnlySecret(t *testing.T) {
 	host := fakeWebhookAPI(t)
 
 	resource.UnitTest(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
+		ProtoV5ProviderFactories: testAccProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: webhookSecretConfig(`  secret = "plain-secret"`),
@@ -157,7 +157,7 @@ func TestWebhookImportKeepsSecretOutOfState(t *testing.T) {
 	fakeWebhookAPI(t)
 
 	resource.UnitTest(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
+		ProtoV5ProviderFactories: testAccProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: webhookSecretConfig(`
@@ -187,7 +187,7 @@ func TestWebhookWriteOnlySecretValidation(t *testing.T) {
 	fakeWebhookAPI(t)
 
 	resource.UnitTest(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
+		ProtoV5ProviderFactories: testAccProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config:      webhookSecretConfig(`  secret_wo = var.webhook_secret`),

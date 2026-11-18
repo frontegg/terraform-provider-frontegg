@@ -14,10 +14,10 @@ import (
 	"testing"
 
 	"github.com/frontegg/terraform-provider-frontegg/internal/restclient"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 )
 
 type fakeWebhookHost struct {
@@ -176,9 +176,9 @@ resource "frontegg_webhook" "test" {
 func TestAccFronteggWebhook_lifecycle(t *testing.T) {
 	name := "tf-acc webhook " + acctest.RandString(8)
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheckPortalCredentials(t) },
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckWebhookDestroy,
+		PreCheck:                 func() { testAccPreCheckPortalCredentials(t) },
+		ProtoV5ProviderFactories: testAccProviderFactories,
+		CheckDestroy:             testAccCheckWebhookDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccWebhookConfig(name, "created", false, `"frontegg.user.created"`),
@@ -217,9 +217,9 @@ func TestAccFronteggWebhook_importPortalCreated(t *testing.T) {
 	var id string
 	config := testAccWebhookConfig(name, "created in the portal", false, `"frontegg.user.created"`)
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheckPortalCredentials(t) },
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckWebhookDestroy,
+		PreCheck:                 func() { testAccPreCheckPortalCredentials(t) },
+		ProtoV5ProviderFactories: testAccProviderFactories,
+		CheckDestroy:             testAccCheckWebhookDestroy,
 		Steps: []resource.TestStep{
 			{
 				PreConfig: func() {
