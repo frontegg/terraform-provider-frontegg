@@ -153,27 +153,24 @@ per event, regardless of type.`,
 	return resource
 }
 
-// fronteggFieldGetter is satisfied by both *schema.ResourceData and
-// *schema.ResourceDiff, letting the same validation run at plan and in tests.
-type fronteggFieldGetter interface {
-	Get(key string) interface{}
-}
-
 func resourceFronteggPrehookCustomizeDiff(ctx context.Context, d *schema.ResourceDiff, m interface{}) error {
 	return validateFronteggPrehookFields(d)
 }
 
 func validateFronteggPrehookFields(d fronteggFieldGetter) error {
+	if valueUnknown(d, "type") {
+		return nil
+	}
 	switch d.Get("type").(string) {
 	case fronteggPrehookTypeCustomCode:
-		if d.Get("code").(string) == "" {
+		if stringValueMissing(d, "code") {
 			return fmt.Errorf("code is required when type is %s", fronteggPrehookTypeCustomCode)
 		}
 	default:
-		if d.Get("url").(string) == "" {
+		if stringValueMissing(d, "url") {
 			return fmt.Errorf("url is required when type is %s", fronteggPrehookTypeAPI)
 		}
-		if d.Get("secret").(string) == "" && !usesWriteOnlySecret(d, "secret") {
+		if secretValueMissing(d, "secret") {
 			return fmt.Errorf("secret is required when type is %s", fronteggPrehookTypeAPI)
 		}
 	}

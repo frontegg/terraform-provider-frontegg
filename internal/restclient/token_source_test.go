@@ -1,0 +1,162 @@
+package restclient
+
+import (
+	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"net/http"
+	"net/http/httptest"
+	"testing"
+	"time"
+)
+
+func TestRefreshFailureFallsBackOnlyToValidToken(t *testing.T) {
+	for _, state := range []string{"valid", "expired", "invalidated", "unknown lifetime"} {
+		t.Run(state, func(t *testing.T) {
+			refreshErr := errors.New("authentication temporarily unavailable")
+			calls := 0
+			source := newTokenSource(func(context.Context) (string, time.Duration, error) {
+				calls++
+				if calls == 1 {
+					return "cached", time.Minute, nil
+				}
+				return "", 0, refreshErr
+			})
+			if _, err := source.Token(context.Background()); err != nil {
+				t.Fatal(err)
+			}
+			source.refreshAt = time.Now().Add(-time.Second)
+			switch state {
+			case "expired":
+				source.expiresAt = time.Now().Add(-time.Second)
+			case "invalidated":
+				source.Invalidate("cached")
+			case "unknown lifetime":
+				source.expiresAt = time.Time{}
+			}
+			token, err := source.Token(context.Background())
+			if state == "valid" {
+				if token != "cached" || err != nil {
+					t.Fatalf("Token() = %q, %v; want cached token", token, err)
+				}
+			} else if token != "" || !errors.Is(err, refreshErr) {
+				t.Fatalf("Token() = %q, %v; want refresh error", token, err)
+			}
+		})
+	}
+}
+
+func TestRefreshHasDeadline(t *testing.T) {
+	started := time.Now()
+	source := newTokenSource(func(ctx context.Context) (string, time.Duration, error) {
+		deadline, ok := ctx.Deadline()
+		if !ok || deadline.After(started.Add(31*time.Second)) {
+			t.Errorf("refresh deadline = %v, present = %v; want at most 30s", deadline, ok)
+		}
+		return "token", time.Minute, nil
+	})
+	if _, err := source.Token(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestRateLimitedAuthenticationHonorsDeadline(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Retry-After", "3600")
+		w.WriteHeader(http.StatusTooManyRequests)
+	}))
+	defer srv.Close()
+	authClient := MakeRestClient(srv.URL, "", "")
+	source := newTokenSource(func(ctx context.Context) (string, time.Duration, error) {
+		return "", 0, authClient.Post(ctx, "/auth/vendor", nil, nil)
+	})
+	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
+	defer cancel()
+	if _, err := source.Token(ctx); !errors.Is(err, context.DeadlineExceeded) {
+		t.Fatalf("Token() error = %v, want deadline exceeded", err)
+	}
+}
+
+func TestWaitingForRefreshCanBeCanceled(t *testing.T) {
+	started, release := make(chan struct{}), make(chan struct{})
+	source := newTokenSource(func(ctx context.Context) (string, time.Duration, error) {
+		close(started)
+		select {
+		case <-release:
+			return "token", time.Minute, nil
+		case <-ctx.Done():
+			return "", 0, ctx.Err()
+		}
+	})
+	done := make(chan error, 1)
+	go func() {
+		_, err := source.Token(context.Background())
+		done <- err
+	}()
+	defer func() {
+		close(release)
+		if err := <-done; err != nil {
+			t.Errorf("refresh: %v", err)
+		}
+	}()
+	<-started
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Millisecond)
+	defer cancel()
+	if _, err := source.Token(ctx); !errors.Is(err, context.DeadlineExceeded) {
+		t.Fatalf("waiting caller error = %v, want deadline exceeded", err)
+	}
+}
+
+func TestRefreshFailureSharesCachedTokenUntilRetry(t *testing.T) {
+	calls := 0
+	source := newTokenSource(func(context.Context) (string, time.Duration, error) {
+		calls++
+		if calls == 1 {
+			return "cached", time.Minute, nil
+		}
+		return "", 0, errors.New("authentication temporarily unavailable")
+	})
+	if _, err := source.Token(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	source.refreshAt = time.Now().Add(-time.Second)
+	for i := 0; i < 3; i++ {
+		if token, err := source.Token(context.Background()); token != "cached" || err != nil {
+			t.Fatalf("Token() = %q, %v; want cached token", token, err)
+		}
+	}
+	if calls != 2 {
+		t.Fatalf("refresh called %d times, want 2: one success and one failed retry", calls)
+	}
+	source.expiresAt = time.Now().Add(-time.Second)
+	source.refreshAt = source.expiresAt
+	if token, err := source.Token(context.Background()); token != "" || err == nil {
+		t.Fatalf("Token() after expiry = %q, %v; want refresh error", token, err)
+	}
+}
+
+func TestVendorTokenSourceLogsInWithItsCredentials(t *testing.T) {
+	var logins int
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var body map[string]string
+		_ = json.NewDecoder(r.Body).Decode(&body)
+		if r.Method != http.MethodPost || r.URL.Path != "/auth/vendor" || body["clientId"] != "client" || body["secret"] != "secret" {
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+		logins++
+		_, _ = fmt.Fprintf(w, `{"token":"vendor-token-%d","expiresIn":300}`, logins)
+	}))
+	defer srv.Close()
+	source := NewVendorTokenSource(srv.URL, "", "", "client", "secret")
+	for range 2 {
+		token, err := source.Token(context.Background())
+		if err != nil || token != "vendor-token-1" {
+			t.Fatalf("Token() = %q, %v; want vendor-token-1", token, err)
+		}
+	}
+	if logins != 1 {
+		t.Fatalf("logins = %d, want 1 while the token is valid", logins)
+	}
+}

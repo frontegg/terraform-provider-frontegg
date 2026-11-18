@@ -46,7 +46,7 @@ resource "frontegg_plan" "example" {
 
 - `assign_on_signup` (Boolean) Whether the plan is assigned automatically upon signup.
 - `default_time_limitation` (Number) Default time limitation in days for auto-assigned plans.
-- `default_treatment` (String) The default treatment for the plan.
+- `default_treatment` (String) The default treatment for the plan. Frontegg uses `false` when it is omitted.
 - `description` (String) A description of the plan.
 - `feature_keys` (List of String) Array of feature keys to be applied on the plan.
 - `rules` (List of Map of String) Set of conditions targeting the plan.
