@@ -496,7 +496,7 @@ Must be one of "off", "on", or "unless-saml".`,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"allowed_redirect_urls": {
-							Description: "Allowed redirect URLs.",
+							Description: "Allowed redirect URLs. A bare http or https origin is the same URL with or without a trailing slash, so `https://app.example.com` and `https://app.example.com/` are registered once. A trailing slash after a path is kept: `https://app.example.com/callback/` and `https://app.example.com/callback` are different URLs. A URL that is already registered and differs from a configured one only by trailing slashes is left as it is, so upgrading the provider doesn't change existing registrations.",
 							Type:        schema.TypeSet,
 							Optional:    true,
 							Elem:        &schema.Schema{Type: schema.TypeString},
@@ -760,19 +760,12 @@ func resourceFronteggWorkspaceRead(ctx context.Context, d *schema.ResourceData, 
 		}
 		items := []interface{}{}
 		if out.IsActive {
-			var outRedirects fronteggOAuthRedirectURIs
-			clientHolder.ApiClient.Ignore404()
-			if err := clientHolder.ApiClient.Get(ctx, fronteggOAuthRedirectURIsURL, &outRedirects); err != nil {
+			allowedRedirectURLs, err := readFronteggAllowedRedirectURLs(ctx, &clientHolder.ApiClient, d)
+			if err != nil {
 				return diag.FromErr(err)
 			}
-			var allowedRedirectURLs []string
-			for _, r := range outRedirects.RedirectURIs {
-				allowedRedirectURLs = append(allowedRedirectURLs, r.RedirectURI)
-			}
-			// Normalize allowed_redirect_urls by trimming trailing slashes to prevent unnecessary plan changes
-			normalizedRedirectURLs := trimRightFromStringSlice(allowedRedirectURLs, "/")
 			items = append(items, map[string]interface{}{
-				"allowed_redirect_urls": normalizedRedirectURLs,
+				"allowed_redirect_urls": allowedRedirectURLs,
 			})
 		}
 		if err := d.Set("hosted_login", items); err != nil {
@@ -939,39 +932,8 @@ func resourceFronteggWorkspaceUpdate(ctx context.Context, d *schema.ResourceData
 			}
 		}
 		if d.HasChange("hosted_login.0.allowed_redirect_urls") {
-			var outRedirects fronteggOAuthRedirectURIs
-			allowedRedirectURLs := d.Get("hosted_login.0.allowed_redirect_urls")
-			allowedRedirectURLsList := stringSetToListWithRightTrim(allowedRedirectURLs.(*schema.Set), "/")
-
-			if err := clientHolder.ApiClient.Get(ctx, fronteggOAuthRedirectURIsURL, &outRedirects); err != nil {
+			if err := updateFronteggAllowedRedirectURLs(ctx, &clientHolder.ApiClient, d); err != nil {
 				return diag.FromErr(err)
-			}
-			for _, r := range outRedirects.RedirectURIs {
-				if !stringInSlice(strings.TrimRight(r.RedirectURI, "/"), allowedRedirectURLsList) {
-					err := clientHolder.ApiClient.Delete(ctx, fmt.Sprintf("%s/%s", fronteggOAuthRedirectURIsURL, r.ID), nil)
-					if err != nil {
-						return diag.FromErr(err)
-					}
-				}
-			}
-			if allowedRedirectURLs != nil {
-				for _, url := range allowedRedirectURLsList {
-					exists := false
-					for _, item := range outRedirects.RedirectURIs {
-						if strings.TrimRight(item.RedirectURI, "/") == strings.TrimRight(url, "/") {
-							exists = true
-						}
-					}
-
-					if !exists {
-						in := fronteggOAuthRedirectURI{
-							RedirectURI: url,
-						}
-						if err := clientHolder.ApiClient.Post(ctx, fronteggOAuthRedirectURIsURL, in, nil); err != nil {
-							return diag.FromErr(err)
-						}
-					}
-				}
 			}
 		}
 	}
