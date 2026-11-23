@@ -6,9 +6,11 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"regexp"
 	"strings"
 	"sync"
 	"testing"
@@ -193,23 +195,25 @@ func TestEmailTemplateReadHTMLTemplate(t *testing.T) {
 	}
 }
 
-// With ignore_changes = [html_template], an update of another field sends html_template from
-// state; after an import that must be the stored HTML, not an empty string.
-func TestEmailTemplateUpdateAfterImportSendsStoredHTML(t *testing.T) {
-	const stored = `<!DOCTYPE html><html><body>live email</body></html>`
-	d := schema.TestResourceDataRaw(t, resourceFronteggEmailTemplate().Schema, map[string]interface{}{})
-	d.SetId("ResetPassword")
-	if err := resourceFronteggEmailTemplateDeserialize(d, fronteggEmailTemplateResource{Type: "ResetPassword", HTMLTemplate: stored}, false); err != nil {
-		t.Fatalf("deserialize: %v", err)
-	}
-	if got := resourceFronteggEmailTemplateSerialize(d).HTMLTemplate; got != stored {
-		t.Errorf("update body htmlTemplate = %q, want the stored HTML %q", got, stored)
-	}
-}
-
+// fakeMailAPI mirrors identity-service's template endpoint: a POST without htmlTemplate keeps
+// the stored HTML, and the HTML is sanitized on write while sanitize is on.
 type fakeMailAPI struct {
 	mu        sync.Mutex
 	templates map[string]fronteggEmailTemplateResource
+	sanitize  bool
+	reject    bool
+	posts     []map[string]interface{}
+}
+
+func newFakeMailAPI(t *testing.T) *fakeMailAPI {
+	t.Helper()
+	api := &fakeMailAPI{templates: map[string]fronteggEmailTemplateResource{}, sanitize: true}
+	srv := httptest.NewServer(http.HandlerFunc(api.serve))
+	t.Cleanup(srv.Close)
+	t.Setenv("FRONTEGG_API_BASE_URL", srv.URL)
+	t.Setenv("FRONTEGG_CLIENT_ID", "unit-test")
+	t.Setenv("FRONTEGG_SECRET_KEY", "unit-test")
+	return api
 }
 
 func (api *fakeMailAPI) serve(w http.ResponseWriter, r *http.Request) {
@@ -219,9 +223,22 @@ func (api *fakeMailAPI) serve(w http.ResponseWriter, r *http.Request) {
 	case r.Method == http.MethodPost && r.URL.Path == "/auth/vendor":
 		_ = json.NewEncoder(w).Encode(map[string]string{"token": "test-token"})
 	case r.Method == http.MethodPost && r.URL.Path == fronteggEmailTemplateURL:
+		raw, _ := io.ReadAll(r.Body)
+		var body map[string]interface{}
+		_ = json.Unmarshal(raw, &body)
+		api.posts = append(api.posts, body)
+		if api.reject {
+			w.WriteHeader(http.StatusForbidden)
+			_ = json.NewEncoder(w).Encode(map[string][]string{"errors": {"HTML template could not be sanitized"}})
+			return
+		}
 		var in fronteggEmailTemplateResource
-		_ = json.NewDecoder(r.Body).Decode(&in)
-		in.HTMLTemplate = fakeSanitize(in.HTMLTemplate)
+		_ = json.Unmarshal(raw, &in)
+		if _, sent := body["htmlTemplate"]; !sent {
+			in.HTMLTemplate = api.templates[in.Type].HTMLTemplate
+		} else if api.sanitize {
+			in.HTMLTemplate = fakeSanitize(in.HTMLTemplate)
+		}
 		api.templates[in.Type] = in
 		w.WriteHeader(http.StatusCreated)
 	case r.Method == http.MethodGet && r.URL.Path == fronteggEmailTemplateURL:
@@ -235,33 +252,34 @@ func (api *fakeMailAPI) serve(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func emailTemplateUnitConfig(html string) string {
+func (api *fakeMailAPI) storedHTML() string {
+	api.mu.Lock()
+	defer api.mu.Unlock()
+	return api.templates["ResetPassword"].HTMLTemplate
+}
+
+func emailTemplateUnitConfig(subject, html string) string {
 	return fmt.Sprintf(`
 resource "frontegg_email_template" "t" {
   template_type = "ResetPassword"
   from_address  = "noreply@example.com"
   from_name     = "Example"
-  subject       = "Reset your password"
+  subject       = %q
   html_template = %q
 }
-`, html)
+`, subject, html)
 }
 
 func TestEmailTemplateHTMLDriftAgainstSanitizingAPI(t *testing.T) {
-	api := &fakeMailAPI{templates: map[string]fronteggEmailTemplateResource{}}
-	srv := httptest.NewServer(http.HandlerFunc(api.serve))
-	t.Cleanup(srv.Close)
-	t.Setenv("FRONTEGG_API_BASE_URL", srv.URL)
-	t.Setenv("FRONTEGG_CLIENT_ID", "unit-test")
-	t.Setenv("FRONTEGG_SECRET_KEY", "unit-test")
-
+	api := newFakeMailAPI(t)
 	const configured = `<html><body>Reset:<br><a href="{{redirectURL}}">here</a></body></html>`
+	config := emailTemplateUnitConfig("Reset your password", configured)
 	resource.UnitTest(t, resource.TestCase{
 		ProviderFactories: testAccProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				// Sanitized on write: the apply must not leave a diff behind.
-				Config: emailTemplateUnitConfig(configured),
+				Config: config,
 				Check:  resource.TestCheckResourceAttr("frontegg_email_template.t", "html_template", configured),
 			},
 			{
@@ -272,16 +290,14 @@ func TestEmailTemplateHTMLDriftAgainstSanitizingAPI(t *testing.T) {
 					tpl.HTMLTemplate = `<!DOCTYPE html><html><body>Edited in the console</body></html>`
 					api.templates["ResetPassword"] = tpl
 				},
-				Config:             emailTemplateUnitConfig(configured),
+				Config:             config,
 				PlanOnly:           true,
 				ExpectNonEmptyPlan: true,
 			},
 			{
-				Config: emailTemplateUnitConfig(configured),
+				Config: config,
 				Check: func(*terraform.State) error {
-					api.mu.Lock()
-					defer api.mu.Unlock()
-					if got := api.templates["ResetPassword"].HTMLTemplate; got != fakeSanitize(configured) {
+					if got := api.storedHTML(); got != fakeSanitize(configured) {
 						return fmt.Errorf("stored HTML = %q, want the configured HTML restored", got)
 					}
 					return nil
@@ -289,6 +305,120 @@ func TestEmailTemplateHTMLDriftAgainstSanitizingAPI(t *testing.T) {
 			},
 		},
 	})
+}
+
+// A rejected HTML change must stay planned, so the next apply retries it.
+func TestEmailTemplateRejectedHTMLIsRetried(t *testing.T) {
+	api := newFakeMailAPI(t)
+	const first = `<html><body>first</body></html>`
+	const second = `<html><body>second</body></html>`
+	setReject := func(reject bool) func() {
+		return func() {
+			api.mu.Lock()
+			defer api.mu.Unlock()
+			api.reject = reject
+		}
+	}
+	resource.UnitTest(t, resource.TestCase{
+		ProviderFactories: testAccProviderFactories,
+		Steps: []resource.TestStep{
+			{Config: emailTemplateUnitConfig("Reset", first)},
+			{
+				PreConfig:   setReject(true),
+				Config:      emailTemplateUnitConfig("Reset", second),
+				ExpectError: regexp.MustCompile(`could not be sanitized`),
+			},
+			{
+				PreConfig:          setReject(false),
+				Config:             emailTemplateUnitConfig("Reset", second),
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: true,
+			},
+			{
+				Config: emailTemplateUnitConfig("Reset", second),
+				Check: func(*terraform.State) error {
+					if got := api.storedHTML(); got != fakeSanitize(second) {
+						return fmt.Errorf("stored HTML = %q, want the retried HTML", got)
+					}
+					return nil
+				},
+			},
+		},
+	})
+}
+
+// An update that leaves html_template alone must not send it: Frontegg would sanitize it again,
+// changing the stored HTML and its hash although the plan showed no HTML change.
+func TestEmailTemplateSubjectChangeKeepsStoredHTML(t *testing.T) {
+	api := newFakeMailAPI(t)
+	api.sanitize = false // stored before sanitizing was enabled
+	const configured = `<html><body>Reset:<br>here</body></html>`
+	resource.UnitTest(t, resource.TestCase{
+		ProviderFactories: testAccProviderFactories,
+		Steps: []resource.TestStep{
+			{Config: emailTemplateUnitConfig("Reset", configured)},
+			{
+				PreConfig: func() {
+					api.mu.Lock()
+					defer api.mu.Unlock()
+					api.sanitize = true
+					api.posts = nil
+				},
+				Config: emailTemplateUnitConfig("Reset your password", configured),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("frontegg_email_template.t", "subject", "Reset your password"),
+					resource.TestCheckResourceAttr("frontegg_email_template.t", "html_template_sha256", sha256Hex(configured)),
+					func(*terraform.State) error {
+						api.mu.Lock()
+						defer api.mu.Unlock()
+						for _, body := range api.posts {
+							if _, sent := body["htmlTemplate"]; sent {
+								return fmt.Errorf("POST body %v sends htmlTemplate for a subject change", body)
+							}
+						}
+						if got := api.templates["ResetPassword"].HTMLTemplate; got != configured {
+							return fmt.Errorf("stored HTML = %q, want it untouched", got)
+						}
+						return nil
+					},
+				),
+			},
+		},
+	})
+}
+
+// An update that does not send the HTML does not know what Frontegg stored, so a console edit
+// made after the plan's refresh must still show as drift.
+func TestEmailTemplateUpdateWithoutHTMLReportsConsoleEdit(t *testing.T) {
+	api := newFakeMailAPI(t)
+	const configured = `<!DOCTYPE html><html><body>configured</body></html>`
+	const edited = `<!DOCTYPE html><html><body>edited in the console</body></html>`
+	api.templates["ResetPassword"] = fronteggEmailTemplateResource{Type: "ResetPassword", Subject: "Reset", HTMLTemplate: edited}
+	holder := &restclient.ClientHolder{ApiClient: restclient.MakeRestClient(os.Getenv("FRONTEGG_API_BASE_URL"), "", "")}
+	holder.ApiClient.Authenticate("test-token")
+
+	res := resourceFronteggEmailTemplate()
+	prior := &terraform.InstanceState{ID: "ResetPassword", Attributes: map[string]string{
+		"id": "ResetPassword", "template_type": "ResetPassword", "active": "true",
+		"from_address": "noreply@example.com", "from_name": "Example", "subject": "Reset",
+		"html_template": configured, "html_template_sha256": sha256Hex(configured),
+		"redirect_url": "", "success_redirect_url": "",
+	}}
+	cfg := terraform.NewResourceConfigRaw(map[string]interface{}{
+		"template_type": "ResetPassword", "from_address": "noreply@example.com", "from_name": "Example",
+		"subject": "Reset your password", "html_template": configured,
+	})
+	diff, err := res.Diff(context.Background(), prior, cfg, holder)
+	if err != nil {
+		t.Fatalf("diff: %v", err)
+	}
+	got, diags := res.Apply(context.Background(), prior, diff, holder)
+	if diags.HasError() {
+		t.Fatalf("apply: %v", diags)
+	}
+	if got.Attributes["html_template"] != edited {
+		t.Errorf("html_template = %q, want the console edit %q so the next plan shows it", got.Attributes["html_template"], edited)
+	}
 }
 
 // hclString quotes s as an HCL string literal, escaping template sequences.
@@ -349,7 +479,7 @@ func TestAccFronteggEmailTemplate_htmlTemplate(t *testing.T) {
 		// Default templates have no from name, which the schema requires.
 		fromName = "Terraform acceptance test"
 	}
-	config := func(html string) string {
+	configFor := func(subject, html string) string {
 		optional := ""
 		if original.RedirectURLPattern != "" {
 			optional += "  redirect_url  = " + hclString(original.RedirectURLPattern) + "\n"
@@ -366,8 +496,11 @@ resource "frontegg_email_template" "t" {
   subject       = %s
   html_template = %s
 %s}
-`, templateType, original.Active, hclString(original.SenderEmail), hclString(fromName), hclString(original.Subject), hclString(html), optional)
+`, templateType, original.Active, hclString(original.SenderEmail), hclString(fromName), hclString(subject), hclString(html), optional)
 	}
+	config := func(html string) string { return configFor(original.Subject, html) }
+	changedSubject := original.Subject + " (tf-acc)"
+	var storedHash string
 	// Left unchanged by Frontegg's sanitizer.
 	const canonical = `<!DOCTYPE html><html><body><p>Reset your password: <a href="{{redirectURL}}">reset</a></p></body></html>`
 	// Rewritten by the sanitizer: DOCTYPE added, <br> closed, onclick and the comment dropped.
@@ -408,6 +541,33 @@ resource "frontegg_email_template" "t" {
 			},
 			{
 				Config: config(sanitized),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttrSet("frontegg_email_template.t", "html_template_sha256"),
+					func(s *terraform.State) error {
+						storedHash = s.RootModule().Resources["frontegg_email_template.t"].Primary.Attributes["html_template_sha256"]
+						return nil
+					},
+				),
+			},
+			{
+				// A subject change leaves the stored HTML, and so its hash, alone.
+				Config: configFor(changedSubject, sanitized),
+				Check:  resource.TestCheckResourceAttrPtr("frontegg_email_template.t", "html_template_sha256", &storedHash),
+			},
+			{
+				// Rejected regardless of sanitizing: Frontegg compiles the HTML as Handlebars.
+				Config:      configFor(changedSubject, `<!DOCTYPE html><html><body>{{#if x}}unclosed</body></html>`),
+				ExpectError: regexp.MustCompile(`Invalid HTML template`),
+			},
+			{
+				// The rejected change is still planned, so the next apply retries it.
+				Config:             configFor(changedSubject, `<!DOCTYPE html><html><body>{{#if x}}unclosed</body></html>`),
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: true,
+			},
+			{
+				Config:   configFor(changedSubject, sanitized),
+				PlanOnly: true,
 			},
 		},
 	})

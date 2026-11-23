@@ -16,7 +16,7 @@ const fronteggEmailTemplateURL = "/identity/resources/mail/v1/configs/templates"
 type fronteggEmailTemplateResource struct {
 	Active             bool   `json:"active"`
 	FromName           string `json:"fromName"`
-	HTMLTemplate       string `json:"htmlTemplate"`
+	HTMLTemplate       string `json:"htmlTemplate,omitempty"`
 	RedirectURL        string `json:"redirectURL"`
 	SuccessRedirectURL string `json:"successRedirectUrl,omitempty"`
 	SenderEmail        string `json:"senderEmail"`
@@ -123,19 +123,24 @@ func resourceFronteggEmailTemplateCustomizeDiff(_ context.Context, d *schema.Res
 }
 
 func resourceFronteggEmailTemplateSerialize(d *schema.ResourceData) fronteggEmailTemplateResource {
-	return fronteggEmailTemplateResource{
+	template := fronteggEmailTemplateResource{
 		Active:             d.Get("active").(bool),
 		FromName:           d.Get("from_name").(string),
 		SenderEmail:        d.Get("from_address").(string),
 		Subject:            d.Get("subject").(string),
-		HTMLTemplate:       d.Get("html_template").(string),
 		RedirectURL:        d.Get("redirect_url").(string),
 		SuccessRedirectURL: d.Get("success_redirect_url").(string),
 		Type:               d.Get("template_type").(string),
 	}
+	// Without htmlTemplate Frontegg keeps the stored HTML. Sending it unchanged would make
+	// Frontegg sanitize it again and could change the stored HTML the plan left alone.
+	if d.HasChange("html_template") {
+		template.HTMLTemplate = d.Get("html_template").(string)
+	}
+	return template
 }
 
-// afterWrite marks the read that follows Terraform's own write: the stored HTML then differs
+// afterWrite marks the read that follows a write of the HTML: the stored HTML then differs
 // from the configured one only by Frontegg's sanitizing, so the configured HTML is kept.
 func resourceFronteggEmailTemplateDeserialize(d *schema.ResourceData, f fronteggEmailTemplateResource, afterWrite bool) error {
 	d.SetId(f.Type)
@@ -235,11 +240,14 @@ func resourceFronteggEmailTemplateUpdate(ctx context.Context, d *schema.Resource
 	in := resourceFronteggEmailTemplateSerialize(d)
 
 	if err := clientHolder.ApiClient.Post(ctx, fronteggEmailTemplateURL, in, nil); err != nil {
+		// Nothing was written, so keep the prior state; otherwise the rejected HTML would be
+		// saved as applied and never retried.
+		d.Partial(true)
 		return diag.FromErr(err)
 	}
 
 	d.SetId(in.Type)
-	return readFronteggEmailTemplate(ctx, d, meta, true)
+	return readFronteggEmailTemplate(ctx, d, meta, in.HTMLTemplate != "")
 }
 
 func resourceFronteggEmailTemplateDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
