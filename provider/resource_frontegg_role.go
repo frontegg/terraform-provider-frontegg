@@ -31,6 +31,10 @@ type fronteggRolePermissions struct {
 	PermissionIDs []string `json:"permissionIds"`
 }
 
+type fronteggRoleTenant struct {
+	TenantID *string `json:"tenantId"`
+}
+
 func resourceFronteggRole() *schema.Resource {
 	return &schema.Resource{
 		Description: `Configures a Frontegg role.`,
@@ -40,7 +44,7 @@ func resourceFronteggRole() *schema.Resource {
 		UpdateContext: resourceFronteggRoleUpdate,
 		DeleteContext: resourceFronteggRoleDelete,
 		Importer: &schema.ResourceImporter{
-			StateContext: schema.ImportStatePassthroughContext,
+			StateContext: resourceFronteggRoleImport,
 		},
 
 		Schema: map[string]*schema.Schema{
@@ -81,9 +85,11 @@ func resourceFronteggRole() *schema.Resource {
 				Required:    true,
 			},
 			"tenant_id": {
-				Description: "The ID of the tenant that owns the role.",
-				Type:        schema.TypeString,
-				Optional:    true,
+				Description: `The ID of the tenant that owns the role. Leave unset for a vendor-level role available to all tenants.
+
+Changing it moves the existing role in place: to the new tenant, which unassigns it from users of other tenants, or to vendor level when removed.`,
+				Type:     schema.TypeString,
+				Optional: true,
 			},
 			"vendor_id": {
 				Description: "The ID of the vendor that owns the role.",
@@ -151,6 +157,23 @@ func resourceFronteggRoleDeserialize(d *schema.ResourceData, f fronteggRole) err
 	return nil
 }
 
+// resourceFronteggRoleImport accepts "role_id" for vendor roles and
+// "tenant_id:role_id" for tenant roles, so that Read sends frontegg-tenant-id.
+func resourceFronteggRoleImport(_ context.Context, d *schema.ResourceData, _ interface{}) ([]*schema.ResourceData, error) {
+	parts := strings.SplitN(d.Id(), ":", 2)
+	if len(parts) == 1 {
+		return []*schema.ResourceData{d}, nil
+	}
+	if parts[0] == "" || parts[1] == "" {
+		return nil, fmt.Errorf("invalid import format, expected role_id or tenant_id:role_id, got: %s", d.Id())
+	}
+	if err := d.Set("tenant_id", parts[0]); err != nil {
+		return nil, err
+	}
+	d.SetId(parts[1])
+	return []*schema.ResourceData{d}, nil
+}
+
 func getTenantIdHeaders(d *schema.ResourceData) http.Header {
 	headers := http.Header{}
 	tenant_id := d.Get("tenant_id").(string)
@@ -172,14 +195,16 @@ func resourceFronteggRoleCreate(ctx context.Context, d *schema.ResourceData, met
 		if err := clientHolder.ApiClient.PostWithHeaders(ctx, fronteggRolePath, headers, in, &out); err != nil {
 			if strings.Contains(err.Error(), "Roles already exists") {
 				roleKey := d.Get("key").(string)
+				tenantID := d.Get("tenant_id").(string)
 				var existingRoles []fronteggRole
 				if err := clientHolder.ApiClient.GetWithHeaders(ctx, fronteggRolePath, headers, &existingRoles); err != nil {
 					return diag.FromErr(err)
 				}
 
+				// With a tenant header the list also holds vendor-level roles, which may share the key.
 				var existingRole *fronteggRole
 				for _, role := range existingRoles {
-					if role.Key == roleKey {
+					if role.Key == roleKey && role.TenantID == tenantID {
 						existingRole = &role
 						break
 					}
@@ -232,6 +257,17 @@ func resourceFronteggRoleRead(ctx context.Context, d *schema.ResourceData, meta 
 func resourceFronteggRoleUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	headers := getTenantIdHeaders(d)
 	clientHolder := meta.(*restclient.ClientHolder)
+	// The tenant-scoped role routes only find roles of the tenant in the header, so move
+	// the role first. Create reaches Update only for a role it found in the planned tenant.
+	if d.HasChange("tenant_id") && !d.IsNewResource() {
+		var in fronteggRoleTenant
+		if tenantID := d.Get("tenant_id").(string); tenantID != "" {
+			in.TenantID = &tenantID
+		}
+		if err := clientHolder.ApiClient.Put(ctx, fmt.Sprintf("%s/%s/tenant", fronteggRolePath, d.Id()), in, nil); err != nil {
+			return diag.FromErr(err)
+		}
+	}
 	{
 		in := resourceFronteggRoleSerialize(d)
 		if err := clientHolder.ApiClient.PatchWithHeaders(ctx, fmt.Sprintf("%s/%s", fronteggRolePath, d.Id()), headers, in, nil); err != nil {

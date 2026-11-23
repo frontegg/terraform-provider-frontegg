@@ -41,10 +41,36 @@ resource "frontegg_role" "example" {
 ### Optional
 
 - `first_user` (Boolean) Whether the role should be applied to the first user in the tenant (new tenants only).
-- `tenant_id` (String) The ID of the tenant that owns the role.
+- `tenant_id` (String) The ID of the tenant that owns the role. Leave unset for a vendor-level role available to all tenants.
+
+Changing it moves the existing role in place: to the new tenant, which unassigns it from users of other tenants, or to vendor level when removed.
 
 ### Read-Only
 
 - `created_at` (String) The timestamp at which the role was created.
 - `id` (String) The ID of this resource.
 - `vendor_id` (String) The ID of the vendor that owns the role.
+
+## Import
+
+Import is supported using the following syntax:
+
+In Terraform v1.5.0 and later, the [`import` block](https://developer.hashicorp.com/terraform/language/import) can be used with the `id` attribute, for example:
+
+```terraform
+# A tenant role is imported as "<tenant_id>:<role_id>"; a vendor-level role by "<role_id>".
+import {
+  to = frontegg_role.example
+  id = "<tenant_id>:<role_id>"
+}
+```
+
+The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
+
+```shell
+# A vendor-level role is imported by its ID.
+terraform import frontegg_role.example <role_id>
+
+# A tenant role is imported as <tenant_id>:<role_id>.
+terraform import frontegg_role.example <tenant_id>:<role_id>
+```
