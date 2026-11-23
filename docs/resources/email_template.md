@@ -49,6 +49,8 @@ resource "frontegg_email_template" "user_activation" {
 - `from_address` (String) The address to use in the "From" header of the email.
 - `from_name` (String) The name to use in the "From" header of the email.
 - `html_template` (String) The HTML template to use in the email.
+
+Frontegg sanitizes the HTML it stores, so the stored form can differ from the configured one. A refresh keeps the configured HTML while the stored HTML is unchanged since Terraform last wrote or read it, and reads the stored HTML when it changed outside Terraform, or on import.
 - `subject` (String) The subject of the email.
 - `template_type` (String) The type of email template to configure.
 
@@ -64,4 +66,26 @@ Access this value as "\{\{redirectURL\}\}" in the template.
 
 ### Read-Only
 
+- `html_template_sha256` (String) The SHA-256 hash of the HTML template as Frontegg stored it, after sanitizing. Used to detect changes made outside Terraform.
 - `id` (String) The ID of this resource.
+
+## Import
+
+Import is supported using the following syntax:
+
+In Terraform v1.5.0 and later, the [`import` block](https://developer.hashicorp.com/terraform/language/import) can be used with the `id` attribute, for example:
+
+```terraform
+# An email template is imported by its template type.
+import {
+  to = frontegg_email_template.example
+  id = "ResetPassword"
+}
+```
+
+The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
+
+```shell
+# An email template is imported by its template type.
+terraform import frontegg_email_template.example ResetPassword
+```
