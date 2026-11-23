@@ -43,7 +43,7 @@ resource "frontegg_role" "example" {
 - `first_user` (Boolean) Whether the role should be applied to the first user in the tenant (new tenants only).
 - `tenant_id` (String) The ID of the tenant that owns the role. Leave unset for a vendor-level role available to all tenants.
 
-Changing it moves the existing role in place: to the new tenant, which unassigns it from users of other tenants, or to vendor level when removed.
+Changing it moves the existing role in place: to the new tenant, which must exist and which unassigns the role from users of other tenants, or to vendor level when removed.
 
 ### Read-Only
 
