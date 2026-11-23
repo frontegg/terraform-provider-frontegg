@@ -2,6 +2,8 @@ package provider
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 
 	"github.com/frontegg/terraform-provider-frontegg/internal/restclient"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -43,6 +45,7 @@ Each email template resource manages one specific email template type for the wo
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},
+		CustomizeDiff: resourceFronteggEmailTemplateCustomizeDiff,
 
 		Schema: map[string]*schema.Schema{
 			"template_type": {
@@ -84,9 +87,16 @@ Must be one of: "ResetPassword", "ActivateUser", "InviteToTenant", "PwnedPasswor
 				Required:    true,
 			},
 			"html_template": {
-				Description: "The HTML template to use in the email.",
+				Description: `The HTML template to use in the email.
+
+Frontegg sanitizes the HTML it stores, so the stored form can differ from the configured one. A refresh keeps the configured HTML while the stored HTML is unchanged since Terraform last wrote or read it, and reads the stored HTML when it changed outside Terraform, or on import.`,
+				Type:     schema.TypeString,
+				Required: true,
+			},
+			"html_template_sha256": {
+				Description: "The SHA-256 hash of the HTML template as Frontegg stored it, after sanitizing. Used to detect changes made outside Terraform.",
 				Type:        schema.TypeString,
-				Required:    true,
+				Computed:    true,
 			},
 			"redirect_url": {
 				Description: `The redirect URL to use, if applicable.
@@ -104,6 +114,14 @@ Access this value as "\{\{redirectURL\}\}" in the template.`,
 	}
 }
 
+// Frontegg sanitizes the HTML it stores, so the hash of a changed template is known only after apply.
+func resourceFronteggEmailTemplateCustomizeDiff(_ context.Context, d *schema.ResourceDiff, _ interface{}) error {
+	if d.HasChange("html_template") {
+		return d.SetNewComputed("html_template_sha256")
+	}
+	return nil
+}
+
 func resourceFronteggEmailTemplateSerialize(d *schema.ResourceData) fronteggEmailTemplateResource {
 	return fronteggEmailTemplateResource{
 		Active:             d.Get("active").(bool),
@@ -117,7 +135,9 @@ func resourceFronteggEmailTemplateSerialize(d *schema.ResourceData) fronteggEmai
 	}
 }
 
-func resourceFronteggEmailTemplateDeserialize(d *schema.ResourceData, f fronteggEmailTemplateResource) error {
+// afterWrite marks the read that follows Terraform's own write: the stored HTML then differs
+// from the configured one only by Frontegg's sanitizing, so the configured HTML is kept.
+func resourceFronteggEmailTemplateDeserialize(d *schema.ResourceData, f fronteggEmailTemplateResource, afterWrite bool) error {
 	d.SetId(f.Type)
 	if err := d.Set("template_type", f.Type); err != nil {
 		return err
@@ -132,6 +152,9 @@ func resourceFronteggEmailTemplateDeserialize(d *schema.ResourceData, f frontegg
 		return err
 	}
 	if err := d.Set("subject", f.Subject); err != nil {
+		return err
+	}
+	if err := setEmailTemplateHTML(d, f.HTMLTemplate, afterWrite); err != nil {
 		return err
 	}
 
@@ -155,11 +178,34 @@ func resourceFronteggEmailTemplateDeserialize(d *schema.ResourceData, f frontegg
 	return nil
 }
 
+func setEmailTemplateHTML(d *schema.ResourceData, stored string, afterWrite bool) error {
+	sum := sha256.Sum256([]byte(stored))
+	storedHash := hex.EncodeToString(sum[:])
+	knownHash := d.Get("html_template_sha256").(string)
+	switch {
+	case afterWrite, knownHash == storedHash:
+		// Unchanged since Terraform last saw it.
+	case knownHash == "" && d.Get("html_template").(string) != "":
+		// State from a provider version that did not record the stored HTML: take it as the
+		// baseline rather than show every sanitized template as changed after an upgrade.
+	default:
+		// Imported, or changed outside Terraform.
+		if err := d.Set("html_template", stored); err != nil {
+			return err
+		}
+	}
+	return d.Set("html_template_sha256", storedHash)
+}
+
 func resourceFronteggEmailTemplateCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	return resourceFronteggEmailTemplateUpdate(ctx, d, meta)
 }
 
 func resourceFronteggEmailTemplateRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	return readFronteggEmailTemplate(ctx, d, meta, false)
+}
+
+func readFronteggEmailTemplate(ctx context.Context, d *schema.ResourceData, meta interface{}, afterWrite bool) diag.Diagnostics {
 	clientHolder := meta.(*restclient.ClientHolder)
 	var out []fronteggEmailTemplateResource
 	if err := clientHolder.ApiClient.Get(ctx, fronteggEmailTemplateURL, &out); err != nil {
@@ -172,7 +218,7 @@ func resourceFronteggEmailTemplateRead(ctx context.Context, d *schema.ResourceDa
 	}
 	for _, template := range out {
 		if template.Type == templateType {
-			if err := resourceFronteggEmailTemplateDeserialize(d, template); err != nil {
+			if err := resourceFronteggEmailTemplateDeserialize(d, template, afterWrite); err != nil {
 				return diag.FromErr(err)
 			}
 			return nil
@@ -193,7 +239,7 @@ func resourceFronteggEmailTemplateUpdate(ctx context.Context, d *schema.Resource
 	}
 
 	d.SetId(in.Type)
-	return resourceFronteggEmailTemplateRead(ctx, d, meta)
+	return readFronteggEmailTemplate(ctx, d, meta, true)
 }
 
 func resourceFronteggEmailTemplateDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
