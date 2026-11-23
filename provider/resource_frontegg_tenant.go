@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"strings"
 
 	"github.com/frontegg/terraform-provider-frontegg/internal/restclient"
@@ -176,6 +177,21 @@ func resourceFronteggTenantRead(ctx context.Context, d *schema.ResourceData, met
 	}
 	d.SetId("")
 	return nil
+}
+
+// fronteggTenantExists reports whether the tenant exists. The tenants API answers an unknown
+// tenant with an empty list, not 404.
+func fronteggTenantExists(ctx context.Context, clientHolder *restclient.ClientHolder, tenantID string) (bool, error) {
+	var out []fronteggTenant
+	if err := clientHolder.ApiClient.Get(ctx, fmt.Sprintf("%s/%s", fronteggTenantPath, url.PathEscape(tenantID)), &out); err != nil {
+		return false, err
+	}
+	for _, c := range out {
+		if c.Key == tenantID {
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
 func resourceFronteggTenantUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
