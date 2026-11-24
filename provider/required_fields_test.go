@@ -4,7 +4,7 @@ import (
 	"regexp"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 )
 
 const computedValueSource = `
@@ -18,7 +18,7 @@ func testPlanOnly(t *testing.T, config string, expectError *regexp.Regexp) {
 	t.Helper()
 	newFakeAPI(t)
 	resource.UnitTest(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
+		ProtoV5ProviderFactories: testAccProviderFactories,
 		Steps: []resource.TestStep{{
 			Config:             config,
 			PlanOnly:           true,

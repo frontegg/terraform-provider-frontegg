@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 )
 
 func testAccPlanConfig(suffix, description string) string {
@@ -30,9 +30,9 @@ resource "frontegg_plan_feature" "test" {
 func TestAccFronteggPlan_lifecycle(t *testing.T) {
 	suffix := acctest.RandString(8)
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckAllDestroyed("frontegg_plan", "frontegg_feature"),
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProviderFactories,
+		CheckDestroy:             testAccCheckAllDestroyed("frontegg_plan", "frontegg_feature"),
 		Steps: []resource.TestStep{
 			{
 				Config: testAccPlanConfig(suffix, "first description"),

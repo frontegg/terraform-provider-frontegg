@@ -5,8 +5,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 )
 
 func testAccSecretConfig(key, value string) string {
@@ -22,9 +22,9 @@ func TestAccFronteggSecret_lifecycle(t *testing.T) {
 	key := "TF_ACC_" + strings.ToUpper(acctest.RandString(8))
 	renamedKey := key + "_NEW"
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckDestroyed("frontegg_secret"),
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProviderFactories,
+		CheckDestroy:             testAccCheckDestroyed("frontegg_secret"),
 		Steps: []resource.TestStep{
 			{
 				Config: testAccSecretConfig(key, "first-value"),

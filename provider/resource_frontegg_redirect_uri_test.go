@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 )
 
 func testAccRedirectURIConfig(path string) string {
@@ -19,9 +19,9 @@ resource "frontegg_redirect_uri" "test" {
 func TestAccFronteggRedirectURI_lifecycle(t *testing.T) {
 	suffix := acctest.RandString(8)
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckDestroyed("frontegg_redirect_uri"),
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProviderFactories,
+		CheckDestroy:             testAccCheckDestroyed("frontegg_redirect_uri"),
 		Steps: []resource.TestStep{
 			{
 				Config: testAccRedirectURIConfig(suffix),

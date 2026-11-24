@@ -9,8 +9,8 @@ import (
 	"testing"
 
 	"github.com/frontegg/terraform-provider-frontegg/internal/restclient"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 )
 
 func socialLoginResourceData(t *testing.T, raw map[string]interface{}) *schema.ResourceData {
@@ -94,8 +94,8 @@ resource "frontegg_social_login" "test" {
 
 func TestAccFronteggSocialLogin_lifecycle(t *testing.T) {
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccSocialLogin,
@@ -211,7 +211,7 @@ func TestSocialLoginCustomizeDiffRequiresSecretWhenCustomised(t *testing.T) {
 func TestSocialLoginPlanRejectsCustomisedWithoutSecret(t *testing.T) {
 	newFakeAPI(t)
 	resource.UnitTest(t, resource.TestCase{
-		ProviderFactories: testAccProviderFactories,
+		ProtoV5ProviderFactories: testAccProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: `
@@ -239,8 +239,8 @@ resource "frontegg_social_login" "adopt" {
 
 func TestAccFronteggSocialLogin_refusesToAdopt(t *testing.T) {
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProviderFactories,
 		Steps: []resource.TestStep{
 			{Config: testAccSocialLogin},
 			{

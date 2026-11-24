@@ -11,10 +11,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/structure"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	sdkterraform "github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 )
 
 func jwtTemplateConfig(claimsAttributes map[string]interface{}) map[string]interface{} {
@@ -95,7 +96,7 @@ func TestResourceFronteggJWTTemplateValidateClaims(t *testing.T) {
 	claimsState := jwtTemplateState(map[string]string{"claims.%": "1", "claims.sub": "{{sub}}"})
 	tests := []struct {
 		name    string
-		state   *terraform.InstanceState
+		state   *sdkterraform.InstanceState
 		raw     map[string]interface{}
 		wantErr string
 	}{
@@ -213,7 +214,7 @@ func TestResourceFronteggJWTTemplateValidateClaims(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			r := resourceFronteggJWTTemplate()
-			_, err := r.Diff(context.Background(), tt.state, terraform.NewResourceConfigRaw(tt.raw), nil)
+			_, err := r.Diff(context.Background(), tt.state, sdkterraform.NewResourceConfigRaw(tt.raw), nil)
 			if tt.wantErr == "" {
 				if err != nil {
 					t.Fatalf("Diff() returned an unexpected error: %v", err)
@@ -266,7 +267,7 @@ func TestResourceFronteggJWTTemplateValidateClaimsAttributes(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			diags := resourceFronteggJWTTemplate().Validate(terraform.NewResourceConfigRaw(tt.raw))
+			diags := resourceFronteggJWTTemplate().Validate(sdkterraform.NewResourceConfigRaw(tt.raw))
 			if tt.wantErr == "" {
 				if diags.HasError() {
 					t.Fatalf("Validate() returned unexpected errors: %v", diags)
@@ -343,16 +344,16 @@ func TestResourceFronteggJWTTemplateSerializeRejectsNullClaimsJSON(t *testing.T)
 	}
 }
 
-func jwtTemplateState(stateAttributes map[string]string) *terraform.InstanceState {
+func jwtTemplateState(stateAttributes map[string]string) *sdkterraform.InstanceState {
 	attributes := map[string]string{"id": "tpl-1", "key": "k", "name": "n", "expiration": "3600", "algorithm": "RS256"}
 	maps.Copy(attributes, stateAttributes)
-	return &terraform.InstanceState{ID: "tpl-1", Attributes: attributes}
+	return &sdkterraform.InstanceState{ID: "tpl-1", Attributes: attributes}
 }
 
 func jwtTemplateUpdateData(t *testing.T, stateAttributes map[string]string, config map[string]interface{}) *schema.ResourceData {
 	jwtTemplateResource := resourceFronteggJWTTemplate()
 	state := jwtTemplateState(stateAttributes)
-	diff, err := jwtTemplateResource.Diff(context.Background(), state, terraform.NewResourceConfigRaw(jwtTemplateConfig(config)), nil)
+	diff, err := jwtTemplateResource.Diff(context.Background(), state, sdkterraform.NewResourceConfigRaw(jwtTemplateConfig(config)), nil)
 	if err != nil {
 		t.Fatalf("diff: %v", err)
 	}
@@ -424,7 +425,7 @@ func TestResourceFronteggJWTTemplateClaimsJSONPlannedValueIsNormalized(t *testin
 	config := jwtTemplateConfig(map[string]interface{}{
 		"claims_json": `{ "sub": "{{sub}}", "iss": "{{iss}}", "aud": "{{clientId}}", "exp": "{{exp}}", "iat": "{{iat}}" }`,
 	})
-	diff, err := resourceFronteggJWTTemplate().Diff(context.Background(), nil, terraform.NewResourceConfigRaw(config), nil)
+	diff, err := resourceFronteggJWTTemplate().Diff(context.Background(), nil, sdkterraform.NewResourceConfigRaw(config), nil)
 	if err != nil {
 		t.Fatalf("diff: %v", err)
 	}
@@ -447,7 +448,7 @@ func TestResourceFronteggJWTTemplateReformattedClaimsJSONHasNoDiff(t *testing.T)
 	config := jwtTemplateConfig(map[string]interface{}{
 		"claims_json": "{\n  \"org\": {\"id\": \"{{user.tenantId}}\"},\n  \"sub\": \"{{sub}}\", \"iss\": \"{{iss}}\",\n  \"aud\": \"{{clientId}}\", \"iat\": \"{{iat}}\", \"exp\": \"{{exp}}\"\n}",
 	})
-	diff, err := jwtTemplateResource.Diff(context.Background(), state, terraform.NewResourceConfigRaw(config), nil)
+	diff, err := jwtTemplateResource.Diff(context.Background(), state, sdkterraform.NewResourceConfigRaw(config), nil)
 	if err != nil {
 		t.Fatalf("diff: %v", err)
 	}
@@ -614,9 +615,9 @@ resource "frontegg_jwt_template" "test" {
 
 func TestAccFronteggJWTTemplate_tenantIDClaimIsAccepted(t *testing.T) {
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckJWTTemplateDestroyed(t),
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProviderFactories,
+		CheckDestroy:             testAccCheckJWTTemplateDestroyed(t),
 		Steps: []resource.TestStep{
 			{
 				Config: testAccJWTTemplateWithTenantID,
@@ -682,9 +683,9 @@ resource "frontegg_jwt_template" "test" {
 
 func TestAccFronteggJWTTemplate_nestedObjectClaim(t *testing.T) {
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckJWTTemplateDestroyed(t),
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProviderFactories,
+		CheckDestroy:             testAccCheckJWTTemplateDestroyed(t),
 		Steps: []resource.TestStep{
 			{
 				Config: testAccJWTTemplateWithStringClaims,
