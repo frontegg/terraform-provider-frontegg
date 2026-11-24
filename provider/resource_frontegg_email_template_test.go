@@ -236,7 +236,7 @@ func (api *fakeMailAPI) serve(w http.ResponseWriter, r *http.Request) {
 		_ = json.Unmarshal(raw, &in)
 		if _, sent := body["htmlTemplate"]; !sent {
 			in.HTMLTemplate = api.templates[in.Type].HTMLTemplate
-		} else if api.sanitize {
+		} else if api.sanitize && in.HTMLTemplate != "" {
 			in.HTMLTemplate = fakeSanitize(in.HTMLTemplate)
 		}
 		api.templates[in.Type] = in
@@ -343,6 +343,27 @@ func TestEmailTemplateRejectedHTMLIsRetried(t *testing.T) {
 					return nil
 				},
 			},
+		},
+	})
+}
+
+// Empty HTML must be sent, on create as on update: Frontegg keeps the stored HTML when
+// htmlTemplate is left out, so the apply would otherwise change nothing.
+func TestEmailTemplateEmptyHTMLIsSent(t *testing.T) {
+	api := newFakeMailAPI(t)
+	api.templates["ResetPassword"] = fronteggEmailTemplateResource{Type: "ResetPassword", HTMLTemplate: "<p>stored</p>"}
+	cleared := func(*terraform.State) error {
+		if got := api.storedHTML(); got != "" {
+			return fmt.Errorf("stored HTML = %q, want it cleared", got)
+		}
+		return nil
+	}
+	resource.UnitTest(t, resource.TestCase{
+		ProviderFactories: testAccProviderFactories,
+		Steps: []resource.TestStep{
+			{Config: emailTemplateUnitConfig("Reset", ""), Check: cleared},
+			{Config: emailTemplateUnitConfig("Reset", `<html><body>first</body></html>`)},
+			{Config: emailTemplateUnitConfig("Reset", ""), Check: cleared},
 		},
 	})
 }

@@ -16,7 +16,7 @@ const fronteggEmailTemplateURL = "/identity/resources/mail/v1/configs/templates"
 type fronteggEmailTemplateResource struct {
 	Active             bool   `json:"active"`
 	FromName           string `json:"fromName"`
-	HTMLTemplate       string `json:"htmlTemplate,omitempty"`
+	HTMLTemplate       string `json:"htmlTemplate"`
 	RedirectURL        string `json:"redirectURL"`
 	SuccessRedirectURL string `json:"successRedirectUrl,omitempty"`
 	SenderEmail        string `json:"senderEmail"`
@@ -28,6 +28,13 @@ type fronteggEmailTemplateResource struct {
 	// values in these read-only pattern fields.
 	RedirectURLPattern        string `json:"redirectURLPattern,omitempty"`
 	SuccessRedirectURLPattern string `json:"successRedirectUrlPattern,omitempty"`
+}
+
+// fronteggEmailTemplateRequest is the POST body. HTMLTemplate is nil when the HTML is not
+// written: without htmlTemplate Frontegg keeps the stored HTML, while "" clears it.
+type fronteggEmailTemplateRequest struct {
+	fronteggEmailTemplateResource
+	HTMLTemplate *string `json:"htmlTemplate,omitempty"`
 }
 
 func resourceFronteggEmailTemplate() *schema.Resource {
@@ -122,8 +129,8 @@ func resourceFronteggEmailTemplateCustomizeDiff(_ context.Context, d *schema.Res
 	return nil
 }
 
-func resourceFronteggEmailTemplateSerialize(d *schema.ResourceData) fronteggEmailTemplateResource {
-	template := fronteggEmailTemplateResource{
+func resourceFronteggEmailTemplateSerialize(d *schema.ResourceData) fronteggEmailTemplateRequest {
+	template := fronteggEmailTemplateRequest{fronteggEmailTemplateResource: fronteggEmailTemplateResource{
 		Active:             d.Get("active").(bool),
 		FromName:           d.Get("from_name").(string),
 		SenderEmail:        d.Get("from_address").(string),
@@ -131,11 +138,12 @@ func resourceFronteggEmailTemplateSerialize(d *schema.ResourceData) fronteggEmai
 		RedirectURL:        d.Get("redirect_url").(string),
 		SuccessRedirectURL: d.Get("success_redirect_url").(string),
 		Type:               d.Get("template_type").(string),
-	}
-	// Without htmlTemplate Frontegg keeps the stored HTML. Sending it unchanged would make
-	// Frontegg sanitize it again and could change the stored HTML the plan left alone.
-	if d.HasChange("html_template") {
-		template.HTMLTemplate = d.Get("html_template").(string)
+	}}
+	// Sending the HTML unchanged would make Frontegg sanitize it again and could change the
+	// stored HTML the plan left alone.
+	if d.IsNewResource() || d.HasChange("html_template") {
+		html := d.Get("html_template").(string)
+		template.HTMLTemplate = &html
 	}
 	return template
 }
@@ -247,7 +255,7 @@ func resourceFronteggEmailTemplateUpdate(ctx context.Context, d *schema.Resource
 	}
 
 	d.SetId(in.Type)
-	return readFronteggEmailTemplate(ctx, d, meta, in.HTMLTemplate != "")
+	return readFronteggEmailTemplate(ctx, d, meta, in.HTMLTemplate != nil)
 }
 
 func resourceFronteggEmailTemplateDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
