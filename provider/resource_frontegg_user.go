@@ -3,13 +3,13 @@ package provider
 import (
 	"context"
 	"fmt"
-	"log"
 	"net/http"
 	"net/url"
 	"strings"
 	"time"
 
 	"github.com/frontegg/terraform-provider-frontegg/internal/restclient"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
@@ -172,7 +172,6 @@ func resourceFronteggUserImport(ctx context.Context, d *schema.ResourceData, met
 }
 
 func resourceFronteggUserSerialize(d *schema.ResourceData) fronteggUser {
-	log.Printf("role IDs: %#v", d.Get("role_ids").(*schema.Set).List())
 	return fronteggUser{
 		Email:           d.Get("email").(string),
 		Password:        secretValue(d, "password"),
@@ -205,7 +204,7 @@ func createFronteggUser(ctx context.Context, client *restclient.Client, headers 
 		if err == nil || !strings.Contains(err.Error(), fronteggErrEmailInUse) || attempt == userCreateEmailRetries {
 			return err
 		}
-		log.Printf("[WARN] email still in use, as after a recent delete; retrying user create (%d/%d)", attempt, userCreateEmailRetries)
+		tflog.Warn(ctx, "email still in use, as after a recent delete; retrying user create", map[string]interface{}{"attempt": attempt, "max_attempts": userCreateEmailRetries})
 		select {
 		case <-ctx.Done():
 			return err

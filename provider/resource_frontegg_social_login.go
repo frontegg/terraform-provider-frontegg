@@ -3,9 +3,9 @@ package provider
 import (
 	"context"
 	"fmt"
-	"log"
 
 	"github.com/frontegg/terraform-provider-frontegg/internal/restclient"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
@@ -236,6 +236,6 @@ func resourceFronteggSocialLoginDelete(ctx context.Context, d *schema.ResourceDa
 		return diag.FromErr(err)
 	}
 
-	log.Printf("[INFO] Deactivated social login for provider: %s", providerName)
+	tflog.Info(ctx, "deactivated social login", map[string]interface{}{"provider_name": providerName})
 	return nil
 }

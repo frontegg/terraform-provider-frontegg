@@ -3,9 +3,10 @@ package restclient
 import (
 	"context"
 	"fmt"
-	"log"
 	"sync"
 	"time"
+
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
 const vendorLoginPath = "/auth/vendor"
@@ -51,7 +52,7 @@ func vendorLogin(ctx context.Context, login *Client, credentials vendorCredentia
 		return "", 0, err
 	}
 	if out.ExpiresIn == nil || *out.ExpiresIn == 0 {
-		log.Printf("[WARN] Frontegg authentication response has no positive expiresIn; management tokens will refresh only after a 401")
+		tflog.Warn(ctx, "Frontegg authentication response has no positive expiresIn; management tokens will refresh only after a 401")
 		return out.AccessToken, 0, nil
 	}
 	if *out.ExpiresIn < 0 {
@@ -109,7 +110,7 @@ func (s *TokenSource) Token(ctx context.Context) (string, error) {
 	if err != nil {
 		// A rejected (invalidated) or unknown-lifetime token never reaches this fallback.
 		if ctx.Err() == nil && s.token != "" && time.Now().Before(s.expiresAt) {
-			log.Printf("[WARN] Management token refresh failed; using the cached token until its expiry")
+			tflog.Warn(ctx, "management token refresh failed; using the cached token until its expiry")
 			retryAt := time.Now().Add(tokenRefreshRetryDelay)
 			if retryAt.After(s.expiresAt) {
 				retryAt = s.expiresAt

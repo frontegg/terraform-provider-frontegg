@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"log"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -13,6 +12,7 @@ import (
 	"time"
 
 	"github.com/frontegg/terraform-provider-frontegg/internal/restclient"
+	"github.com/hashicorp/terraform-plugin-log/tflogtest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
@@ -153,9 +153,7 @@ func TestProviderWarnsWithoutTokenLifetime(t *testing.T) {
 	for _, body := range []string{`{"token":"token"}`, `{"token":"token","expiresIn":0}`} {
 		t.Run(body, func(t *testing.T) {
 			var logs bytes.Buffer
-			previous := log.Writer()
-			log.SetOutput(&logs)
-			defer log.SetOutput(previous)
+			ctx := tflogtest.RootLogger(context.Background(), &logs)
 			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				_, _ = fmt.Fprint(w, body)
 			}))
@@ -165,11 +163,11 @@ func TestProviderWarnsWithoutTokenLifetime(t *testing.T) {
 				"api_base_url": srv.URL, "portal_base_url": srv.URL,
 				"client_id": "client", "secret_key": "secret",
 			})
-			_, diags := p.ConfigureContextFunc(context.Background(), d)
+			_, diags := p.ConfigureContextFunc(ctx, d)
 			if diags.HasError() {
 				t.Fatalf("configure: %v", diags)
 			}
-			if !strings.Contains(logs.String(), "[WARN] Frontegg authentication response has no positive expiresIn") {
+			if !strings.Contains(logs.String(), "Frontegg authentication response has no positive expiresIn") {
 				t.Fatalf("missing lifetime warning: %s", logs.String())
 			}
 		})

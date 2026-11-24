@@ -4,12 +4,13 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"log"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/hashicorp/terraform-plugin-log/tflogtest"
 )
 
 func TestAuthenticationResponseRedaction(t *testing.T) {
@@ -27,9 +28,7 @@ func TestAuthenticationResponseRedaction(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			var logs bytes.Buffer
-			previous := log.Writer()
-			log.SetOutput(&logs)
-			defer log.SetOutput(previous)
+			ctx := tflogtest.RootLogger(context.Background(), &logs)
 			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.Header().Set("Set-Cookie", "sensitive-cookie")
 				w.Header().Set("Frontegg-Trace-Id", "trace-id")
@@ -45,13 +44,16 @@ func TestAuthenticationResponseRedaction(t *testing.T) {
 				Token    string
 				Lifetime float64
 			}
-			err := client.Post(context.Background(), "/auth/vendor", nil, &out)
+			err := client.Post(ctx, "/auth/vendor", nil, &out)
 			if tc.name == "success" {
 				if err != nil || out.Token != "sensitive-response" {
 					t.Fatalf("decode: %q, %v", out.Token, err)
 				}
 			} else if err == nil {
 				t.Fatal("expected an error")
+			}
+			if !strings.Contains(logs.String(), "sending request") {
+				t.Fatalf("request was not logged: %s", logs.String())
 			}
 			combined := logs.String() + fmt.Sprint(err)
 			for _, secret := range []string{"sensitive-response", "sensitive-cookie", "1e1000"} {
@@ -68,9 +70,7 @@ func TestAuthenticationResponseRedaction(t *testing.T) {
 
 func TestRequestLoggingPreservesScopeAndRedactsCredentials(t *testing.T) {
 	var logs bytes.Buffer
-	previous := log.Writer()
-	log.SetOutput(&logs)
-	defer log.SetOutput(previous)
+	ctx := tflogtest.RootLogger(context.Background(), &logs)
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("Authorization") != "Bearer sensitive-bearer" || r.Header.Get("Cookie") != "sensitive-cookie" {
 			t.Error("logging changed the request's credentials")
@@ -84,7 +84,7 @@ func TestRequestLoggingPreservesScopeAndRedactsCredentials(t *testing.T) {
 	headers.Set("Cookie", "sensitive-cookie")
 	headers.Set("Proxy-Authorization", "sensitive-proxy")
 	headers.Set("frontegg-tenant-id", "tenant-id")
-	if err := client.GetWithHeaders(context.Background(), "/resource", headers, nil); err != nil {
+	if err := client.GetWithHeaders(ctx, "/resource", headers, nil); err != nil {
 		t.Fatal(err)
 	}
 	for _, secret := range []string{"sensitive-bearer", "sensitive-cookie", "sensitive-proxy"} {
